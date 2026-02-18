@@ -19,10 +19,12 @@ import type { CollectorAssignment } from "@/types/proposal";
 
 interface DashboardSidebarProps {
   collapsed?: boolean;
+  onNavigate?: () => void;
 }
 
 export default function DashboardSidebar({
   collapsed = false,
+  onNavigate,
 }: DashboardSidebarProps) {
   const pathname = usePathname();
   const { user, profile, loading: authLoading } = useAuth();
@@ -275,6 +277,7 @@ export default function DashboardSidebar({
                           <Link
                             key={subItem.name}
                             href={subItem.href}
+                            onClick={onNavigate}
                             className={cn(
                               "flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors text-xs",
                               isSubActive
@@ -296,6 +299,7 @@ export default function DashboardSidebar({
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={onNavigate}
                 className={cn(
                   "flex items-center gap-2 px-2 py-2 rounded-md transition-colors",
                   collapsed ? "justify-center" : "",
@@ -353,6 +357,7 @@ export default function DashboardSidebar({
                     <Link
                       key={assignment.id}
                       href={`/submit/${assignment.submission_token}`}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-2 px-2 py-2 rounded-md transition-colors text-xs font-medium",
                         isActive
@@ -404,6 +409,7 @@ export default function DashboardSidebar({
               <Link
                 key={item.name}
                 href={item.href}
+                onClick={onNavigate}
                 className={cn(
                   "flex items-center gap-2 px-2 py-2 rounded-md transition-colors",
                   collapsed ? "justify-center" : "",

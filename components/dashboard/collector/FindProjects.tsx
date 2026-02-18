@@ -286,7 +286,7 @@ export default function FindProjects() {
                   className="pl-10 bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button
                   onClick={() => setShowFilters(!showFilters)}
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
@@ -329,7 +329,7 @@ export default function FindProjects() {
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {/* Category Filter */}
                   <div className="space-y-2">
                     <button
@@ -447,7 +447,7 @@ export default function FindProjects() {
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="dark:bg-gray-800/50 border-none">
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -552,8 +552,8 @@ export default function FindProjects() {
                 className="dark:bg-gray-800/50 border border-border hover:border-cyan-400/50 transition-all"
               >
                 <CardContent className="pt-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <CategoryIcon className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                         <h3 className="text-xl font-semibold text-foreground">{project.title}</h3>
@@ -566,7 +566,7 @@ export default function FindProjects() {
                         {project.description}
                       </p>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <DollarSign className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                           <span className="font-semibold text-foreground">

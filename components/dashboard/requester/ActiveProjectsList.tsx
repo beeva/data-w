@@ -288,16 +288,16 @@ export default function ActiveProjectsList() {
       >
         <CardContent className="py-2.5 px-3">
           {/* Header Row */}
-          <div className="flex items-start justify-between gap-2 mb-1.5">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-2 mb-1.5">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
                 <span className={cn("text-sm font-semibold truncate", isCancelled && "line-through")}>{project.title}</span>
                 {getStatusBadge(project.status as string)}
                 <Badge variant="secondary" className="text-[8px] px-1 py-0">{project.category}</Badge>
               </div>
               <p className="text-[10px] text-muted-foreground line-clamp-1">{project.description}</p>
             </div>
-            <div className="flex gap-1 flex-shrink-0">
+            <div className="flex flex-wrap gap-1 flex-shrink-0">
               {showPauseResume === "pause" && (
                 <Button
                   variant="outline"
@@ -440,12 +440,12 @@ export default function ActiveProjectsList() {
   return (
     <div className="space-y-3 p-2">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-lg font-bold text-foreground">Projects</h1>
           <p className="text-xs text-muted-foreground">Manage all your data collection projects</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button onClick={fetchProjects} variant="outline" size="sm" className="h-7 text-xs px-2">
             <RefreshCw className="w-3 h-3 mr-1" />
             Refresh
@@ -468,7 +468,7 @@ export default function ActiveProjectsList() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Card className="dark:bg-gray-800/50 border-none">
           <CardContent className="py-2 px-3">
             <div className="flex items-center justify-between">
@@ -519,7 +519,7 @@ export default function ActiveProjectsList() {
       <Card className="dark:bg-gray-800/50 border-none">
         <CardContent className="py-3 px-3">
           <Tabs defaultValue="active" className="w-full">
-            <TabsList className="h-8 w-full grid grid-cols-4 mb-3">
+            <TabsList className="h-8 w-full grid grid-cols-2 sm:grid-cols-4 mb-3">
               <TabsTrigger value="active" className="text-xs h-7 data-[state=active]:bg-cyan-500 data-[state=active]:text-white">
                 Active ({activeProjects.length})
               </TabsTrigger>

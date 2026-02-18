@@ -54,7 +54,7 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-6 py-12">
+    <div className="min-h-screen bg-gradient-hero flex items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
       <div className="w-full max-w-md">
         {/* Logo/Brand */}
         <div className="flex justify-center mb-8">
@@ -62,7 +62,7 @@ export default function Login() {
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
+        <div className="bg-white rounded-2xl shadow-2xl p-5 sm:p-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Log in to your account</h2>
           
           <div className="mb-6">

@@ -286,7 +286,7 @@ export default function CollectorDashboard() {
                   : `${projects.length} open projects available`}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {hasLocation && (
                 <Select
                   value={String(maxDistance)}

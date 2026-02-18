@@ -203,9 +203,9 @@ export default function WalletContent() {
                 return (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between py-3 px-3 rounded-lg hover:bg-accent/50 transition-colors border border-transparent hover:border-border"
+                    className="flex flex-wrap items-center justify-between gap-2 py-3 px-3 rounded-lg hover:bg-accent/50 transition-colors border border-transparent hover:border-border"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div
                         className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center",
@@ -220,8 +220,8 @@ export default function WalletContent() {
                           <ArrowUpRight className="w-4 h-4 text-red-600" />
                         )}
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {isIncoming ? "Received from" : "Paid to"}{" "}
                           {counterparty}
                         </p>
@@ -236,7 +236,7 @@ export default function WalletContent() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-shrink-0">
                       <div className="flex items-center gap-1.5">
                         {statusIcon(tx.status)}
                         <Badge

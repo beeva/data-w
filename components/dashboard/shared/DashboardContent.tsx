@@ -36,7 +36,7 @@ export default function DashboardContent() {
               <CardTitle className="text-sm font-semibold">
                 Completeness
               </CardTitle>
-              <div className="flex items-center gap-1">
+              <div className="flex flex-wrap items-center gap-1">
                 <Button
                   variant="outline"
                   size="sm"
@@ -140,7 +140,7 @@ export default function DashboardContent() {
       </div>
 
       {/* Middle Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
         {/* Today Queue */}
         <Card className="dark:bg-gray-800/50 border-none">
           <CardHeader className="py-2 px-3">

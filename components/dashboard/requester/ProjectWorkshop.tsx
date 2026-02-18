@@ -339,7 +339,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
         />
       )}
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <Button
             variant="ghost"
@@ -370,7 +370,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
       )}
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
         <Card className="dark:bg-gray-800/50 border-none">
           <CardContent className="py-2.5 px-3">
             <div className="flex items-center justify-between">
@@ -469,7 +469,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
               <span className="font-semibold">{completionRate}%</span>
             </div>
             <Progress value={completionRate} className="h-1.5" />
-            <div className="grid grid-cols-3 gap-2 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
               <div className="text-center">
                 <p className="text-base font-bold text-green-600">
                   {stats?.validated_submissions || 0}
@@ -499,7 +499,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
           <CardTitle className="text-xs font-semibold">Project Details</CardTitle>
         </CardHeader>
         <CardContent className="py-2 px-4">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="flex items-center gap-1.5 text-[11px]">
               <DollarSign className="w-3 h-3 text-muted-foreground" />
               <span className="text-muted-foreground">Budget:</span>
@@ -521,7 +521,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
 
       {/* Submissions Tabs */}
       <Tabs defaultValue="proposals" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 mb-2 h-8">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-2 h-8">
           <TabsTrigger value="proposals" className="text-[10px] h-7">
             <Briefcase className="w-3 h-3 mr-1" />
             Proposals
@@ -634,7 +634,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
 
                         {/* Expanded: Submissions table for this collector */}
                         {isCollectorExpanded && (
-                          <div className="border-t border-gray-200 dark:border-gray-700/50">
+                          <div className="border-t border-gray-200 dark:border-gray-700/50 overflow-x-auto">
                             <Table>
                               <TableHeader>
                                 <TableRow className="bg-gray-50 dark:bg-gray-800/30">
@@ -680,7 +680,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
                                         </TableCell>
                                         <TableCell className="text-right pr-4">
                                           {submission.status === "pending" && (
-                                            <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex flex-wrap gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
                                               <Button
                                                 size="sm"
                                                 className="h-6 text-[10px] px-2 bg-green-600 hover:bg-green-700"
@@ -739,7 +739,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
                                                   No files found for this submission.
                                                 </p>
                                               ) : (
-                                                <div className="rounded-md border border-gray-200 dark:border-gray-700/50 overflow-hidden">
+                                                <div className="rounded-md border border-gray-200 dark:border-gray-700/50 overflow-x-auto">
                                                   <Table>
                                                     <TableHeader>
                                                       <TableRow className="bg-gray-100 dark:bg-gray-800/50">

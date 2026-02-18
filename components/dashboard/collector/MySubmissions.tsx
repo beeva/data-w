@@ -170,7 +170,7 @@ export default function MySubmissions() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Card className="dark:bg-gray-800/50 border-none">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -252,7 +252,7 @@ export default function MySubmissions() {
 
       {/* Submissions Tabs */}
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
           <TabsTrigger value="all">All ({stats.total})</TabsTrigger>
           <TabsTrigger value="pending">Pending ({stats.pending})</TabsTrigger>
           <TabsTrigger value="validated">Validated ({stats.validated})</TabsTrigger>
@@ -285,16 +285,16 @@ export default function MySubmissions() {
                     className="dark:bg-gray-800/50 border-none hover:shadow-md transition-shadow"
                   >
                     <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-3 mb-2">
                             <h3 className="text-lg font-semibold">
                               {submission.project_title}
                             </h3>
                             {getStatusBadge(submission.status)}
                           </div>
 
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm mt-4">
                             <div className="flex items-center gap-2 text-muted-foreground">
                               <Calendar className="w-4 h-4" />
                               <span>Submitted: {formatDate(submission.submitted_at)}</span>

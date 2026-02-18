@@ -227,7 +227,7 @@ export default function RequesterDashboard() {
   return (
     <div className="space-y-3 p-2">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h1 className="text-lg font-bold text-foreground">Welcome back!</h1>
           <p className="text-xs text-muted-foreground">Here's what's happening with your projects</p>
@@ -339,7 +339,7 @@ export default function RequesterDashboard() {
             </CardHeader>
             <CardContent className="py-2 px-3">
               <Tabs defaultValue="active" className="w-full">
-                <TabsList className="h-7 w-full grid grid-cols-4 mb-2">
+                <TabsList className="h-7 w-full grid grid-cols-2 sm:grid-cols-4 mb-2">
                   <TabsTrigger value="active" className="text-[10px] h-6 data-[state=active]:bg-cyan-500 data-[state=active]:text-white">
                     Active ({activeProjects.length})
                   </TabsTrigger>
@@ -553,7 +553,7 @@ export default function RequesterDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="py-2 px-3">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {[
                   {
                     label: "Active Budget",
@@ -729,7 +729,7 @@ export default function RequesterDashboard() {
           <Card className="dark:bg-gray-800/50 border-none bg-gradient-to-br from-cyan-500/5 to-blue-500/5">
             <CardContent className="py-3 px-3">
               <p className="text-[10px] text-muted-foreground mb-2">Quick Actions</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 

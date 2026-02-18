@@ -160,7 +160,7 @@ export default function SystemStats() {
       </div>
 
       {/* Platform Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         <Card className="dark:bg-gray-800/50 border-none">
           <CardContent className="pt-6 text-center">
             <Globe className="w-8 h-8 text-blue-500 mx-auto mb-2" />
@@ -218,7 +218,7 @@ export default function SystemStats() {
 
       {/* Growth Charts */}
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-4">
           <TabsTrigger value="users">
             <Users className="w-4 h-4 mr-2" />
             Users
@@ -290,7 +290,7 @@ export default function SystemStats() {
                 </div>
 
                 {/* Growth Summary */}
-                <div className="grid grid-cols-3 gap-4 pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-gray-200 dark:border-gray-700 mt-6">
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1 text-green-600">
                       <TrendingUp className="w-4 h-4" />

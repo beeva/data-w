@@ -215,7 +215,7 @@ export default function BillingContent() {
       </Card>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
         <Card className="dark:bg-gray-800/50 border-none">
           <CardContent className="py-2 px-2">
             <div className="flex items-center justify-between">
@@ -279,7 +279,7 @@ export default function BillingContent() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="usage" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 mb-1.5 h-7">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-1.5 h-7">
           <TabsTrigger value="usage" className="text-[10px] h-6">
             <BarChart3 className="w-2.5 h-2.5 mr-0.5" />
             Usage
@@ -355,7 +355,7 @@ export default function BillingContent() {
                 </div>
 
                 {/* Monthly Stats */}
-                <div className="grid grid-cols-4 gap-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-700">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-700">
                   {usageData.slice(-2).map((data) => (
                     <div key={data.date} className="text-center">
                       <p className="text-[9px] text-muted-foreground">{formatMonthYear(data.date)}</p>

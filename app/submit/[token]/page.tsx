@@ -278,7 +278,7 @@ export default function SubmitPage() {
           onClose={() => setToast(null)}
         />
       )}
-      <div className="max-w-4xl mx-auto p-4 space-y-4">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-4">
         {/* Success Banner */}
         <Card className="dark:bg-green-900/20 border-green-500/30">
           <CardContent className="p-4">
@@ -309,7 +309,7 @@ export default function SubmitPage() {
               <p className="text-sm text-muted-foreground">{project.description}</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <h4 className="text-xs font-semibold mb-1">Category</h4>
                 <Badge variant="outline">{project.category}</Badge>
@@ -417,6 +417,7 @@ export default function SubmitPage() {
                 </p>
               </div>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -478,6 +479,7 @@ export default function SubmitPage() {
                                     No files found for this submission.
                                   </p>
                                 ) : (
+                                  <div className="overflow-x-auto">
                                   <Table>
                                     <TableHeader>
                                       <TableRow className="border-border">
@@ -527,6 +529,7 @@ export default function SubmitPage() {
                                       ))}
                                     </TableBody>
                                   </Table>
+                                  </div>
                                 )}
                               </div>
                             </TableCell>
@@ -537,6 +540,7 @@ export default function SubmitPage() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>

@@ -401,7 +401,7 @@ export default function AccountSettings() {
             )}
 
             {/* Basic Info */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="space-y-0.5">
                 <Label htmlFor="full_name" className="text-[10px]">
                   <User className="w-2.5 h-2.5 inline mr-0.5" />
@@ -482,7 +482,7 @@ export default function AccountSettings() {
                     placeholder="Start typing to search..."
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="space-y-0.5">
                     <Label htmlFor="location_city" className="text-[10px]">City</Label>
                     <Input
@@ -542,7 +542,7 @@ export default function AccountSettings() {
                     <Building2 className="w-3 h-3" />
                     Company Information
                   </h3>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="space-y-0.5">
                       <Label htmlFor="company_name" className="text-[10px]">Company Name</Label>
                       <Input
@@ -580,7 +580,7 @@ export default function AccountSettings() {
                 <Separator className="my-1.5" />
                 <div>
                   <h3 className="text-[10px] font-semibold mb-1">Collector Stats</h3>
-                  <div className="grid grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                     <div className="p-1.5 bg-gray-50 dark:bg-gray-700/50 rounded text-center">
                       <p className="text-sm font-bold text-cyan-500">
                         ${profile.total_earnings?.toFixed(2) || "0.00"}
@@ -616,7 +616,7 @@ export default function AccountSettings() {
                 <Separator className="my-1.5" />
                 <div>
                   <h3 className="text-[10px] font-semibold mb-1">Validator Stats</h3>
-                  <div className="grid grid-cols-2 gap-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                     <div className="p-1.5 bg-gray-50 dark:bg-gray-700/50 rounded text-center">
                       <p className="text-sm font-bold text-cyan-500">
                         {profile.total_validations || 0}
@@ -661,7 +661,7 @@ export default function AccountSettings() {
           <CardDescription className="text-[10px]">Read-only details</CardDescription>
         </CardHeader>
         <CardContent className="py-1.5 px-3">
-          <div className="grid grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div>
               <Label className="text-[9px] text-muted-foreground">Email</Label>
               <p className="text-[11px] font-medium truncate">{profile?.email || "N/A"}</p>

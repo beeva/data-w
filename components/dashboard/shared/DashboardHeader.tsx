@@ -241,9 +241,9 @@ export default function DashboardHeader({
         onClose={() => setRealtimeToast(null)}
       />
     )}
-    <header className="h-12 bg-white dark:bg-gray-800 flex items-center justify-between rounded-2xl px-4 flex-shrink-0">
+    <header className="h-12 bg-white dark:bg-gray-800 flex items-center justify-between rounded-2xl px-2 sm:px-4 flex-shrink-0">
       {/* Left side - Collapse button and Search */}
-      <div className="flex items-center gap-4 flex-1">
+      <div className="flex items-center gap-2 sm:gap-4 flex-1">
         {/* Sidebar Toggle Button */}
         <Button
           variant="ghost"
@@ -368,17 +368,17 @@ export default function DashboardHeader({
       </div>
 
       {/* Right side - Actions */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-0.5 sm:gap-1.5">
         {/* Wallet */}
         <Button
           variant="ghost"
           onClick={() => router.push("/dashboard/wallet")}
           aria-label="Wallet"
-          className="h-8 gap-1.5 px-2.5"
+          className="h-8 gap-1.5 px-2 sm:px-2.5"
         >
           <Wallet className="w-4 h-4" />
           {walletBalance !== null && (
-            <span className="text-xs font-semibold tabular-nums">
+            <span className="text-xs font-semibold tabular-nums hidden sm:inline">
               ${walletBalance.toFixed(2)}
             </span>
           )}
@@ -416,7 +416,7 @@ export default function DashboardHeader({
           </Button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-72 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-40 text-sm">
+            <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-72 max-w-72 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-40 text-sm">
               <div className="px-3 pb-2 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                 <span className="font-semibold text-xs text-foreground">
                   Notifications

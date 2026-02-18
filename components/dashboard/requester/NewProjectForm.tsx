@@ -184,7 +184,7 @@ export default function NewProjectForm() {
   }
 
   return (
-    <div className="flex gap-4 h-[calc(100vh-120px)] p-2">
+    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-120px)] p-2">
       {/* Main Form - 70% */}
       <div className="flex-1 min-w-0">
         <form onSubmit={handleSubmit} className="h-full flex flex-col">
@@ -249,7 +249,7 @@ export default function NewProjectForm() {
           </div>
 
           {/* Budget and Deadline */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="space-y-0.5">
               <Label htmlFor="budget" className="text-[10px]">
                 <DollarSign className="w-2.5 h-2.5 inline mr-0.5" />
@@ -307,7 +307,7 @@ export default function NewProjectForm() {
           {/* Data Types */}
           <div className="space-y-0.5">
             <Label className="text-[10px]">Data Types *</Label>
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1">
               {dataTypes.map((type) => (
                 <label
                   key={type}
@@ -328,7 +328,7 @@ export default function NewProjectForm() {
           {/* Formats */}
           <div className="space-y-0.5">
             <Label className="text-[10px]">Formats *</Label>
-            <div className="grid grid-cols-4 gap-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1">
               {formats.map((format) => (
                 <label
                   key={format}
@@ -387,7 +387,7 @@ export default function NewProjectForm() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
               <div className="space-y-0.5">
                 <Label htmlFor="location_lat" className="text-[10px]">Latitude</Label>
                 <Input
@@ -431,7 +431,7 @@ export default function NewProjectForm() {
 
             </CardContent>
             {/* Submit Button - Sticky at bottom */}
-            <div className="flex gap-2 p-3 pt-1.5 border-t border-gray-700 flex-shrink-0">
+            <div className="flex flex-wrap gap-2 p-3 pt-1.5 border-t border-gray-700 flex-shrink-0">
               <Button
                 type="button"
                 variant="outline"
@@ -451,7 +451,7 @@ export default function NewProjectForm() {
       </div>
 
       {/* Suggestions Panel - 30% */}
-      <div className="w-[30%] min-w-[300px]">
+      <div className="w-full lg:w-[30%] min-w-0 lg:min-w-[300px]">
         <DataSuggestionsPanel
           title={formData.title}
           description={formData.description}

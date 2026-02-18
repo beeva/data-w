@@ -172,7 +172,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* System Health & Quick Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* System Health */}
         <Card className="dark:bg-gray-800/50 border-none">
           <CardHeader>
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
           <CardTitle className="text-lg">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <Button variant="outline" className="h-auto py-4 flex-col gap-2">
               <Users className="w-5 h-5" />
               <span>Manage Users</span>

@@ -202,14 +202,14 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold">User Management</h1>
           <p className="text-muted-foreground mt-1">
             Manage platform users and permissions
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
             Export
@@ -222,7 +222,7 @@ export default function UserManagement() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="dark:bg-gray-800/50 border-none">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">

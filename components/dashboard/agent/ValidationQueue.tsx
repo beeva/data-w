@@ -226,7 +226,7 @@ export default function ValidationQueue() {
             Review and validate data submissions
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Select value={filter} onValueChange={setFilter}>
             <SelectTrigger className="w-40">
               <Filter className="w-4 h-4 mr-2" />
@@ -336,9 +336,9 @@ export default function ValidationQueue() {
 
                   {/* Main Content */}
                   <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <div className="flex items-center gap-3 mb-1">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-3 mb-1">
                           <h3 className="text-lg font-semibold">
                             {item.project_title}
                           </h3>
@@ -347,7 +347,7 @@ export default function ValidationQueue() {
                         </div>
 
                         {/* Collector Info */}
-                        <div className="flex items-center gap-4 mt-3">
+                        <div className="flex flex-wrap items-center gap-4 mt-3">
                           <div className="flex items-center gap-2">
                             <Avatar className="w-6 h-6">
                               <AvatarImage src={item.collector_avatar || ""} />
@@ -375,7 +375,7 @@ export default function ValidationQueue() {
                         </div>
 
                         {/* File Info & AI Score */}
-                        <div className="flex items-center gap-6 mt-4">
+                        <div className="flex flex-wrap items-center gap-6 mt-4">
                           <div className="flex items-center gap-2 text-sm">
                             <FileText className="w-4 h-4 text-muted-foreground" />
                             <span>{item.files_count} files</span>
