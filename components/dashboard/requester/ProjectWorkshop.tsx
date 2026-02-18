@@ -9,6 +9,7 @@ import {
   getDataItemsBySubmission,
   updateSubmissionStatus,
 } from "@/lib/services/submissionService";
+import { transferFunds } from "@/lib/services/walletService";
 import type { Project } from "@/types/project";
 import type {
   SubmissionWithCollector,
@@ -199,14 +200,33 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
 
       if (updateError) throw updateError;
 
+      if (approve && project) {
+        const submission = submissions.find((s) => s.id === submissionId);
+        if (submission) {
+          const { error: txError } = await transferFunds(
+            user.id,
+            submission.collector_id,
+            submissionId,
+            project.budget
+          );
+          if (txError) {
+            setToast({
+              message: txError.message,
+              type: "error",
+            });
+            setProcessingId(null);
+            return;
+          }
+        }
+      }
+
       setToast({
         message: approve
-          ? "Submission approved successfully!"
+          ? "Submission approved and payment transferred!"
           : "Submission rejected.",
         type: "success",
       });
 
-      // Refresh data
       await fetchData();
     } catch (err: any) {
       console.error("Error updating submission:", err);

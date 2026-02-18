@@ -24,6 +24,8 @@ export interface UserProfile {
   phone: string | null;
   created_at: string;
   updated_at: string;
+  // Wallet
+  balance: number | null;
   // Requester specific fields
   company_name: string | null;
   company_website: string | null;

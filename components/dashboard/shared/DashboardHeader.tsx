@@ -14,6 +14,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Bell,
+  Wallet,
   ChevronDown,
   User,
   HelpCircle,
@@ -35,6 +36,7 @@ import {
   getUnreadNotificationCount,
   markAllNotificationsAsRead,
 } from "@/lib/services/notificationService";
+import { getWalletBalance } from "@/lib/services/walletService";
 
 interface DashboardHeaderProps {
   onSidebarToggle: () => void;
@@ -57,6 +59,7 @@ export default function DashboardHeader({
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [realtimeToast, setRealtimeToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -121,6 +124,12 @@ export default function DashboardHeader({
     };
 
     loadUnread();
+  }, [userId]);
+
+  // Load wallet balance
+  useEffect(() => {
+    if (!userId) return;
+    getWalletBalance(userId).then(({ balance }) => setWalletBalance(balance));
   }, [userId]);
 
   // Realtime subscription: update notification count when new notifications arrive
@@ -360,6 +369,21 @@ export default function DashboardHeader({
 
       {/* Right side - Actions */}
       <div className="flex items-center gap-1.5">
+        {/* Wallet */}
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/dashboard/wallet")}
+          aria-label="Wallet"
+          className="h-8 gap-1.5 px-2.5"
+        >
+          <Wallet className="w-4 h-4" />
+          {walletBalance !== null && (
+            <span className="text-xs font-semibold tabular-nums">
+              ${walletBalance.toFixed(2)}
+            </span>
+          )}
+        </Button>
+
         {/* Dark/Light Mode Toggle */}
         <Button
           variant="ghost"
