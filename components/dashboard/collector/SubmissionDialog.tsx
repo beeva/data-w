@@ -8,6 +8,7 @@ import {
   createDataItem,
   getFileTypeFromMime,
 } from "@/lib/services/submissionService";
+import { createNotification } from "@/lib/services/notificationService";
 import type { Project, CollectorAssignment } from "@/types";
 import type { SubmissionMetadata } from "@/types/submission";
 import {
@@ -262,6 +263,20 @@ export default function SubmissionDialog({
 
       setUploadStatus("Submission complete!");
       setSubmitted(true);
+
+      await createNotification({
+        userId: project.requester_id,
+        type: "submission_created",
+        title: "New Submission Received",
+        body: `A collector has submitted ${files.length} file${files.length > 1 ? "s" : ""} for "${project.title}".`,
+        metadata: {
+          project_id: project.id,
+          submission_id: submission.id,
+          collector_id: user.id,
+          file_count: files.length,
+        },
+      });
+
       onToast?.({ message: `Successfully submitted ${files.length} file${files.length > 1 ? "s" : ""}!`, type: "success" });
       onSuccess?.();
     } catch (err: any) {
