@@ -118,6 +118,7 @@ export default function SubmitPage() {
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [toast, setToast] = useState<SubmissionToast | null>(null);
 
+  const userId = user?.id;
   useEffect(() => {
     if (authLoading) return;
 
@@ -127,14 +128,14 @@ export default function SubmitPage() {
       return;
     }
 
-    if (!user) {
+    if (!userId) {
       setError("Please log in to access this submission link.");
       setLoading(false);
       return;
     }
 
     fetchAssignment();
-  }, [token, authLoading, user]);
+  }, [token, authLoading, userId]);
 
   const fetchAssignment = async () => {
     try {

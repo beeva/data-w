@@ -76,16 +76,17 @@ export default function CollectorDashboard() {
   const collectorLng = profile?.location?.lng;
   const hasLocation = typeof collectorLat === "number" && typeof collectorLng === "number";
 
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
 
     const fetchData = async () => {
       setLoading(true);
       try {
         const [projectsRes, proposalsRes, assignmentsRes] = await Promise.all([
           getOpenProjects(),
-          getProposalsByCollector(user.id),
-          getAssignmentsByCollector(user.id),
+          getProposalsByCollector(userId),
+          getAssignmentsByCollector(userId),
         ]);
 
         setProjects(projectsRes.data || []);
@@ -106,7 +107,7 @@ export default function CollectorDashboard() {
     };
 
     fetchData();
-  }, [user]);
+  }, [userId]);
 
   const distanceOptions = [
     { value: "0", label: "All distances" },

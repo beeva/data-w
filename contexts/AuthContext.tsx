@@ -111,18 +111,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     subscription = authSubscription
 
-    // Refresh session when tab becomes visible after inactivity
+    // Refresh session when tab becomes visible after inactivity.
+    // Only call refreshSession() — onAuthStateChange already handles state updates.
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isMounted) {
-        supabase.auth.refreshSession().then(({ data: { session }, error: refreshError }) => {
-          if (!isMounted) return
-          if (refreshError || !session) {
-            setUser(null)
-            setProfile(null)
-          } else {
-            setUser(session.user)
-          }
-        }).catch(() => {})
+        supabase.auth.refreshSession().catch(() => {})
       }
     }
 
