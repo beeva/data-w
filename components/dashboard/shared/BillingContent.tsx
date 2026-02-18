@@ -103,6 +103,8 @@ export default function BillingContent() {
   useEffect(() => {
     if (userId) {
       fetchBillingData(true);
+    } else {
+      setLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);

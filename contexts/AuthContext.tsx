@@ -97,8 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return
+
+      // Token refresh doesn't change user identity — skip to avoid cascading re-renders
+      if (event === 'TOKEN_REFRESHED') return
       
       setUser(session?.user ?? null)
       if (session?.user) {

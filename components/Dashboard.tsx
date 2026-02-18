@@ -48,9 +48,8 @@ export default function Dashboard() {
 
   // Render role-specific dashboard content
   const renderDashboardContent = () => {
-    if (!profile) {
-      // If profile not loaded yet, show requester dashboard as default
-      return <RequesterDashboard />;
+    if (loading || !profile) {
+      return <Loading />;
     }
 
     switch (profile.role) {

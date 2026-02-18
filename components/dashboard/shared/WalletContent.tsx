@@ -39,7 +39,10 @@ export default function WalletContent() {
 
   const fetchWalletData = useCallback(
     async (showSpinner = true) => {
-      if (!userId) return;
+      if (!userId) {
+        setLoading(false);
+        return;
+      }
       try {
         if (showSpinner) setLoading(true);
         setError("");
