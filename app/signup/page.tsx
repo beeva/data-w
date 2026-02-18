@@ -1,6 +1,10 @@
+import { Suspense } from 'react'
 import SignUp from '@/components/SignUp'
 
 export default function SignUpPage() {
-  return <SignUp />
+  return (
+    <Suspense>
+      <SignUp />
+    </Suspense>
+  )
 }
-

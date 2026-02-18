@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Testimonials from "@/components/Testimonials";
@@ -9,7 +10,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import ToastNotification from "@/components/ui/toast-notification";
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [showToast, setShowToast] = useState(false);
@@ -21,7 +22,6 @@ export default function Home() {
       setToastMessage("Signed out successfully");
       setShowToast(true);
 
-      // Clean the URL so toast doesn't re-trigger
       router.replace("/");
     }
   }, [searchParams, router]);
@@ -44,5 +44,13 @@ export default function Home() {
       <FAQ />
       <Footer />
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
   );
 }

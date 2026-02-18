@@ -306,7 +306,7 @@ export default function FindProjects() {
                   </SelectContent>
                 </Select>
                 <Button
-                  onClick={fetchProjects}
+                  onClick={() => fetchProjects()}
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   Refresh

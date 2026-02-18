@@ -421,7 +421,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
               <div>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Avg Score</p>
                 <p className="text-lg font-bold text-cyan-600">
-                  {stats?.average_validation_score !== null
+                  {stats?.average_validation_score != null
                     ? `${stats.average_validation_score}%`
                     : "N/A"}
                 </p>

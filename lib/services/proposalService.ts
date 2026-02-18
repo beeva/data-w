@@ -284,7 +284,7 @@ export async function acceptProposals(
         // Generate unique token (base64url encoded random bytes)
         const array = new Uint8Array(32);
         crypto.getRandomValues(array);
-        const token = btoa(String.fromCharCode(...array))
+        const token = btoa(String.fromCharCode(...Array.from(array)))
           .replace(/\+/g, "-")
           .replace(/\//g, "_")
           .replace(/=/g, "");
