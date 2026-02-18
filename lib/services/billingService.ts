@@ -1,0 +1,434 @@
+/**
+ * Supabase service functions for Billing operations
+ */
+
+import { createClient } from "@/lib/supabase/client";
+import type {
+  BillingStats,
+  ProjectBilling,
+  UsageData,
+  Invoice,
+  PaymentMethod,
+  SubscriptionPlan,
+} from "@/types/billing";
+
+/**
+ * Get billing statistics for a user
+ */
+export async function getBillingStats(
+  userId: string
+): Promise<{ data: BillingStats | null; error: Error | null }> {
+  try {
+    const supabase = createClient();
+
+    // Fetch transactions for this user
+    const { data: transactions, error: txError } = await supabase
+      .from("transactions")
+      .select("*")
+      .or(`requester_id.eq.${userId},collector_id.eq.${userId}`);
+
+    if (txError) {
+      return { data: null, error: new Error(txError.message) };
+    }
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    let totalSpent = 0;
+    let totalEarned = 0;
+    let pendingPayments = 0;
+    let thisMonthSpent = 0;
+    let thisMonthEarned = 0;
+
+    (transactions || []).forEach((tx) => {
+      const txDate = new Date(tx.created_at);
+      const isThisMonth = txDate >= startOfMonth && txDate <= endOfMonth;
+
+      if (tx.requester_id === userId) {
+        // User is paying
+        if (tx.status === "completed") {
+          totalSpent += parseFloat(tx.amount) + parseFloat(tx.platform_fee);
+          if (isThisMonth) {
+            thisMonthSpent += parseFloat(tx.amount) + parseFloat(tx.platform_fee);
+          }
+        } else if (tx.status === "pending") {
+          pendingPayments += parseFloat(tx.amount) + parseFloat(tx.platform_fee);
+        }
+      } else if (tx.collector_id === userId) {
+        // User is earning
+        if (tx.status === "completed") {
+          totalEarned += parseFloat(tx.amount);
+          if (isThisMonth) {
+            thisMonthEarned += parseFloat(tx.amount);
+          }
+        }
+      }
+    });
+
+    // Calculate upcoming bill (pending + estimated based on active projects)
+    const upcomingBill = pendingPayments;
+
+    // Get next billing date (end of current month for simplicity)
+    const nextBillingDate = endOfMonth.toISOString();
+
+    const stats: BillingStats = {
+      total_spent: totalSpent,
+      total_earned: totalEarned,
+      pending_payments: pendingPayments,
+      this_month_spent: thisMonthSpent,
+      this_month_earned: thisMonthEarned,
+      active_projects_cost: pendingPayments,
+      upcoming_bill: upcomingBill,
+      next_billing_date: nextBillingDate,
+    };
+
+    return { data: stats, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err : new Error("Failed to fetch billing stats"),
+    };
+  }
+}
+
+/**
+ * Get billing breakdown per project
+ */
+export async function getProjectBillings(
+  userId: string
+): Promise<{ data: ProjectBilling[] | null; error: Error | null }> {
+  try {
+    const supabase = createClient();
+
+    // Fetch user's projects
+    const { data: projects, error: projError } = await supabase
+      .from("requests")
+      .select("id, title")
+      .eq("requester_id", userId);
+
+    if (projError) {
+      return { data: null, error: new Error(projError.message) };
+    }
+
+    if (!projects || projects.length === 0) {
+      return { data: [], error: null };
+    }
+
+    // Fetch transactions for these projects
+    const { data: transactions, error: txError } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("requester_id", userId);
+
+    if (txError) {
+      return { data: null, error: new Error(txError.message) };
+    }
+
+    // Get submissions to map to projects
+    const { data: submissions, error: subError } = await supabase
+      .from("submissions")
+      .select("id, request_id")
+      .in(
+        "request_id",
+        projects.map((p) => p.id)
+      );
+
+    if (subError) {
+      return { data: null, error: new Error(subError.message) };
+    }
+
+    // Create submission to project mapping
+    const submissionToProject: Record<string, string> = {};
+    (submissions || []).forEach((sub) => {
+      submissionToProject[sub.id] = sub.request_id;
+    });
+
+    // Aggregate billing per project
+    const projectBillings: Record<string, ProjectBilling> = {};
+
+    projects.forEach((project) => {
+      projectBillings[project.id] = {
+        project_id: project.id,
+        project_title: project.title,
+        total_spent: 0,
+        submissions_paid: 0,
+        pending_payments: 0,
+        last_payment_date: null,
+      };
+    });
+
+    (transactions || []).forEach((tx) => {
+      if (tx.submission_id && submissionToProject[tx.submission_id]) {
+        const projectId = submissionToProject[tx.submission_id];
+        if (projectBillings[projectId]) {
+          const amount = parseFloat(tx.amount) + parseFloat(tx.platform_fee);
+          if (tx.status === "completed") {
+            projectBillings[projectId].total_spent += amount;
+            projectBillings[projectId].submissions_paid += 1;
+            if (
+              !projectBillings[projectId].last_payment_date ||
+              new Date(tx.completed_at) >
+                new Date(projectBillings[projectId].last_payment_date!)
+            ) {
+              projectBillings[projectId].last_payment_date = tx.completed_at;
+            }
+          } else if (tx.status === "pending") {
+            projectBillings[projectId].pending_payments += amount;
+          }
+        }
+      }
+    });
+
+    return { data: Object.values(projectBillings), error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to fetch project billings"),
+    };
+  }
+}
+
+/**
+ * Get usage data for charts (last 6 months)
+ */
+export async function getUsageData(
+  userId: string
+): Promise<{ data: UsageData[] | null; error: Error | null }> {
+  try {
+    const supabase = createClient();
+    const now = new Date();
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+
+    // Fetch transactions
+    const { data: transactions, error: txError } = await supabase
+      .from("transactions")
+      .select("*")
+      .or(`requester_id.eq.${userId},collector_id.eq.${userId}`)
+      .gte("created_at", sixMonthsAgo.toISOString());
+
+    if (txError) {
+      return { data: null, error: new Error(txError.message) };
+    }
+
+    // Fetch projects created
+    const { data: projects, error: projError } = await supabase
+      .from("requests")
+      .select("id, created_at")
+      .eq("requester_id", userId)
+      .gte("created_at", sixMonthsAgo.toISOString());
+
+    if (projError) {
+      return { data: null, error: new Error(projError.message) };
+    }
+
+    // Fetch submissions received
+    const { data: submissions, error: subError } = await supabase
+      .from("submissions")
+      .select("id, submitted_at, request_id")
+      .gte("submitted_at", sixMonthsAgo.toISOString());
+
+    // Filter submissions to only include those for user's projects
+    const userProjectIds =
+      projects?.map((p) => p.id) || [];
+    const userSubmissions =
+      submissions?.filter((s) => userProjectIds.includes(s.request_id)) || [];
+
+    // Generate monthly usage data
+    const usageData: UsageData[] = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+      const monthKey = monthStart.toISOString().slice(0, 7); // YYYY-MM
+
+      let amountSpent = 0;
+      let amountEarned = 0;
+
+      (transactions || []).forEach((tx) => {
+        const txDate = new Date(tx.created_at);
+        if (txDate >= monthStart && txDate <= monthEnd && tx.status === "completed") {
+          if (tx.requester_id === userId) {
+            amountSpent += parseFloat(tx.amount) + parseFloat(tx.platform_fee);
+          } else if (tx.collector_id === userId) {
+            amountEarned += parseFloat(tx.amount);
+          }
+        }
+      });
+
+      const projectsCreated = (projects || []).filter((p) => {
+        const pDate = new Date(p.created_at);
+        return pDate >= monthStart && pDate <= monthEnd;
+      }).length;
+
+      const submissionsReceived = userSubmissions.filter((s) => {
+        const sDate = new Date(s.submitted_at);
+        return sDate >= monthStart && sDate <= monthEnd;
+      }).length;
+
+      usageData.push({
+        date: monthKey,
+        projects_created: projectsCreated,
+        submissions_received: submissionsReceived,
+        amount_spent: amountSpent,
+        amount_earned: amountEarned,
+      });
+    }
+
+    return { data: usageData, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err : new Error("Failed to fetch usage data"),
+    };
+  }
+}
+
+/**
+ * Get invoices for a user
+ */
+export async function getInvoices(
+  userId: string
+): Promise<{ data: Invoice[] | null; error: Error | null }> {
+  try {
+    const supabase = createClient();
+
+    // Fetch completed transactions as invoices
+    const { data: transactions, error: txError } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("requester_id", userId)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (txError) {
+      return { data: null, error: new Error(txError.message) };
+    }
+
+    const invoices: Invoice[] = (transactions || []).map((tx, idx) => ({
+      id: tx.id,
+      user_id: tx.requester_id,
+      amount: parseFloat(tx.amount) + parseFloat(tx.platform_fee),
+      currency: tx.currency || "USD",
+      status: tx.status as "completed",
+      description: `Payment for submission`,
+      invoice_date: tx.created_at,
+      due_date: tx.created_at,
+      paid_at: tx.completed_at,
+      stripe_invoice_id: tx.stripe_payment_intent_id,
+    }));
+
+    return { data: invoices, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error("Failed to fetch invoices"),
+    };
+  }
+}
+
+/**
+ * Get subscription plans (static for now)
+ */
+export function getSubscriptionPlans(): SubscriptionPlan[] {
+  return [
+    {
+      id: "free",
+      name: "Free",
+      tier: "free",
+      price_monthly: 0,
+      price_yearly: 0,
+      features: [
+        "Up to 3 projects",
+        "Basic analytics",
+        "Community support",
+        "1 GB storage",
+      ],
+      max_projects: 3,
+      max_collectors: 10,
+      storage_gb: 1,
+      support_level: "Community",
+    },
+    {
+      id: "starter",
+      name: "Starter",
+      tier: "starter",
+      price_monthly: 29,
+      price_yearly: 290,
+      features: [
+        "Up to 10 projects",
+        "Advanced analytics",
+        "Email support",
+        "10 GB storage",
+        "API access",
+      ],
+      max_projects: 10,
+      max_collectors: 50,
+      storage_gb: 10,
+      support_level: "Email",
+    },
+    {
+      id: "professional",
+      name: "Professional",
+      tier: "professional",
+      price_monthly: 99,
+      price_yearly: 990,
+      features: [
+        "Unlimited projects",
+        "Real-time analytics",
+        "Priority support",
+        "100 GB storage",
+        "Advanced API",
+        "Custom integrations",
+      ],
+      max_projects: -1,
+      max_collectors: 500,
+      storage_gb: 100,
+      support_level: "Priority",
+    },
+    {
+      id: "enterprise",
+      name: "Enterprise",
+      tier: "enterprise",
+      price_monthly: 299,
+      price_yearly: 2990,
+      features: [
+        "Everything in Professional",
+        "Dedicated support",
+        "Unlimited storage",
+        "Custom SLA",
+        "On-premise option",
+        "White-label option",
+      ],
+      max_projects: -1,
+      max_collectors: -1,
+      storage_gb: -1,
+      support_level: "Dedicated",
+    },
+  ];
+}
+
+/**
+ * Simulate payment methods (would integrate with Stripe in production)
+ */
+export function getMockPaymentMethods(): PaymentMethod[] {
+  return [
+    {
+      id: "pm_1",
+      user_id: "",
+      type: "card",
+      last_four: "4242",
+      brand: "Visa",
+      exp_month: 12,
+      exp_year: 2027,
+      is_default: true,
+      created_at: new Date().toISOString(),
+    },
+  ];
+}
