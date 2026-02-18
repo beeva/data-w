@@ -78,7 +78,10 @@ export default function CollectorDashboard() {
 
   const userId = user?.id;
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
     const fetchData = async () => {
       setLoading(true);
