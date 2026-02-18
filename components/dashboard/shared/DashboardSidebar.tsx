@@ -458,8 +458,8 @@ export default function DashboardSidebar({
           )}
         >
           <Avatar className="w-8 h-8">
-            <AvatarImage src={profile?.avatar_url || "/avatars/man1.jpg"} alt={profile?.full_name || "User"} />
-            <AvatarFallback className="bg-cyan-100 dark:bg-cyan-900 text-cyan-700 dark:text-cyan-300 text-xs">
+            <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || "User"} />
+            <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white text-xs font-semibold">
               {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>
           </Avatar>
