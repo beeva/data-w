@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import SubmitProposalDialog from "./SubmitProposalDialog";
 import { cn } from "@/lib/utils";
-import { getProposalsByCollector } from "@/lib/services/proposalService";
+import { getProposalsByCollector, getAssignmentCountsByProjects } from "@/lib/services/proposalService";
 import type { Proposal } from "@/types/proposal";
 
 export default function FindProjects() {
@@ -58,6 +58,7 @@ export default function FindProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, Proposal>>({});
+  const [assignmentCounts, setAssignmentCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -90,8 +91,9 @@ export default function FindProjects() {
 
       if (projectsResult.error) throw projectsResult.error;
 
-      setProjects(projectsResult.data || []);
-      setFilteredProjects(projectsResult.data || []);
+      const allProjects = projectsResult.data || [];
+      setProjects(allProjects);
+      setFilteredProjects(allProjects);
 
       if (proposalsResult.data && userId) {
         const statusMap: Record<string, Proposal> = {};
@@ -99,6 +101,13 @@ export default function FindProjects() {
           statusMap[proposal.request_id] = proposal;
         });
         setProposalStatuses(statusMap);
+      }
+
+      if (allProjects.length > 0) {
+        const { data: counts } = await getAssignmentCountsByProjects(
+          allProjects.map((p) => p.id)
+        );
+        setAssignmentCounts(counts || {});
       }
     } catch (err: any) {
       setError(err.message || "Failed to load projects");
@@ -456,7 +465,12 @@ export default function FindProjects() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Available Projects</p>
-                <p className="text-2xl font-bold text-foreground">{filteredProjects.length}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {filteredProjects.filter((p) => (assignmentCounts[p.id] || 0) < p.max_collectors).length}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {filteredProjects.length} total open
+                </p>
               </div>
             </div>
           </CardContent>
@@ -471,7 +485,10 @@ export default function FindProjects() {
               <div>
                 <p className="text-sm text-muted-foreground">Total Budget Available</p>
                 <p className="text-2xl font-bold text-foreground">
-                  ${filteredProjects.reduce((sum, p) => sum + p.budget, 0).toFixed(0)}
+                  ${filteredProjects
+                    .filter((p) => (assignmentCounts[p.id] || 0) < p.max_collectors)
+                    .reduce((sum, p) => sum + p.budget, 0)
+                    .toLocaleString()}
                 </p>
               </div>
             </div>
@@ -485,9 +502,15 @@ export default function FindProjects() {
                 <Users className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Collector Slots</p>
+                <p className="text-sm text-muted-foreground">Open Collector Slots</p>
                 <p className="text-2xl font-bold text-foreground">
-                  {filteredProjects.reduce((sum, p) => sum + p.max_collectors, 0)}
+                  {filteredProjects.reduce(
+                    (sum, p) => sum + Math.max(p.max_collectors - (assignmentCounts[p.id] || 0), 0),
+                    0
+                  )}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {filteredProjects.reduce((sum, p) => sum + p.max_collectors, 0)} total
                 </p>
               </div>
             </div>

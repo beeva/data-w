@@ -478,3 +478,37 @@ export async function getAssignmentsByProject(
     };
   }
 }
+
+/**
+ * Get assignment counts for multiple projects in a single query
+ */
+export async function getAssignmentCountsByProjects(
+  projectIds: string[]
+): Promise<{ data: Record<string, number>; error: Error | null }> {
+  if (projectIds.length === 0) return { data: {}, error: null };
+
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("collector_assignments")
+      .select("request_id")
+      .in("request_id", projectIds)
+      .eq("status", "active");
+
+    if (error) {
+      return { data: {}, error: new Error(error.message) };
+    }
+
+    const counts: Record<string, number> = {};
+    (data || []).forEach((row) => {
+      counts[row.request_id] = (counts[row.request_id] || 0) + 1;
+    });
+
+    return { data: counts, error: null };
+  } catch (err) {
+    return {
+      data: {},
+      error: err instanceof Error ? err : new Error("Failed to fetch assignment counts"),
+    };
+  }
+}

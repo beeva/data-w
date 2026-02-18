@@ -37,9 +37,8 @@ export default function ActiveProjectsList() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [hasFetched, setHasFetched] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [projectStats, setProjectStats] = useState<Record<string, {
@@ -77,17 +76,18 @@ export default function ActiveProjectsList() {
       console.error("Error fetching projects:", err);
     } finally {
       setLoading(false);
-      setHasFetched(true);
     }
   };
 
   useEffect(() => {
-    if (!authLoading && userId && !hasFetched) {
-      fetchProjects();
-    } else if (!authLoading && !userId) {
+    if (authLoading) return;
+
+    if (!userId) {
       setLoading(false);
-      setHasFetched(true);
+      return;
     }
+
+    fetchProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, authLoading]);
 
@@ -263,7 +263,7 @@ export default function ActiveProjectsList() {
   const completedProjects = projects.filter(p => p.status === "completed");
   const cancelledProjects = projects.filter(p => p.status === "cancelled");
 
-  if (loading || (authLoading && !hasFetched)) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
