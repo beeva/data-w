@@ -9,14 +9,15 @@ import AccountSettings from "@/components/dashboard/shared/AccountSettings";
 export default function SettingsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const userId = user?.id;
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !userId) {
       router.replace("/login");
     }
-  }, [user, loading, router]);
+  }, [userId, loading, router]);
 
-  if (!loading && !user) {
+  if (!loading && !userId) {
     return null;
   }
 

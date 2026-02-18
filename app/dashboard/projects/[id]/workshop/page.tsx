@@ -11,14 +11,15 @@ export default function WorkshopPage() {
   const router = useRouter();
   const params = useParams();
   const projectId = params.id as string;
+  const userId = user?.id;
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !userId) {
       router.replace("/login");
     }
-  }, [user, loading, router]);
+  }, [userId, loading, router]);
 
-  if (!loading && !user) {
+  if (!loading && !userId) {
     return null;
   }
 

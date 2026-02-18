@@ -53,8 +53,10 @@ export default function ActiveProjectsList() {
     pendingPayment: number;
   }>>({});
 
+  const userId = user?.id;
+
   const fetchProjects = async () => {
-    if (!user) {
+    if (!userId) {
       setLoading(false);
       return;
     }
@@ -63,7 +65,7 @@ export default function ActiveProjectsList() {
       setLoading(true);
       setError("");
 
-      const { data, error: fetchError } = await getProjectsByRequester(user.id);
+      const { data, error: fetchError } = await getProjectsByRequester(userId);
 
       if (fetchError) {
         throw fetchError;
@@ -80,14 +82,14 @@ export default function ActiveProjectsList() {
   };
 
   useEffect(() => {
-    if (!authLoading && user && !hasFetched) {
+    if (!authLoading && userId && !hasFetched) {
       fetchProjects();
-    } else if (!authLoading && !user) {
+    } else if (!authLoading && !userId) {
       setLoading(false);
       setHasFetched(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, authLoading]);
+  }, [userId, authLoading]);
 
   // Fetch real submission stats for all projects
   useEffect(() => {

@@ -185,10 +185,10 @@ export default function SubmitPage() {
   }, [project?.id, user?.id]);
 
   useEffect(() => {
-    if (project && user) {
+    if (project && userId) {
       fetchSubmissions();
     }
-  }, [project, user, fetchSubmissions]);
+  }, [project, userId, fetchSubmissions]);
 
   const toggleSubmissionFiles = async (submissionId: string) => {
     if (expandedSubmission === submissionId) {
