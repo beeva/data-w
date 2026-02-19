@@ -34,10 +34,7 @@ import {
   FileText,
   Film,
   Music,
-  Download,
   ExternalLink,
-  ThumbsUp,
-  ThumbsDown,
   ShieldCheck,
   ShieldAlert,
   ScanSearch,
@@ -51,6 +48,8 @@ interface SubmissionRow {
   validated_at: string | null;
   validation_score: number | null;
   metadata: any;
+  agent_validated: boolean;
+  agent_validated_at: string | null;
   project_id: string;
   project_title: string;
   project_category: string;
@@ -60,6 +59,7 @@ interface SubmissionRow {
   collector_email: string;
   collector_avatar: string | null;
   validator_name: string | null;
+  agent_name: string | null;
   files_count: number;
 }
 
@@ -132,7 +132,6 @@ export default function AgentDashboard() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [itemsMap, setItemsMap] = useState<Record<string, DataItemRow[]>>({});
   const [loadingItems, setLoadingItems] = useState<string | null>(null);
-  const [processingId, setProcessingId] = useState<string | null>(null);
   const [validatingId, setValidatingId] = useState<string | null>(null);
   const [aiResults, setAiResults] = useState<Record<string, AiValidationResult>>({});
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -179,27 +178,6 @@ export default function AgentDashboard() {
       } finally {
         setLoadingItems(null);
       }
-    }
-  };
-
-  const handleValidate = async (submissionId: string, approve: boolean) => {
-    if (!userId) return;
-    setProcessingId(submissionId);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.rpc("agent_validate_submission", {
-        p_agent_id: userId,
-        p_submission_id: submissionId,
-        p_status: approve ? "validated" : "rejected",
-        p_score: approve ? 100 : 0,
-      });
-      if (error) throw error;
-      setToast({ message: approve ? "Submission approved!" : "Submission rejected.", type: "success" });
-      fetchData();
-    } catch (err: any) {
-      setToast({ message: err.message || "Failed to validate", type: "error" });
-    } finally {
-      setProcessingId(null);
     }
   };
 
@@ -253,20 +231,19 @@ export default function AgentDashboard() {
       const result: AiValidationResult = await res.json();
       setAiResults((prev) => ({ ...prev, [submissionId]: result }));
 
+      const supabase = createClient();
+      await supabase.rpc("agent_validate_submission", {
+        p_agent_id: userId,
+        p_submission_id: submissionId,
+        p_passed: !result.has_ai_content,
+      });
+
       if (result.has_ai_content) {
-        // Auto-reject if AI content detected
-        const supabase = createClient();
-        await supabase.rpc("agent_validate_submission", {
-          p_agent_id: userId,
-          p_submission_id: submissionId,
-          p_status: "rejected",
-          p_score: 0,
-        });
         setToast({ message: "AI-generated content detected — submission auto-rejected", type: "error" });
-        fetchData();
       } else {
-        setToast({ message: "Validation passed — no AI-generated content detected", type: "success" });
+        setToast({ message: "Validation passed — awaiting requester approval", type: "success" });
       }
+      fetchData();
 
       // Expand to show detail
       setExpandedId(submissionId);
@@ -444,7 +421,6 @@ export default function AgentDashboard() {
                       <th className="text-left py-2.5 px-3 text-[11px] font-medium text-muted-foreground">Submitted</th>
                       <th className="text-left py-2.5 px-3 text-[11px] font-medium text-muted-foreground">Status</th>
                       <th className="text-center py-2.5 px-3 text-[11px] font-medium text-muted-foreground">AI Check</th>
-                      <th className="text-center py-2.5 px-3 text-[11px] font-medium text-muted-foreground">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -452,7 +428,6 @@ export default function AgentDashboard() {
                       const isExpanded = expandedId === sub.id;
                       const items = itemsMap[sub.id];
                       const isLoadingFiles = loadingItems === sub.id;
-                      const isProcessing = processingId === sub.id;
                       const cfg = STATUS_CONFIG[sub.status] || STATUS_CONFIG.pending;
                       const notes = sub.metadata?.notes || null;
 
@@ -500,9 +475,17 @@ export default function AgentDashboard() {
                               </Badge>
                             </td>
                             <td className="py-3 px-3">
-                              <div className="flex items-center justify-center">
-                                {sub.status !== "pending" ? (
-                                  <span className="text-[10px] text-muted-foreground">—</span>
+                              <div className="flex items-center justify-center gap-1">
+                                {sub.agent_validated && sub.status === "rejected" && !aiResults[sub.id] ? (
+                                  <Badge variant="secondary" className="bg-red-500/20 text-red-600 text-[9px] gap-0.5">
+                                    <ShieldAlert className="w-3 h-3" />
+                                    AI Rejected
+                                  </Badge>
+                                ) : sub.agent_validated && sub.status !== "rejected" ? (
+                                  <Badge variant="secondary" className="bg-green-500/20 text-green-600 text-[9px] gap-0.5">
+                                    <ShieldCheck className="w-3 h-3" />
+                                    Pass
+                                  </Badge>
                                 ) : validatingId === sub.id ? (
                                   <Loader2 className="w-4 h-4 animate-spin text-cyan-500" />
                                 ) : aiResults[sub.id] ? (
@@ -517,7 +500,7 @@ export default function AgentDashboard() {
                                       AI Found
                                     </Badge>
                                   )
-                                ) : (
+                                ) : sub.status === "pending" ? (
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -529,37 +512,8 @@ export default function AgentDashboard() {
                                     <ScanSearch className="w-3 h-3" />
                                     Validate
                                   </Button>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-3 px-3">
-                              <div className="flex items-center justify-center gap-1">
-                                {sub.status === "pending" ? (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      className="h-6 w-6 p-0 bg-green-600 hover:bg-green-700 text-white"
-                                      onClick={(e) => { e.stopPropagation(); handleValidate(sub.id, true); }}
-                                      disabled={isProcessing}
-                                      title="Approve"
-                                    >
-                                      {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsUp className="w-3 h-3" />}
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-6 w-6 p-0 border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                                      onClick={(e) => { e.stopPropagation(); handleValidate(sub.id, false); }}
-                                      disabled={isProcessing}
-                                      title="Reject"
-                                    >
-                                      {isProcessing ? <Loader2 className="w-3 h-3 animate-spin" /> : <ThumbsDown className="w-3 h-3" />}
-                                    </Button>
-                                  </>
                                 ) : (
-                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                    {sub.validator_name || "—"}
-                                  </span>
+                                  <span className="text-[10px] text-muted-foreground">—</span>
                                 )}
                                 <button
                                   onClick={(e) => { e.stopPropagation(); toggleExpand(sub.id); }}
@@ -575,7 +529,7 @@ export default function AgentDashboard() {
                           {/* Expanded detail row */}
                           {isExpanded && (
                             <tr>
-                              <td colSpan={8} className="p-0">
+                              <td colSpan={7} className="p-0">
                                 <div className="bg-gray-50/80 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700 p-4 space-y-3">
                                   {/* Notes */}
                                   {notes && (

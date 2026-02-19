@@ -23,6 +23,9 @@ export interface Submission {
   submitted_at: string;
   validated_at: string | null;
   validator_id: string | null;
+  agent_validated: boolean;
+  agent_validated_at: string | null;
+  agent_id: string | null;
   metadata: SubmissionMetadata | null;
   created_at: string;
   updated_at: string;

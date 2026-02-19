@@ -300,6 +300,9 @@ CREATE TABLE submissions (
   submitted_at TIMESTAMPTZ DEFAULT NOW(),
   validated_at TIMESTAMPTZ,
   validator_id UUID REFERENCES profiles(id),
+  agent_validated BOOLEAN DEFAULT FALSE,
+  agent_validated_at TIMESTAMPTZ,
+  agent_id UUID REFERENCES profiles(id),
   metadata JSONB, -- {device_info, gps_data, timestamp, etc.}
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -628,7 +631,7 @@ BEGIN
       SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json)
       FROM (
         SELECT s.id, s.status, s.submitted_at, s.validation_score, s.validated_at,
-               s.metadata,
+               s.metadata, s.agent_validated, s.agent_validated_at,
                r.id AS project_id,
                r.title AS project_title,
                r.category AS project_category,
@@ -638,11 +641,13 @@ BEGIN
                cp.email AS collector_email,
                cp.avatar_url AS collector_avatar,
                vp.full_name AS validator_name,
+               ap.full_name AS agent_name,
                (SELECT count(*) FROM data_items di WHERE di.submission_id = s.id) AS files_count
         FROM submissions s
         JOIN requests r  ON r.id = s.request_id
         JOIN profiles cp ON cp.id = s.collector_id
         LEFT JOIN profiles vp ON vp.id = s.validator_id
+        LEFT JOIN profiles ap ON ap.id = s.agent_id
         WHERE (p_status_filter = 'all' OR s.status = p_status_filter)
         ORDER BY
           CASE s.status WHEN 'pending' THEN 0 ELSE 1 END,
@@ -656,12 +661,11 @@ BEGIN
 END;
 $$;
 
--- Agent: validate a submission (approve or reject, bypasses RLS)
+-- Agent: mark submission as agent-validated (pass) or auto-reject (fail)
 CREATE OR REPLACE FUNCTION agent_validate_submission(
   p_agent_id uuid,
   p_submission_id uuid,
-  p_status text,
-  p_score integer DEFAULT NULL
+  p_passed boolean
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -672,16 +676,23 @@ BEGIN
     RAISE EXCEPTION 'Access denied: agent only';
   END IF;
 
-  IF p_status NOT IN ('validated', 'rejected') THEN
-    RAISE EXCEPTION 'Invalid status: must be validated or rejected';
+  IF p_passed THEN
+    UPDATE submissions
+    SET agent_validated = TRUE,
+        agent_validated_at = NOW(),
+        agent_id = p_agent_id
+    WHERE id = p_submission_id;
+  ELSE
+    UPDATE submissions
+    SET agent_validated = TRUE,
+        agent_validated_at = NOW(),
+        agent_id = p_agent_id,
+        status = 'rejected',
+        validation_score = 0,
+        validator_id = p_agent_id,
+        validated_at = NOW()
+    WHERE id = p_submission_id;
   END IF;
-
-  UPDATE submissions
-  SET status = p_status,
-      validator_id = p_agent_id,
-      validation_score = COALESCE(p_score, CASE WHEN p_status = 'validated' THEN 100 ELSE 0 END),
-      validated_at = NOW()
-  WHERE id = p_submission_id;
 END;
 $$;
 

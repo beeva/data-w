@@ -679,7 +679,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
                                           {notes}
                                         </TableCell>
                                         <TableCell className="text-right pr-4">
-                                          {submission.status === "pending" && (
+                                          {submission.status === "pending" && submission.agent_validated && (
                                             <div className="flex flex-wrap gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
                                               <Button
                                                 size="sm"
@@ -709,6 +709,12 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
                                                 Reject
                                               </Button>
                                             </div>
+                                          )}
+                                          {submission.status === "pending" && !submission.agent_validated && (
+                                            <Badge variant="secondary" className="text-[9px] bg-yellow-500/15 text-yellow-600">
+                                              <Clock className="w-3 h-3 mr-0.5" />
+                                              Awaiting Validation
+                                            </Badge>
                                           )}
                                           {submission.status !== "pending" && (
                                             <Badge variant="outline" className="text-[9px]">
