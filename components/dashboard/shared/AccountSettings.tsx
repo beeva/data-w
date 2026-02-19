@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import ToastNotification from "@/components/ui/toast-notification";
 import {
   User,
   Mail,
@@ -35,6 +36,9 @@ import {
   Camera,
   Trash2,
   Upload,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface FormData {
@@ -51,13 +55,26 @@ interface FormData {
 }
 
 export default function AccountSettings() {
-  const { user, profile, loading: authLoading, refreshProfile } = useAuth();
+  const { user, profile, loading: authLoading, refreshProfile, signOut } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [passwordData, setPasswordData] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordToast, setPasswordToast] = useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     full_name: "",
@@ -231,6 +248,89 @@ export default function AccountSettings() {
     }
   };
 
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
+    setPasswordSuccess(false);
+    setPasswordError("");
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setPasswordError("");
+    setPasswordSuccess(false);
+
+    if (!passwordData.current_password) {
+      setPasswordError("Current password is required");
+      return;
+    }
+    if (passwordData.new_password.length < 6) {
+      setPasswordError("New password must be at least 6 characters");
+      return;
+    }
+    if (passwordData.new_password !== passwordData.confirm_password) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
+
+    setPasswordLoading(true);
+
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+      // Step 1: Verify current password via REST (no client side effects)
+      const verifyRes = await fetch(
+        `${supabaseUrl}/auth/v1/token?grant_type=password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: supabaseKey },
+          body: JSON.stringify({
+            email: user.email,
+            password: passwordData.current_password,
+          }),
+        }
+      );
+
+      if (!verifyRes.ok) {
+        throw new Error("Current password is incorrect");
+      }
+
+      const { access_token } = await verifyRes.json();
+
+      // Step 2: Update password via REST using the token (no client side effects)
+      const updateRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: supabaseKey,
+          Authorization: `Bearer ${access_token}`,
+        },
+        body: JSON.stringify({ password: passwordData.new_password }),
+      });
+
+      if (!updateRes.ok) {
+        const err = await updateRes.json().catch(() => null);
+        throw new Error(err?.msg || err?.message || "Failed to update password");
+      }
+
+      setPasswordLoading(false);
+      setPasswordToast(true);
+
+      setTimeout(async () => {
+        await signOut();
+        router.replace("/login");
+      }, 2000);
+      return;
+    } catch (err: any) {
+      setPasswordError(err.message || "Failed to change password");
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
   const getVerificationBadge = (tier: string | null) => {
     const colors: Record<string, string> = {
       bronze: "bg-amber-600",
@@ -290,6 +390,15 @@ export default function AccountSettings() {
   }
 
   return (
+    <>
+    {passwordToast && (
+      <ToastNotification
+        message="Password changed successfully. Signing out..."
+        type="success"
+        duration={2500}
+        onClose={() => setPasswordToast(false)}
+      />
+    )}
     <div className="space-y-2 p-2">
       <div className="flex items-center justify-between">
         <div>
@@ -685,6 +794,149 @@ export default function AccountSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Change Password */}
+      <form onSubmit={handlePasswordSubmit}>
+        <Card className="dark:bg-gray-800/50 border-none">
+          <CardHeader className="py-2 px-3">
+            <CardTitle className="text-xs font-semibold flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              Change Password
+            </CardTitle>
+            <CardDescription className="text-[10px]">
+              Update your account password
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 py-1.5 px-3">
+            {passwordError && (
+              <div className="p-1.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-600 dark:text-red-400 text-[10px]">
+                {passwordError}
+              </div>
+            )}
+
+            {passwordSuccess && (
+              <div className="p-1.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-green-600 dark:text-green-400 text-[10px] flex items-center gap-1">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                Password changed successfully!
+              </div>
+            )}
+
+            <div className="space-y-0.5">
+              <Label htmlFor="current_password" className="text-[10px]">
+                Current Password
+              </Label>
+              <div className="relative">
+                <Input
+                  id="current_password"
+                  name="current_password"
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={passwordData.current_password}
+                  onChange={handlePasswordChange}
+                  placeholder="Enter current password"
+                  className="h-7 text-[11px] pr-8"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-7 w-7 p-0"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff className="w-3 h-3 text-muted-foreground" />
+                  ) : (
+                    <Eye className="w-3 h-3 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="new_password" className="text-[10px]">
+                  New Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="new_password"
+                    name="new_password"
+                    type={showNewPassword ? "text" : "password"}
+                    value={passwordData.new_password}
+                    onChange={handlePasswordChange}
+                    placeholder="At least 6 characters"
+                    className="h-7 text-[11px] pr-8"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-7 w-7 p-0"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="w-3 h-3 text-muted-foreground" />
+                    ) : (
+                      <Eye className="w-3 h-3 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-0.5">
+                <Label htmlFor="confirm_password" className="text-[10px]">
+                  Confirm New Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirm_password"
+                    name="confirm_password"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={passwordData.confirm_password}
+                    onChange={handlePasswordChange}
+                    placeholder="Re-enter new password"
+                    className="h-7 text-[11px] pr-8"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-7 w-7 p-0"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-3 h-3 text-muted-foreground" />
+                    ) : (
+                      <Eye className="w-3 h-3 text-muted-foreground" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1.5">
+              <Button
+                type="submit"
+                disabled={passwordLoading}
+                size="sm"
+                className="h-6 text-[10px] px-3"
+              >
+                {passwordLoading ? (
+                  <>
+                    <Loader2 className="w-2.5 h-2.5 mr-1 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Lock className="w-2.5 h-2.5 mr-1" />
+                    Change Password
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </form>
     </div>
+    </>
   );
 }

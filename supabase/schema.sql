@@ -590,3 +590,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Verify the current user's password server-side (no session side effects)
+CREATE OR REPLACE FUNCTION verify_user_password(password text)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1
+    FROM auth.users
+    WHERE id = auth.uid()
+      AND encrypted_password = crypt(password, encrypted_password)
+  );
+END;
+$$;
+
