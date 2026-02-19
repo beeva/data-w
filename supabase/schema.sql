@@ -606,8 +606,8 @@ BEGIN
 END;
 $$;
 
--- Agent: fetch dashboard data (stats + pending submissions, bypasses RLS for joins)
-CREATE OR REPLACE FUNCTION get_agent_dashboard(p_agent_id uuid)
+-- Agent: fetch dashboard data (stats + all submissions, bypasses RLS for joins)
+CREATE OR REPLACE FUNCTION get_agent_dashboard(p_agent_id uuid, p_status_filter text DEFAULT 'all')
 RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -624,27 +624,88 @@ BEGIN
     'validatedToday',  (SELECT count(*) FROM submissions WHERE status IN ('validated','rejected') AND validator_id = p_agent_id AND validated_at::date = CURRENT_DATE),
     'totalValidations',(SELECT count(*) FROM submissions WHERE validator_id = p_agent_id AND status IN ('validated','rejected')),
     'accuracyScore',   (SELECT COALESCE(p.validation_score, 0) FROM profiles p WHERE p.id = p_agent_id),
-    'pendingSubmissions', (
+    'submissions', (
       SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json)
       FROM (
-        SELECT s.id, s.status, s.submitted_at, s.validation_score,
-               r.title  AS project_title,
+        SELECT s.id, s.status, s.submitted_at, s.validation_score, s.validated_at,
+               s.metadata,
+               r.id AS project_id,
+               r.title AS project_title,
                r.category AS project_category,
+               r.budget AS project_budget,
+               cp.id AS collector_id,
                cp.full_name AS collector_name,
                cp.email AS collector_email,
                cp.avatar_url AS collector_avatar,
+               vp.full_name AS validator_name,
                (SELECT count(*) FROM data_items di WHERE di.submission_id = s.id) AS files_count
         FROM submissions s
         JOIN requests r  ON r.id = s.request_id
         JOIN profiles cp ON cp.id = s.collector_id
-        WHERE s.status = 'pending'
-        ORDER BY s.submitted_at DESC
-        LIMIT 20
+        LEFT JOIN profiles vp ON vp.id = s.validator_id
+        WHERE (p_status_filter = 'all' OR s.status = p_status_filter)
+        ORDER BY
+          CASE s.status WHEN 'pending' THEN 0 ELSE 1 END,
+          s.submitted_at DESC
+        LIMIT 100
       ) t
     )
   ) INTO result;
 
   RETURN result;
+END;
+$$;
+
+-- Agent: validate a submission (approve or reject, bypasses RLS)
+CREATE OR REPLACE FUNCTION agent_validate_submission(
+  p_agent_id uuid,
+  p_submission_id uuid,
+  p_status text,
+  p_score integer DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = p_agent_id AND role = 'agent') THEN
+    RAISE EXCEPTION 'Access denied: agent only';
+  END IF;
+
+  IF p_status NOT IN ('validated', 'rejected') THEN
+    RAISE EXCEPTION 'Invalid status: must be validated or rejected';
+  END IF;
+
+  UPDATE submissions
+  SET status = p_status,
+      validator_id = p_agent_id,
+      validation_score = COALESCE(p_score, CASE WHEN p_status = 'validated' THEN 100 ELSE 0 END),
+      validated_at = NOW()
+  WHERE id = p_submission_id;
+END;
+$$;
+
+-- Agent: get data items for a submission (bypasses RLS)
+CREATE OR REPLACE FUNCTION agent_get_submission_items(p_agent_id uuid, p_submission_id uuid)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = p_agent_id AND role = 'agent') THEN
+    RAISE EXCEPTION 'Access denied: agent only';
+  END IF;
+
+  RETURN (
+    SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json)
+    FROM (
+      SELECT di.id, di.file_url, di.file_type, di.file_name, di.file_size,
+             di.mime_type, di.thumbnail_url, di.metadata, di.created_at
+      FROM data_items di
+      WHERE di.submission_id = p_submission_id
+      ORDER BY di.created_at ASC
+    ) t
+  );
 END;
 $$;
 
