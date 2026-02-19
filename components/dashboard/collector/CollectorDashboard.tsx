@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOpenProjects } from "@/lib/services/projectService";
-import { getProposalsByCollector, getAssignmentsByCollector } from "@/lib/services/proposalService";
+import { getProposalsByCollector, getAssignmentsByCollector, getAssignmentCountsByProjects } from "@/lib/services/proposalService";
 import type { Project } from "@/types/project";
 import type { Proposal } from "@/types/proposal";
 import {
@@ -68,6 +68,7 @@ export default function CollectorDashboard() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [proposalStatuses, setProposalStatuses] = useState<Record<string, Proposal>>({});
+  const [assignmentCounts, setAssignmentCounts] = useState<Record<string, number>>({});
   const [activeAssignments, setActiveAssignments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [maxDistance, setMaxDistance] = useState<number>(0); // 0 = all
@@ -92,7 +93,8 @@ export default function CollectorDashboard() {
           getAssignmentsByCollector(userId),
         ]);
 
-        setProjects(projectsRes.data || []);
+        const allProjects = projectsRes.data || [];
+        setProjects(allProjects);
         setActiveAssignments((assignmentsRes.data || []).length);
 
         if (proposalsRes.data) {
@@ -101,6 +103,13 @@ export default function CollectorDashboard() {
             map[p.request_id] = p;
           });
           setProposalStatuses(map);
+        }
+
+        if (allProjects.length > 0) {
+          const { data: counts } = await getAssignmentCountsByProjects(
+            allProjects.map((p) => p.id)
+          );
+          setAssignmentCounts(counts || {});
         }
       } catch (err) {
         console.error("Error loading dashboard:", err);
@@ -345,6 +354,7 @@ export default function CollectorDashboard() {
                 const rawKm = getRawDistanceKm(project);
                 const distance = rawKm !== null ? formatDistance(rawKm) : null;
                 const proposal = proposalStatuses[project.id];
+                const slotsFilled = (assignmentCounts[project.id] || 0) >= (project.max_collectors || 1);
 
                 return (
                   <div
@@ -416,11 +426,14 @@ export default function CollectorDashboard() {
                             Submitted<br />
                             {new Date(proposal.submitted_at).toLocaleDateString()}
                           </p>
+                        ) : slotsFilled ? (
+                          <Badge variant="secondary" className="text-[10px] bg-gray-500/20 text-gray-400">
+                            Slots Full
+                          </Badge>
                         ) : (
                           <SubmitProposalDialog
                             project={project}
                             onSuccess={() => {
-                              // Refresh proposals
                               if (user) {
                                 getProposalsByCollector(user.id).then((res) => {
                                   if (res.data) {

@@ -538,6 +538,7 @@ export default function FindProjects() {
           {filteredProjects.map((project) => {
             const CategoryIcon = getCategoryIcon(project.category);
             const proposal = proposalStatuses[project.id];
+            const slotsFilled = (assignmentCounts[project.id] || 0) >= (project.max_collectors || 1);
             
             const getStatusBadge = () => {
               if (!proposal) return null;
@@ -637,6 +638,10 @@ export default function FindProjects() {
                             Submitted {new Date(proposal.submitted_at).toLocaleDateString()}
                           </p>
                         </div>
+                      ) : slotsFilled ? (
+                        <Badge variant="secondary" className="text-[10px] bg-gray-500/20 text-gray-400">
+                          Slots Full
+                        </Badge>
                       ) : (
                         <SubmitProposalDialog
                           project={project}
