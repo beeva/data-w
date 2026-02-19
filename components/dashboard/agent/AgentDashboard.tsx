@@ -38,6 +38,9 @@ import {
   ExternalLink,
   ThumbsUp,
   ThumbsDown,
+  ShieldCheck,
+  ShieldAlert,
+  ScanSearch,
 } from "lucide-react";
 import ToastNotification from "@/components/ui/toast-notification";
 
@@ -80,6 +83,20 @@ interface AgentData {
   submissions: SubmissionRow[];
 }
 
+interface AiFileResult {
+  id: string;
+  file_name: string;
+  is_ai_generated: boolean;
+  confidence: number;
+  reasons: string[];
+}
+
+interface AiValidationResult {
+  has_ai_content: boolean;
+  overall_pass: boolean;
+  files: AiFileResult[];
+}
+
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   pending: { color: "bg-yellow-500/20 text-yellow-600", label: "Pending" },
   validated: { color: "bg-green-500/20 text-green-600", label: "Approved" },
@@ -116,6 +133,8 @@ export default function AgentDashboard() {
   const [itemsMap, setItemsMap] = useState<Record<string, DataItemRow[]>>({});
   const [loadingItems, setLoadingItems] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [validatingId, setValidatingId] = useState<string | null>(null);
+  const [aiResults, setAiResults] = useState<Record<string, AiValidationResult>>({});
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -181,6 +200,80 @@ export default function AgentDashboard() {
       setToast({ message: err.message || "Failed to validate", type: "error" });
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleAiValidate = async (submissionId: string) => {
+    if (!userId) return;
+
+    // Need the files first — load them if not cached
+    let files = itemsMap[submissionId];
+    if (!files) {
+      try {
+        setLoadingItems(submissionId);
+        const supabase = createClient();
+        const { data: items, error } = await supabase.rpc("agent_get_submission_items", {
+          p_agent_id: userId,
+          p_submission_id: submissionId,
+        });
+        if (error) throw error;
+        files = (items as DataItemRow[]) || [];
+        setItemsMap((prev) => ({ ...prev, [submissionId]: files }));
+      } catch (err: any) {
+        setToast({ message: "Failed to load files for validation", type: "error" });
+        return;
+      } finally {
+        setLoadingItems(null);
+      }
+    }
+
+    if (files.length === 0) {
+      setToast({ message: "No files to validate", type: "error" });
+      return;
+    }
+
+    setValidatingId(submissionId);
+    try {
+      const res = await fetch("/api/validate-ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          files: files.map((f) => ({
+            id: f.id,
+            file_url: f.file_url,
+            file_type: f.file_type,
+            file_name: f.file_name,
+            file_size: f.file_size,
+          })),
+        }),
+      });
+
+      if (!res.ok) throw new Error("AI validation request failed");
+
+      const result: AiValidationResult = await res.json();
+      setAiResults((prev) => ({ ...prev, [submissionId]: result }));
+
+      if (result.has_ai_content) {
+        // Auto-reject if AI content detected
+        const supabase = createClient();
+        await supabase.rpc("agent_validate_submission", {
+          p_agent_id: userId,
+          p_submission_id: submissionId,
+          p_status: "rejected",
+          p_score: 0,
+        });
+        setToast({ message: "AI-generated content detected — submission auto-rejected", type: "error" });
+        fetchData();
+      } else {
+        setToast({ message: "Validation passed — no AI-generated content detected", type: "success" });
+      }
+
+      // Expand to show detail
+      setExpandedId(submissionId);
+    } catch (err: any) {
+      setToast({ message: err.message || "AI validation failed", type: "error" });
+    } finally {
+      setValidatingId(null);
     }
   };
 
@@ -350,6 +443,7 @@ export default function AgentDashboard() {
                       <th className="text-center py-2.5 px-3 text-[11px] font-medium text-muted-foreground">Files</th>
                       <th className="text-left py-2.5 px-3 text-[11px] font-medium text-muted-foreground">Submitted</th>
                       <th className="text-left py-2.5 px-3 text-[11px] font-medium text-muted-foreground">Status</th>
+                      <th className="text-center py-2.5 px-3 text-[11px] font-medium text-muted-foreground">AI Check</th>
                       <th className="text-center py-2.5 px-3 text-[11px] font-medium text-muted-foreground">Actions</th>
                     </tr>
                   </thead>
@@ -406,6 +500,39 @@ export default function AgentDashboard() {
                               </Badge>
                             </td>
                             <td className="py-3 px-3">
+                              <div className="flex items-center justify-center">
+                                {sub.status !== "pending" ? (
+                                  <span className="text-[10px] text-muted-foreground">—</span>
+                                ) : validatingId === sub.id ? (
+                                  <Loader2 className="w-4 h-4 animate-spin text-cyan-500" />
+                                ) : aiResults[sub.id] ? (
+                                  aiResults[sub.id].overall_pass ? (
+                                    <Badge variant="secondary" className="bg-green-500/20 text-green-600 text-[9px] gap-0.5">
+                                      <ShieldCheck className="w-3 h-3" />
+                                      Pass
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary" className="bg-red-500/20 text-red-600 text-[9px] gap-0.5">
+                                      <ShieldAlert className="w-3 h-3" />
+                                      AI Found
+                                    </Badge>
+                                  )
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 text-[10px] px-2 gap-1"
+                                    onClick={(e) => { e.stopPropagation(); handleAiValidate(sub.id); }}
+                                    disabled={!!validatingId}
+                                    title="Check for AI-generated content"
+                                  >
+                                    <ScanSearch className="w-3 h-3" />
+                                    Validate
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3 px-3">
                               <div className="flex items-center justify-center gap-1">
                                 {sub.status === "pending" ? (
                                   <>
@@ -448,7 +575,7 @@ export default function AgentDashboard() {
                           {/* Expanded detail row */}
                           {isExpanded && (
                             <tr>
-                              <td colSpan={7} className="p-0">
+                              <td colSpan={8} className="p-0">
                                 <div className="bg-gray-50/80 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700 p-4 space-y-3">
                                   {/* Notes */}
                                   {notes && (
@@ -513,6 +640,54 @@ export default function AgentDashboard() {
                                       <p className="text-xs text-muted-foreground text-center py-3">No files found</p>
                                     ) : null}
                                   </div>
+
+                                  {/* AI Validation Results */}
+                                  {aiResults[sub.id] && (
+                                    <div className={`rounded-md p-3 border ${
+                                      aiResults[sub.id].overall_pass
+                                        ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
+                                        : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                                    }`}>
+                                      <div className="flex items-center gap-2 mb-2">
+                                        {aiResults[sub.id].overall_pass ? (
+                                          <ShieldCheck className="w-4 h-4 text-green-600" />
+                                        ) : (
+                                          <ShieldAlert className="w-4 h-4 text-red-600" />
+                                        )}
+                                        <p className={`text-xs font-semibold ${
+                                          aiResults[sub.id].overall_pass ? "text-green-700 dark:text-green-400" : "text-red-700 dark:text-red-400"
+                                        }`}>
+                                          {aiResults[sub.id].overall_pass
+                                            ? "AI Check Passed — No AI-generated content detected"
+                                            : "AI Check Failed — AI-generated content detected"}
+                                        </p>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        {aiResults[sub.id].files.map((fr) => (
+                                          <div key={fr.id} className="flex items-start gap-2 text-[10px]">
+                                            {fr.is_ai_generated ? (
+                                              <XCircle className="w-3 h-3 text-red-500 mt-0.5 flex-shrink-0" />
+                                            ) : (
+                                              <CheckCircle className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                                            )}
+                                            <div>
+                                              <span className="font-medium">{fr.file_name}</span>
+                                              {fr.confidence > 0 && (
+                                                <span className="text-muted-foreground ml-1">
+                                                  ({fr.confidence}% confidence)
+                                                </span>
+                                              )}
+                                              <ul className="mt-0.5 text-muted-foreground list-disc list-inside">
+                                                {fr.reasons.map((r, i) => (
+                                                  <li key={i}>{r}</li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
 
                                   {/* Validation info for reviewed submissions */}
                                   {sub.status !== "pending" && (
