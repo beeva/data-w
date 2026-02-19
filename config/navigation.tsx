@@ -87,6 +87,7 @@ export const lowerNavItems: NavItem[] = [
     name: "Billing & Subscription",
     href: "/dashboard/billing",
     icon: CreditCard,
+    roles: ['requester', 'collector', 'agent'],
   },
   {
     name: "Account settings",
