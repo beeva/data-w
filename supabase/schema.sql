@@ -785,3 +785,192 @@ BEGIN
 END;
 $$;
 
+-- ============================================================
+-- Support Tickets
+-- ============================================================
+
+CREATE TYPE ticket_status AS ENUM ('open', 'in_progress', 'resolved', 'closed');
+CREATE TYPE ticket_priority AS ENUM ('low', 'normal', 'high', 'urgent');
+
+CREATE TABLE support_tickets (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES profiles(id) NOT NULL,
+  subject TEXT NOT NULL,
+  message TEXT NOT NULL,
+  status ticket_status NOT NULL DEFAULT 'open',
+  priority ticket_priority NOT NULL DEFAULT 'normal',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_tickets_user ON support_tickets(user_id);
+CREATE INDEX idx_tickets_status ON support_tickets(status);
+
+ALTER TABLE support_tickets ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own tickets"
+  ON support_tickets FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create tickets"
+  ON support_tickets FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE TABLE ticket_replies (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  ticket_id UUID REFERENCES support_tickets(id) ON DELETE CASCADE NOT NULL,
+  user_id UUID REFERENCES profiles(id) NOT NULL,
+  message TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_ticket_replies_ticket ON ticket_replies(ticket_id);
+
+ALTER TABLE ticket_replies ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view replies on own tickets"
+  ON ticket_replies FOR SELECT
+  USING (
+    EXISTS (SELECT 1 FROM support_tickets t WHERE t.id = ticket_id AND t.user_id = auth.uid())
+    OR EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
+  );
+
+CREATE POLICY "Users can reply to own tickets"
+  ON ticket_replies FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id
+    AND (
+      EXISTS (SELECT 1 FROM support_tickets t WHERE t.id = ticket_id AND t.user_id = auth.uid())
+      OR EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin')
+    )
+  );
+
+-- Admin: list all tickets with user info (bypasses RLS)
+CREATE OR REPLACE FUNCTION admin_get_tickets(
+  status_filter text DEFAULT 'all',
+  search_term text DEFAULT '',
+  result_limit integer DEFAULT 50,
+  result_offset integer DEFAULT 0
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  result json;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+
+  SELECT json_build_object(
+    'tickets', (
+      SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json)
+      FROM (
+        SELECT tk.id, tk.subject, tk.message, tk.status, tk.priority,
+               tk.created_at, tk.updated_at, tk.resolved_at,
+               tk.user_id,
+               p.full_name AS user_name,
+               p.email AS user_email,
+               p.avatar_url AS user_avatar,
+               p.role AS user_role,
+               (SELECT count(*) FROM ticket_replies tr WHERE tr.ticket_id = tk.id) AS reply_count
+        FROM support_tickets tk
+        JOIN profiles p ON p.id = tk.user_id
+        WHERE (status_filter = 'all' OR tk.status::text = status_filter)
+          AND (search_term = '' OR tk.subject ILIKE '%' || search_term || '%' OR p.full_name ILIKE '%' || search_term || '%' OR p.email ILIKE '%' || search_term || '%')
+        ORDER BY
+          CASE tk.status WHEN 'open' THEN 0 WHEN 'in_progress' THEN 1 WHEN 'resolved' THEN 2 WHEN 'closed' THEN 3 END,
+          CASE tk.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 WHEN 'low' THEN 3 END,
+          tk.created_at DESC
+        LIMIT result_limit OFFSET result_offset
+      ) t
+    ),
+    'total', (
+      SELECT count(*)
+      FROM support_tickets tk
+      JOIN profiles p ON p.id = tk.user_id
+      WHERE (status_filter = 'all' OR tk.status::text = status_filter)
+        AND (search_term = '' OR tk.subject ILIKE '%' || search_term || '%' OR p.full_name ILIKE '%' || search_term || '%' OR p.email ILIKE '%' || search_term || '%')
+    )
+  ) INTO result;
+
+  RETURN result;
+END;
+$$;
+
+-- Admin: get replies for a ticket (bypasses RLS)
+CREATE OR REPLACE FUNCTION admin_get_ticket_replies(p_ticket_id uuid)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+
+  RETURN (
+    SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json)
+    FROM (
+      SELECT tr.id, tr.message, tr.created_at, tr.user_id,
+             p.full_name, p.email, p.avatar_url, p.role
+      FROM ticket_replies tr
+      JOIN profiles p ON p.id = tr.user_id
+      WHERE tr.ticket_id = p_ticket_id
+      ORDER BY tr.created_at ASC
+    ) t
+  );
+END;
+$$;
+
+-- Admin: reply to a ticket and optionally change status (bypasses RLS)
+CREATE OR REPLACE FUNCTION admin_reply_ticket(
+  p_ticket_id uuid,
+  p_message text,
+  p_status text DEFAULT NULL
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+
+  INSERT INTO ticket_replies (ticket_id, user_id, message)
+  VALUES (p_ticket_id, auth.uid(), p_message);
+
+  IF p_status IS NOT NULL THEN
+    UPDATE support_tickets
+    SET status = p_status::ticket_status,
+        updated_at = NOW(),
+        resolved_at = CASE WHEN p_status IN ('resolved', 'closed') THEN NOW() ELSE resolved_at END
+    WHERE id = p_ticket_id;
+  ELSE
+    UPDATE support_tickets SET updated_at = NOW() WHERE id = p_ticket_id;
+  END IF;
+END;
+$$;
+
+-- Admin: update ticket status only
+CREATE OR REPLACE FUNCTION admin_update_ticket_status(p_ticket_id uuid, p_status text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+
+  UPDATE support_tickets
+  SET status = p_status::ticket_status,
+      updated_at = NOW(),
+      resolved_at = CASE WHEN p_status IN ('resolved', 'closed') THEN NOW() ELSE resolved_at END
+  WHERE id = p_ticket_id;
+END;
+$$;
+

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import {
   Book,
   Video,
   Zap,
+  Inbox,
 } from "lucide-react";
 
 interface ChatMessage {
@@ -113,8 +115,28 @@ const getBotResponse = (message: string): string => {
   return "I understand you need help. Let me connect you with a support agent who can better assist you. In the meantime, you can check our FAQ section for quick answers.";
 };
 
+interface Ticket {
+  id: string;
+  subject: string;
+  message: string;
+  status: string;
+  priority: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+}
+
+interface TicketReply {
+  id: string;
+  message: string;
+  created_at: string;
+  user_id: string;
+  full_name: string | null;
+  role: string;
+}
+
 export default function HelpSupport() {
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMinimized, setChatMinimized] = useState(false);
   const [message, setMessage] = useState("");
@@ -130,9 +152,87 @@ export default function HelpSupport() {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [ticketSubject, setTicketSubject] = useState("");
   const [ticketMessage, setTicketMessage] = useState("");
+  const [ticketSubmitting, setTicketSubmitting] = useState(false);
   const [ticketSubmitted, setTicketSubmitted] = useState(false);
+  const [myTickets, setMyTickets] = useState<Ticket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const [ticketReplies, setTicketReplies] = useState<TicketReply[]>([]);
+  const [repliesLoading, setRepliesLoading] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [replySubmitting, setReplySubmitting] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLInputElement>(null);
+
+  const userId = user?.id;
+
+  const fetchMyTickets = useCallback(async () => {
+    if (!userId) { setTicketsLoading(false); return; }
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("support_tickets")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (!error && data) setMyTickets(data);
+    } catch (e) {
+      console.error("Error fetching tickets:", e);
+    } finally {
+      setTicketsLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => { fetchMyTickets(); }, [fetchMyTickets]);
+
+  const fetchReplies = async (ticketId: string) => {
+    setRepliesLoading(true);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("ticket_replies")
+        .select("id, message, created_at, user_id, profiles(full_name, role)")
+        .eq("ticket_id", ticketId)
+        .order("created_at", { ascending: true });
+      if (!error && data) {
+        setTicketReplies(
+          data.map((r: any) => ({
+            id: r.id,
+            message: r.message,
+            created_at: r.created_at,
+            user_id: r.user_id,
+            full_name: r.profiles?.full_name || null,
+            role: r.profiles?.role || "user",
+          }))
+        );
+      }
+    } catch (e) {
+      console.error("Error fetching replies:", e);
+    } finally {
+      setRepliesLoading(false);
+    }
+  };
+
+  const handleReplySubmit = async () => {
+    if (!replyText.trim() || !selectedTicket || !userId) return;
+    setReplySubmitting(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("ticket_replies").insert({
+        ticket_id: selectedTicket.id,
+        user_id: userId,
+        message: replyText.trim(),
+      });
+      if (!error) {
+        setReplyText("");
+        fetchReplies(selectedTicket.id);
+      }
+    } catch (e) {
+      console.error("Error submitting reply:", e);
+    } finally {
+      setReplySubmitting(false);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -175,15 +275,27 @@ export default function HelpSupport() {
     }, 1000 + Math.random() * 1000);
   };
 
-  const handleSubmitTicket = () => {
-    if (!ticketSubject.trim() || !ticketMessage.trim()) return;
-    // In real app, submit to backend
-    setTicketSubmitted(true);
-    setTimeout(() => {
+  const handleSubmitTicket = async () => {
+    if (!ticketSubject.trim() || !ticketMessage.trim() || !userId) return;
+    setTicketSubmitting(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("support_tickets").insert({
+        user_id: userId,
+        subject: ticketSubject.trim(),
+        message: ticketMessage.trim(),
+      });
+      if (error) throw error;
+      setTicketSubmitted(true);
       setTicketSubject("");
       setTicketMessage("");
-      setTicketSubmitted(false);
-    }, 3000);
+      fetchMyTickets();
+      setTimeout(() => setTicketSubmitted(false), 3000);
+    } catch (e) {
+      console.error("Error submitting ticket:", e);
+    } finally {
+      setTicketSubmitting(false);
+    }
   };
 
   const formatTime = (date: Date) => {
@@ -364,9 +476,10 @@ export default function HelpSupport() {
                   </div>
                   <Button
                     onClick={handleSubmitTicket}
-                    disabled={!ticketSubject.trim() || !ticketMessage.trim()}
+                    disabled={!ticketSubject.trim() || !ticketMessage.trim() || ticketSubmitting}
                     className="w-full h-7 text-[10px]"
                   >
+                    {ticketSubmitting ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
                     Submit Ticket
                   </Button>
                 </div>
@@ -390,6 +503,137 @@ export default function HelpSupport() {
           </Card>
         </div>
       </div>
+
+      {/* My Tickets */}
+      <Card className="dark:bg-gray-800/50 border-none">
+        <CardHeader className="py-2 px-3">
+          <CardTitle className="text-xs font-semibold flex items-center gap-1">
+            <Inbox className="w-3.5 h-3.5" />
+            My Tickets
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="py-2 px-3">
+          {ticketsLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : myTickets.length === 0 ? (
+            <p className="text-[11px] text-muted-foreground text-center py-4">No tickets yet</p>
+          ) : selectedTicket ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => { setSelectedTicket(null); setTicketReplies([]); }}
+                className="text-[10px] text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
+              >
+                ← Back to tickets
+              </button>
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[11px] font-semibold">{selectedTicket.subject}</h4>
+                  <Badge
+                    className={`text-[9px] capitalize ${
+                      selectedTicket.status === "open" ? "bg-blue-500/20 text-blue-600" :
+                      selectedTicket.status === "in_progress" ? "bg-yellow-500/20 text-yellow-600" :
+                      selectedTicket.status === "resolved" ? "bg-green-500/20 text-green-600" :
+                      "bg-gray-500/20 text-gray-600"
+                    }`}
+                    variant="secondary"
+                  >
+                    {selectedTicket.status.replace("_", " ")}
+                  </Badge>
+                </div>
+                <p className="text-[10px] text-muted-foreground">{selectedTicket.message}</p>
+                <p className="text-[9px] text-muted-foreground">
+                  {new Date(selectedTicket.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </p>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Replies</p>
+                {repliesLoading ? (
+                  <div className="flex items-center justify-center py-3">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : ticketReplies.length === 0 ? (
+                  <p className="text-[10px] text-muted-foreground text-center py-2">No replies yet</p>
+                ) : (
+                  ticketReplies.map((reply) => (
+                    <div
+                      key={reply.id}
+                      className={`rounded-lg p-2 text-[10px] ${
+                        reply.role === "admin"
+                          ? "bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800"
+                          : "bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-semibold">
+                          {reply.role === "admin" ? "Support Team" : (reply.full_name || "You")}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground">
+                          {new Date(reply.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <p>{reply.message}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {selectedTicket.status !== "closed" && selectedTicket.status !== "resolved" && (
+                <div className="flex gap-2">
+                  <Input
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleReplySubmit()}
+                    placeholder="Type a reply..."
+                    className="h-7 text-[10px] flex-1"
+                  />
+                  <Button
+                    onClick={handleReplySubmit}
+                    disabled={!replyText.trim() || replySubmitting}
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                  >
+                    {replySubmitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+              {myTickets.map((ticket) => (
+                <button
+                  key={ticket.id}
+                  onClick={() => { setSelectedTicket(ticket); fetchReplies(ticket.id); }}
+                  className="w-full text-left p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-medium truncate">{ticket.subject}</span>
+                    <Badge
+                      className={`text-[8px] capitalize flex-shrink-0 ${
+                        ticket.status === "open" ? "bg-blue-500/20 text-blue-600" :
+                        ticket.status === "in_progress" ? "bg-yellow-500/20 text-yellow-600" :
+                        ticket.status === "resolved" ? "bg-green-500/20 text-green-600" :
+                        "bg-gray-500/20 text-gray-600"
+                      }`}
+                      variant="secondary"
+                    >
+                      {ticket.status.replace("_", " ")}
+                    </Badge>
+                  </div>
+                  <p className="text-[9px] text-muted-foreground mt-0.5 truncate">{ticket.message}</p>
+                  <p className="text-[8px] text-muted-foreground mt-0.5">
+                    {new Date(ticket.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </p>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Floating Chat Button */}
       {!chatOpen && (

@@ -6,6 +6,7 @@ import {
   FolderKanban,
   Home,
   Users,
+  Ticket,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -73,6 +74,12 @@ export const upperNavItems: NavItem[] = [
     icon: Users,
     roles: ['admin'],
   },
+  {
+    name: "Support Tickets",
+    href: "/dashboard/tickets",
+    icon: Ticket,
+    roles: ['admin'],
+  },
 ];
 
 export const lowerNavItems: NavItem[] = [
@@ -90,5 +97,6 @@ export const lowerNavItems: NavItem[] = [
     name: "Help & Support",
     href: "/dashboard/support",
     icon: HelpCircle,
+    roles: ['requester', 'collector', 'agent'],
   },
 ];

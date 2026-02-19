@@ -401,7 +401,7 @@ export default function DashboardSidebar({
 
         {/* Lower Navigation Items */}
         <div className="space-y-0.5">
-          {lowerNavItems.map((item) => {
+          {lowerNavItems.filter(shouldShowNavItem).map((item) => {
             const isActive =
               pathname === item.href || pathname?.startsWith(item.href + "/");
             const Icon = item.icon;
