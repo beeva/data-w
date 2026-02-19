@@ -123,6 +123,12 @@ export default function NewProjectForm() {
       return;
     }
 
+    if (!formData.location_address) {
+      setError("Location is required");
+      setLoading(false);
+      return;
+    }
+
     try {
       const requirements = {
         data_types: formData.data_types,
@@ -364,7 +370,7 @@ export default function NewProjectForm() {
           <div className="space-y-1.5 p-2 border border-gray-200 dark:border-gray-700 rounded">
             <div className="flex items-center gap-1">
               <MapPin className="w-3 h-3 text-muted-foreground" />
-              <Label className="text-[10px] font-semibold">Location (Optional)</Label>
+              <Label className="text-[10px] font-semibold">Location *</Label>
             </div>
 
             <div className="space-y-0.5">

@@ -167,6 +167,10 @@ export default function EditProjectDialog({
       setError("Deadline is required");
       return;
     }
+    if (!formData.location_address) {
+      setError("Location is required");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -382,7 +386,7 @@ export default function EditProjectDialog({
           <div className="space-y-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-1">
               <MapPin className="w-3 h-3 text-muted-foreground" />
-              <h3 className="text-[10px] font-semibold">Location (Optional)</h3>
+              <h3 className="text-[10px] font-semibold">Location *</h3>
             </div>
 
             <div className="space-y-0.5">
