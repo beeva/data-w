@@ -11,6 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   MessageCircle,
   Send,
   X,
@@ -152,6 +159,7 @@ export default function HelpSupport() {
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [ticketSubject, setTicketSubject] = useState("");
   const [ticketMessage, setTicketMessage] = useState("");
+  const [ticketPriority, setTicketPriority] = useState<string>("normal");
   const [ticketSubmitting, setTicketSubmitting] = useState(false);
   const [ticketSubmitted, setTicketSubmitted] = useState(false);
   const [myTickets, setMyTickets] = useState<Ticket[]>([]);
@@ -284,11 +292,13 @@ export default function HelpSupport() {
         user_id: userId,
         subject: ticketSubject.trim(),
         message: ticketMessage.trim(),
+        priority: ticketPriority,
       });
       if (error) throw error;
       setTicketSubmitted(true);
       setTicketSubject("");
       setTicketMessage("");
+      setTicketPriority("normal");
       fetchMyTickets();
       setTimeout(() => setTicketSubmitted(false), 3000);
     } catch (e) {
@@ -473,6 +483,20 @@ export default function HelpSupport() {
                       placeholder="Describe your issue in detail..."
                       className="text-[11px] min-h-[80px] resize-none"
                     />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Priority</label>
+                    <Select value={ticketPriority} onValueChange={setTicketPriority}>
+                      <SelectTrigger className="h-7 text-[11px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="low" className="text-[11px]">Low</SelectItem>
+                        <SelectItem value="normal" className="text-[11px]">Normal</SelectItem>
+                        <SelectItem value="high" className="text-[11px]">High</SelectItem>
+                        <SelectItem value="urgent" className="text-[11px]">Urgent</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <Button
                     onClick={handleSubmitTicket}
