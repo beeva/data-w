@@ -721,3 +721,67 @@ BEGIN
 END;
 $$;
 
+-- Admin: list all users with search/filter (bypasses RLS)
+CREATE OR REPLACE FUNCTION admin_get_users(
+  search_term text DEFAULT '',
+  role_filter text DEFAULT 'all',
+  result_limit integer DEFAULT 100,
+  result_offset integer DEFAULT 0
+)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  result json;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+
+  SELECT json_build_object(
+    'users', (
+      SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json)
+      FROM (
+        SELECT p.id, p.email, p.full_name, p.avatar_url, p.role,
+               p.verification_tier, p.created_at, p.updated_at, p.balance,
+               p.total_earnings, p.total_submissions, p.rating
+        FROM profiles p
+        WHERE (search_term = '' OR p.email ILIKE '%' || search_term || '%' OR p.full_name ILIKE '%' || search_term || '%')
+          AND (role_filter = 'all' OR p.role::text = role_filter)
+        ORDER BY p.created_at DESC
+        LIMIT result_limit OFFSET result_offset
+      ) t
+    ),
+    'total', (
+      SELECT count(*)
+      FROM profiles p
+      WHERE (search_term = '' OR p.email ILIKE '%' || search_term || '%' OR p.full_name ILIKE '%' || search_term || '%')
+        AND (role_filter = 'all' OR p.role::text = role_filter)
+    )
+  ) INTO result;
+
+  RETURN result;
+END;
+$$;
+
+-- Admin: update a user's role (bypasses RLS)
+CREATE OR REPLACE FUNCTION admin_update_user_role(target_user_id uuid, new_role text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+
+  IF new_role NOT IN ('requester', 'collector', 'agent', 'admin') THEN
+    RAISE EXCEPTION 'Invalid role: %', new_role;
+  END IF;
+
+  UPDATE profiles SET role = new_role::user_role, updated_at = NOW()
+  WHERE id = target_user_id;
+END;
+$$;
+

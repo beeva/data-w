@@ -5,6 +5,7 @@ import {
   HelpCircle,
   FolderKanban,
   Home,
+  Users,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -65,6 +66,12 @@ export const upperNavItems: NavItem[] = [
     href: "/dashboard/projects/find",
     icon: FolderKanban,
     roles: ['collector'],
+  },
+  {
+    name: "Users",
+    href: "/dashboard/users",
+    icon: Users,
+    roles: ['admin'],
   },
 ];
 
