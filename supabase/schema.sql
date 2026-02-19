@@ -606,6 +606,48 @@ BEGIN
 END;
 $$;
 
+-- Agent: fetch dashboard data (stats + pending submissions, bypasses RLS for joins)
+CREATE OR REPLACE FUNCTION get_agent_dashboard(p_agent_id uuid)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  result json;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = p_agent_id AND role = 'agent') THEN
+    RAISE EXCEPTION 'Access denied: agent only';
+  END IF;
+
+  SELECT json_build_object(
+    'pendingCount',    (SELECT count(*) FROM submissions WHERE status = 'pending'),
+    'validatedToday',  (SELECT count(*) FROM submissions WHERE status IN ('validated','rejected') AND validator_id = p_agent_id AND validated_at::date = CURRENT_DATE),
+    'totalValidations',(SELECT count(*) FROM submissions WHERE validator_id = p_agent_id AND status IN ('validated','rejected')),
+    'accuracyScore',   (SELECT COALESCE(p.validation_score, 0) FROM profiles p WHERE p.id = p_agent_id),
+    'pendingSubmissions', (
+      SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json)
+      FROM (
+        SELECT s.id, s.status, s.submitted_at, s.validation_score,
+               r.title  AS project_title,
+               r.category AS project_category,
+               cp.full_name AS collector_name,
+               cp.email AS collector_email,
+               cp.avatar_url AS collector_avatar,
+               (SELECT count(*) FROM data_items di WHERE di.submission_id = s.id) AS files_count
+        FROM submissions s
+        JOIN requests r  ON r.id = s.request_id
+        JOIN profiles cp ON cp.id = s.collector_id
+        WHERE s.status = 'pending'
+        ORDER BY s.submitted_at DESC
+        LIMIT 20
+      ) t
+    )
+  ) INTO result;
+
+  RETURN result;
+END;
+$$;
+
 -- Admin: fetch aggregated dashboard stats (bypasses RLS)
 CREATE OR REPLACE FUNCTION get_admin_stats()
 RETURNS json
