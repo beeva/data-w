@@ -71,3 +71,76 @@ BEGIN
   );
 END;
 $$;
+
+-- Admin: fetch aggregated dashboard stats (bypasses RLS)
+CREATE OR REPLACE FUNCTION get_admin_stats()
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  result json;
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+
+  SELECT json_build_object(
+    'totalUsers',       (SELECT count(*) FROM profiles),
+    'activeUsers',      (SELECT count(*) FROM profiles WHERE updated_at > now() - interval '30 days'),
+    'totalProjects',    (SELECT count(*) FROM requests),
+    'activeProjects',   (SELECT count(*) FROM requests WHERE status = 'open'),
+    'totalRevenue',     COALESCE((SELECT sum(amount) FROM transactions WHERE status = 'completed'), 0),
+    'pendingSubmissions', (SELECT count(*) FROM submissions WHERE status = 'pending'),
+    'usersByRole',      (SELECT json_object_agg(role, cnt) FROM (SELECT role, count(*) AS cnt FROM profiles GROUP BY role) r)
+  ) INTO result;
+
+  RETURN result;
+END;
+$$;
+
+-- Admin: fetch recent activity across all tables (bypasses RLS)
+CREATE OR REPLACE FUNCTION get_admin_recent_activity(activity_limit integer DEFAULT 20)
+RETURNS TABLE(activity_type text, message text, created_at timestamptz)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin') THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+
+  RETURN QUERY
+  SELECT * FROM (
+    SELECT 'user'::text,
+           ('New user registered: ' || COALESCE(p.full_name, p.email))::text,
+           p.created_at
+    FROM profiles p
+
+    UNION ALL
+
+    SELECT 'project'::text,
+           ('Project created: ' || r.title)::text,
+           r.created_at
+    FROM requests r
+
+    UNION ALL
+
+    SELECT 'submission'::text,
+           ('New submission on "' || COALESCE(r2.title, 'Unknown') || '"')::text,
+           s.submitted_at
+    FROM submissions s
+    LEFT JOIN requests r2 ON r2.id = s.request_id
+
+    UNION ALL
+
+    SELECT 'payment'::text,
+           ('Payment of $' || t.amount::text || ' completed')::text,
+           COALESCE(t.completed_at, t.created_at)
+    FROM transactions t
+    WHERE t.status = 'completed'
+  ) combined
+  ORDER BY created_at DESC
+  LIMIT activity_limit;
+END;
+$$;
