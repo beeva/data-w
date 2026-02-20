@@ -222,6 +222,7 @@ export default function AgentDashboard() {
             file_type: f.file_type,
             file_name: f.file_name,
             file_size: f.file_size,
+            mime_type: f.mime_type,
           })),
         }),
       });
