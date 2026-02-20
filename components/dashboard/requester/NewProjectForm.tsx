@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createProject } from "@/lib/services/projectService";
+import { deductProjectBudget } from "@/lib/services/walletService";
 import { useAuth } from "@/contexts/AuthContext";
 import type { ProjectFormData } from "@/types/project";
 import {
@@ -130,6 +131,16 @@ export default function NewProjectForm() {
     }
 
     try {
+      const budgetAmount = parseFloat(formData.budget);
+
+      const { error: budgetError } = await deductProjectBudget(
+        user.id,
+        budgetAmount
+      );
+      if (budgetError) {
+        throw budgetError;
+      }
+
       const requirements = {
         data_types: formData.data_types,
         formats: formData.formats,
@@ -151,7 +162,7 @@ export default function NewProjectForm() {
         title: formData.title,
         description: formData.description,
         category: formData.category,
-        budget: parseFloat(formData.budget),
+        budget: budgetAmount,
         deadline: formData.deadline,
         max_collectors: parseInt(formData.max_collectors),
         location,

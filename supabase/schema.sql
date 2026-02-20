@@ -593,6 +593,60 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- Deduct project budget from requester balance at project creation
+CREATE OR REPLACE FUNCTION deduct_project_budget(
+  p_requester_id UUID,
+  p_amount DECIMAL
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_balance DECIMAL;
+BEGIN
+  SELECT balance INTO v_balance
+  FROM profiles WHERE id = p_requester_id FOR UPDATE;
+
+  IF v_balance IS NULL THEN
+    RAISE EXCEPTION 'User not found';
+  END IF;
+
+  IF v_balance < p_amount THEN
+    RAISE EXCEPTION 'Insufficient balance';
+  END IF;
+
+  UPDATE profiles
+  SET balance = balance - p_amount,
+      updated_at = NOW()
+  WHERE id = p_requester_id;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Credit collector on submission approval (requester already paid at project creation)
+CREATE OR REPLACE FUNCTION credit_collector(
+  p_requester_id UUID,
+  p_collector_id UUID,
+  p_submission_id UUID,
+  p_amount DECIMAL
+)
+RETURNS UUID AS $$
+DECLARE
+  v_tx_id UUID;
+BEGIN
+  UPDATE profiles
+  SET balance = balance + p_amount,
+      total_earnings = total_earnings + p_amount,
+      updated_at = NOW()
+  WHERE id = p_collector_id;
+
+  INSERT INTO transactions (submission_id, requester_id, collector_id, amount, platform_fee, status, completed_at)
+  VALUES (p_submission_id, p_requester_id, p_collector_id, p_amount, 0, 'completed', NOW())
+  RETURNING id INTO v_tx_id;
+
+  RETURN v_tx_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Verify the current user's password server-side (no session side effects)
 CREATE OR REPLACE FUNCTION verify_user_password(password text)
 RETURNS boolean

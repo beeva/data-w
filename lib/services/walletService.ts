@@ -119,3 +119,67 @@ export async function transferFunds(
     };
   }
 }
+
+/**
+ * Deduct project budget from requester's balance at project creation.
+ */
+export async function deductProjectBudget(
+  requesterId: string,
+  amount: number
+): Promise<{ success: boolean; error: Error | null }> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.rpc("deduct_project_budget", {
+      p_requester_id: requesterId,
+      p_amount: amount,
+    });
+
+    if (error) {
+      const message = error.message.includes("Insufficient balance")
+        ? "Insufficient balance to create this project"
+        : error.message;
+      return { success: false, error: new Error(message) };
+    }
+
+    return { success: true, error: null };
+  } catch (err) {
+    return {
+      success: false,
+      error:
+        err instanceof Error ? err : new Error("Failed to deduct budget"),
+    };
+  }
+}
+
+/**
+ * Credit collector when a submission is approved.
+ * The requester's budget was already deducted at project creation.
+ */
+export async function creditCollector(
+  requesterId: string,
+  collectorId: string,
+  submissionId: string,
+  amount: number
+): Promise<{ transactionId: string | null; error: Error | null }> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("credit_collector", {
+      p_requester_id: requesterId,
+      p_collector_id: collectorId,
+      p_submission_id: submissionId,
+      p_amount: amount,
+    });
+
+    if (error) {
+      return { transactionId: null, error: new Error(error.message) };
+    }
+
+    return { transactionId: data as string, error: null };
+  } catch (err) {
+    return {
+      transactionId: null,
+      error:
+        err instanceof Error ? err : new Error("Failed to credit collector"),
+    };
+  }
+}

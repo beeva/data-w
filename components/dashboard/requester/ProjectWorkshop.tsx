@@ -9,7 +9,7 @@ import {
   getDataItemsBySubmission,
   updateSubmissionStatus,
 } from "@/lib/services/submissionService";
-import { transferFunds } from "@/lib/services/walletService";
+import { creditCollector } from "@/lib/services/walletService";
 import type { Project } from "@/types/project";
 import type {
   SubmissionWithCollector,
@@ -203,7 +203,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
       if (approve && project) {
         const submission = submissions.find((s) => s.id === submissionId);
         if (submission) {
-          const { error: txError } = await transferFunds(
+          const { error: txError } = await creditCollector(
             user.id,
             submission.collector_id,
             submissionId,
@@ -222,7 +222,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
 
       setToast({
         message: approve
-          ? "Submission approved and payment transferred!"
+          ? "Submission approved and collector paid!"
           : "Submission rejected.",
         type: "success",
       });
