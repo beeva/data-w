@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { getCategoryColor } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -460,7 +461,7 @@ export default function AgentDashboard() {
                               <p className="text-xs font-medium truncate max-w-[180px]">{sub.project_title}</p>
                             </td>
                             <td className="py-3 px-3">
-                              <Badge variant="outline" className="text-[9px]">{sub.project_category}</Badge>
+                              <Badge className={`text-[9px] ${getCategoryColor(sub.project_category)}`}>{sub.project_category}</Badge>
                             </td>
                             <td className="py-3 px-3 text-center">
                               <span className="text-xs">{sub.files_count}</span>

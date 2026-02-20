@@ -31,7 +31,7 @@ import {
   FolderKanban,
   RefreshCw,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, getCategoryColor } from "@/lib/utils";
 
 export default function ActiveProjectsList() {
   const { user, loading: authLoading } = useAuth();
@@ -295,7 +295,7 @@ export default function ActiveProjectsList() {
               <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
                 <span className={cn("text-sm font-semibold truncate", isCancelled && "line-through")}>{project.title}</span>
                 {getStatusBadge(project.status as string)}
-                <Badge variant="secondary" className="text-[8px] px-1 py-0">{project.category}</Badge>
+                <Badge className={cn("text-[8px] px-1 py-0", getCategoryColor(project.category))}>{project.category}</Badge>
               </div>
               <p className="text-[10px] text-muted-foreground line-clamp-1">{project.description}</p>
             </div>

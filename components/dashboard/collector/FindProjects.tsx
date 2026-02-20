@@ -49,7 +49,7 @@ import {
   XCircle,
 } from "lucide-react";
 import SubmitProposalDialog from "./SubmitProposalDialog";
-import { cn } from "@/lib/utils";
+import { cn, getCategoryColor } from "@/lib/utils";
 import { getProposalsByCollector, getAssignmentCountsByProjects } from "@/lib/services/proposalService";
 import type { Proposal } from "@/types/proposal";
 
@@ -581,7 +581,7 @@ export default function FindProjects() {
                       <div className="flex items-center gap-3 mb-2 flex-wrap">
                         <CategoryIcon className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
                         <h3 className="text-xl font-semibold text-foreground">{project.title}</h3>
-                        <Badge className="bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border-cyan-500/30">
+                        <Badge className={getCategoryColor(project.category)}>
                           {project.category}
                         </Badge>
                         {getStatusBadge()}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { getCategoryColor } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -343,7 +344,7 @@ export default function ValidationQueue() {
                             {item.project_title}
                           </h3>
                           {getPriorityBadge(item.priority)}
-                          <Badge variant="outline">{item.category}</Badge>
+                          <Badge className={getCategoryColor(item.category)}>{item.category}</Badge>
                         </div>
 
                         {/* Collector Info */}

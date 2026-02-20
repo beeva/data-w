@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { getCategoryColor } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOpenProjects } from "@/lib/services/projectService";
 import { getProposalsByCollector, getAssignmentsByCollector, getAssignmentCountsByProjects } from "@/lib/services/proposalService";
@@ -367,7 +368,7 @@ export default function CollectorDashboard() {
                           <h3 className="text-sm font-semibold truncate">
                             {project.title}
                           </h3>
-                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                          <Badge className={`text-[9px] px-1.5 py-0 ${getCategoryColor(project.category)}`}>
                             {project.category}
                           </Badge>
                           {proposal && (
