@@ -116,6 +116,13 @@ export async function searchProjects(
   }
 }
 
+const PLAN_PROJECT_LIMITS: Record<string, number> = {
+  free: 3,
+  starter: 10,
+  professional: -1,
+  enterprise: -1,
+};
+
 /**
  * Create a new project/request
  */
@@ -125,7 +132,34 @@ export async function createProject(
 ): Promise<{ data: Project | null; error: Error | null }> {
   try {
     const supabase = createClient();
-    // Convert date string to ISO timestamp (end of day for deadline)
+
+    // Check subscription project limit
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("subscription_tier")
+      .eq("id", requesterId)
+      .single();
+
+    const tier = profile?.subscription_tier || "free";
+    const limit = PLAN_PROJECT_LIMITS[tier] ?? 3;
+
+    if (limit > 0) {
+      const { count } = await supabase
+        .from("requests")
+        .select("id", { count: "exact", head: true })
+        .eq("requester_id", requesterId)
+        .in("status", ["open", "in_progress"]);
+
+      if ((count ?? 0) >= limit) {
+        return {
+          data: null,
+          error: new Error(
+            `You've reached the maximum of ${limit} active projects on the ${tier.charAt(0).toUpperCase() + tier.slice(1)} plan. Upgrade your plan to create more.`
+          ),
+        };
+      }
+    }
+
     const deadline = projectData.deadline
       ? `${projectData.deadline}T23:59:59`
       : null;

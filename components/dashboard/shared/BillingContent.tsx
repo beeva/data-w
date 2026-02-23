@@ -313,8 +313,7 @@ export default function BillingContent() {
                   {currentPlan.max_projects === -1
                     ? "Unlimited"
                     : currentPlan.max_projects}{" "}
-                  projects • {currentPlan.storage_gb === -1 ? "Unlimited" : `${currentPlan.storage_gb}GB`} •{" "}
-                  {currentPlan.support_level}
+                  projects
                   {subscription &&
                     ` • Renews ${formatDate(subscription.current_period_end)}`}
                 </p>
@@ -537,14 +536,10 @@ export default function BillingContent() {
                       )}
                     </div>
 
-                    <ul className="space-y-1 mb-3">
-                      {plan.features.map((feature, idx) => (
-                        <li key={idx} className="text-[10px] flex items-start gap-1">
-                          <CheckCircle2 className="w-2.5 h-2.5 text-green-500 flex-shrink-0 mt-0.5" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    <p className="text-[10px] text-muted-foreground mb-3 flex items-center gap-1">
+                      <CheckCircle2 className="w-2.5 h-2.5 text-green-500 flex-shrink-0" />
+                      {plan.max_projects === -1 ? "Unlimited projects" : `Up to ${plan.max_projects} projects`}
+                    </p>
 
                     <Button
                       className={cn(
