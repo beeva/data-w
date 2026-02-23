@@ -71,7 +71,6 @@ export default function RequesterDashboard() {
           getProjectsByRequester(userId),
           getNotifications(10),
         ]);
-
         const allProjects = projectsRes.data || [];
         setProjects(allProjects);
         setNotifications(notificationsRes.data || []);
@@ -82,7 +81,6 @@ export default function RequesterDashboard() {
           const statsResults = await Promise.all(
             activeProjs.map((p) => getSubmissionsByProject(p.id))
           );
-
           let totalPending = 0;
           const progressMap: Record<string, number> = {};
 

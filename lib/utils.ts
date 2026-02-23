@@ -5,6 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export function withTimeout<T>(promise: PromiseLike<T>, ms = 15000): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Request timed out")), ms)
+    ),
+  ])
+}
+
 const categoryColorMap: Record<string, string> = {
   "Photography": "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30",
   "Video":       "bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30",

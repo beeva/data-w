@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
-import { User } from '@supabase/supabase-js'
+import { User, type AuthChangeEvent, type Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 import { getProfileById } from '@/lib/services/profileService'
 import type { UserProfile } from '@/types/user'
@@ -30,20 +30,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Memoize supabase client to prevent re-creation on every render
   const supabase = useMemo(() => createClient(), [])
 
-  const fetchProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await getProfileById(userId)
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-      if (error) {
-        console.error('Error fetching profile:', error)
-        return null
+  const fetchProfile = useCallback(async (userId: string) => {
+    const retries = 3
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const { data, error } = await getProfileById(userId)
+
+        if (!error) return data
+
+        if (attempt === retries - 1) {
+          console.error('Error fetching profile:', error)
+          return null
+        }
+      } catch (error) {
+        if (attempt === retries - 1) {
+          console.error('Error fetching profile:', error)
+          return null
+        }
       }
 
-      return data
-    } catch (error) {
-      console.error('Error fetching profile:', error)
-      return null
+      await sleep(500 * (attempt + 1))
     }
+    return null
   }, [])
 
   useEffect(() => {
@@ -97,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (!isMounted) return
 
       // Token refresh doesn't change user identity — skip to avoid cascading re-renders
@@ -115,10 +125,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     subscription = authSubscription
 
     // Refresh session when tab becomes visible after inactivity.
-    // Only call refreshSession() — onAuthStateChange already handles state updates.
+    // Keep session fresh proactively (some projects use short JWT lifetimes, e.g. ~5 minutes).
+    const refreshSessionSafely = () => {
+      if (!isMounted) return
+      Promise.race([
+        supabase.auth.refreshSession(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Auth refresh timeout')), 8000)
+        ),
+      ]).catch(() => {})
+    }
+
+    const refreshInterval = setInterval(refreshSessionSafely, 4 * 60 * 1000)
+
+    // Refresh session when tab becomes visible after inactivity.
+    // onAuthStateChange handles user/profile updates.
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isMounted) {
-        supabase.auth.refreshSession().catch(() => {})
+        refreshSessionSafely()
       }
     }
 
@@ -126,6 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMounted = false
+      clearInterval(refreshInterval)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       subscription?.unsubscribe()
     }

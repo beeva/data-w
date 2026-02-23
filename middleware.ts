@@ -29,9 +29,18 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const result = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Supabase auth timeout')), 8000)
+      ),
+    ])
+    user = result.data.user
+  } catch {
+    user = null
+  }
 
   // Protect dashboard route
   if (request.nextUrl.pathname.startsWith('/dashboard')) {
