@@ -49,8 +49,6 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    // <Suspense>
-      <HomeContent />
-    // </Suspense>
+    <HomeContent />
   );
 }
