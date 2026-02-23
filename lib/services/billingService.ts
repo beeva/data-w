@@ -10,6 +10,8 @@ import type {
   Invoice,
   PaymentMethod,
   SubscriptionPlan,
+  UserSubscription,
+  BillingCycle,
 } from "@/types/billing";
 
 /**
@@ -415,20 +417,119 @@ export function getSubscriptionPlans(): SubscriptionPlan[] {
 }
 
 /**
- * Simulate payment methods (would integrate with Stripe in production)
+ * Get the user's active subscription
  */
-export function getMockPaymentMethods(): PaymentMethod[] {
-  return [
-    {
-      id: "pm_1",
-      user_id: "",
-      type: "card",
-      last_four: "4242",
-      brand: "Visa",
-      exp_month: 12,
-      exp_year: 2027,
-      is_default: true,
-      created_at: new Date().toISOString(),
-    },
-  ];
+export async function getUserSubscription(
+  userId: string
+): Promise<{ data: UserSubscription | null; error: Error | null }> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("user_subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    if (data) {
+      return {
+        data: {
+          id: data.id,
+          user_id: data.user_id,
+          plan_id: data.plan_id,
+          tier: data.tier,
+          billing_cycle: data.billing_cycle as BillingCycle,
+          status: data.status,
+          current_period_start: data.current_period_start,
+          current_period_end: data.current_period_end,
+          cancel_at_period_end: data.cancel_at_period_end,
+          created_at: data.created_at,
+        } as UserSubscription,
+        error: null,
+      };
+    }
+
+    return { data: null, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to fetch subscription"),
+    };
+  }
+}
+
+/**
+ * Subscribe to a plan using wallet balance
+ */
+export async function subscribeToPlan(
+  userId: string,
+  planId: string,
+  tier: string,
+  billingCycle: BillingCycle,
+  price: number
+): Promise<{ subscriptionId: string | null; error: Error | null }> {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.rpc("subscribe_to_plan", {
+      p_user_id: userId,
+      p_plan_id: planId,
+      p_tier: tier,
+      p_billing_cycle: billingCycle,
+      p_price: price,
+    });
+
+    if (error) {
+      const message = error.message.includes("Insufficient balance")
+        ? "Insufficient balance. Please deposit funds first."
+        : error.message;
+      return { subscriptionId: null, error: new Error(message) };
+    }
+
+    return { subscriptionId: data as string, error: null };
+  } catch (err) {
+    return {
+      subscriptionId: null,
+      error:
+        err instanceof Error ? err : new Error("Failed to subscribe to plan"),
+    };
+  }
+}
+
+/**
+ * Cancel the user's subscription
+ */
+export async function cancelSubscription(
+  userId: string,
+  immediate = false
+): Promise<{ success: boolean; error: Error | null }> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.rpc("cancel_subscription", {
+      p_user_id: userId,
+      p_immediate: immediate,
+    });
+
+    if (error) {
+      return { success: false, error: new Error(error.message) };
+    }
+
+    return { success: true, error: null };
+  } catch (err) {
+    return {
+      success: false,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to cancel subscription"),
+    };
+  }
 }

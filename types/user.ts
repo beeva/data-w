@@ -26,6 +26,8 @@ export interface UserProfile {
   updated_at: string;
   // Wallet
   balance: number | null;
+  // Subscription
+  subscription_tier: string | null;
   // Requester specific fields
   company_name: string | null;
   company_website: string | null;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   getBillingStats,
@@ -8,15 +9,19 @@ import {
   getUsageData,
   getInvoices,
   getSubscriptionPlans,
-  getMockPaymentMethods,
+  getUserSubscription,
+  subscribeToPlan,
+  cancelSubscription,
 } from "@/lib/services/billingService";
+import { getWalletBalance } from "@/lib/services/walletService";
 import type {
   BillingStats,
   ProjectBilling,
   UsageData,
   Invoice,
   SubscriptionPlan,
-  PaymentMethod,
+  UserSubscription,
+  BillingCycle,
 } from "@/types/billing";
 import {
   Card,
@@ -30,11 +35,17 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
   DollarSign,
   CreditCard,
   Calendar,
   TrendingUp,
-  TrendingDown,
   ArrowUpRight,
   ArrowDownRight,
   Clock,
@@ -43,8 +54,6 @@ import {
   Loader2,
   RefreshCw,
   Download,
-  Plus,
-  ExternalLink,
   Receipt,
   BarChart3,
   Wallet,
@@ -52,18 +61,58 @@ import {
   Building2,
   ChevronRight,
   FileText,
+  Bitcoin,
+  XCircle,
+  Shield,
+  Zap,
+  Crown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const TIER_ICONS: Record<string, React.ReactNode> = {
+  free: <Zap className="w-4 h-4 text-white" />,
+  starter: <Shield className="w-4 h-4 text-white" />,
+  professional: <Sparkles className="w-4 h-4 text-white" />,
+  enterprise: <Crown className="w-4 h-4 text-white" />,
+};
+
+const TIER_GRADIENTS: Record<string, string> = {
+  free: "from-gray-500 to-gray-600",
+  starter: "from-blue-500 to-cyan-600",
+  professional: "from-purple-500 to-pink-600",
+  enterprise: "from-amber-500 to-orange-600",
+};
+
+const TIER_BORDERS: Record<string, string> = {
+  free: "border-gray-300 dark:border-gray-600",
+  starter: "border-blue-500",
+  professional: "border-purple-500",
+  enterprise: "border-amber-500",
+};
 
 export default function BillingContent() {
   const { user, profile } = useAuth();
+  const router = useRouter();
   const [stats, setStats] = useState<BillingStats | null>(null);
   const [projectBillings, setProjectBillings] = useState<ProjectBilling[]>([]);
   const [usageData, setUsageData] = useState<UsageData[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [plans] = useState<SubscriptionPlan[]>(getSubscriptionPlans());
+  const [subscription, setSubscription] = useState<UserSubscription | null>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Subscription dialog
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan | null>(null);
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeError, setSubscribeError] = useState("");
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  // Cancel dialog
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const userId = user?.id;
 
@@ -74,12 +123,14 @@ export default function BillingContent() {
       if (showSpinner) setLoading(true);
       setError("");
 
-      const [statsResult, projectsResult, usageResult, invoicesResult] =
+      const [statsResult, projectsResult, usageResult, invoicesResult, subResult, balanceResult] =
         await Promise.all([
           getBillingStats(userId),
           getProjectBillings(userId),
           getUsageData(userId),
           getInvoices(userId),
+          getUserSubscription(userId),
+          getWalletBalance(userId),
         ]);
 
       if (statsResult.error) throw statsResult.error;
@@ -91,10 +142,10 @@ export default function BillingContent() {
       setProjectBillings(projectsResult.data || []);
       setUsageData(usageResult.data || []);
       setInvoices(invoicesResult.data || []);
-      setPaymentMethods(getMockPaymentMethods());
+      setSubscription(subResult.data);
+      setWalletBalance(balanceResult.balance);
     } catch (err: any) {
       setError(err.message || "Failed to load billing data");
-      console.error("Error fetching billing data:", err);
     } finally {
       setLoading(false);
     }
@@ -109,12 +160,8 @@ export default function BillingContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
-  };
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
@@ -127,10 +174,7 @@ export default function BillingContent() {
 
   const formatMonthYear = (dateString: string) => {
     const date = new Date(dateString + "-01");
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-    });
+    return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
   };
 
   const getMaxUsageValue = () => {
@@ -140,12 +184,67 @@ export default function BillingContent() {
     return Math.max(maxSpent, maxEarned, 100);
   };
 
-  // Calculate current plan (mock - would come from subscription service)
-  const currentPlan = plans[0]; // Free plan by default
-  const usagePercentage = Math.min(
-    ((projectBillings.length || 0) / currentPlan.max_projects) * 100,
-    100
-  );
+  const currentTier = subscription?.tier || profile?.subscription_tier || "free";
+  const currentPlan = plans.find((p) => p.tier === currentTier) || plans[0];
+  const usagePercentage =
+    currentPlan.max_projects > 0
+      ? Math.min(((projectBillings.length || 0) / currentPlan.max_projects) * 100, 100)
+      : 0;
+
+  const getPrice = (plan: SubscriptionPlan) =>
+    billingCycle === "yearly" ? plan.price_yearly : plan.price_monthly;
+
+  const handleSelectPlan = (plan: SubscriptionPlan) => {
+    if (plan.tier === currentTier) return;
+    setSelectedPlan(plan);
+    setSubscribeError("");
+    setShowConfirm(true);
+  };
+
+  const handleSubscribe = async () => {
+    if (!userId || !selectedPlan) return;
+    const price = getPrice(selectedPlan);
+
+    setSubscribing(true);
+    setSubscribeError("");
+
+    try {
+      const { error: subError } = await subscribeToPlan(
+        userId,
+        selectedPlan.id,
+        selectedPlan.tier,
+        billingCycle,
+        price
+      );
+
+      if (subError) throw subError;
+
+      setShowConfirm(false);
+      setSelectedPlan(null);
+      await fetchBillingData(false);
+    } catch (err: any) {
+      setSubscribeError(err.message || "Failed to subscribe");
+    } finally {
+      setSubscribing(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!userId) return;
+    setCancelling(true);
+
+    try {
+      const { error: cancelError } = await cancelSubscription(userId, false);
+      if (cancelError) throw cancelError;
+
+      setShowCancel(false);
+      await fetchBillingData(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to cancel subscription");
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -161,9 +260,16 @@ export default function BillingContent() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-base font-semibold">Billing & Subscription</h1>
-          <p className="text-[10px] text-muted-foreground">Manage billing and spending</p>
+          <p className="text-[10px] text-muted-foreground">
+            Manage your plan, billing and spending
+          </p>
         </div>
-        <Button onClick={() => fetchBillingData(true)} variant="outline" size="sm" className="h-6 text-[10px] px-2">
+        <Button
+          onClick={() => fetchBillingData(true)}
+          variant="outline"
+          size="sm"
+          className="h-6 text-[10px] px-2"
+        >
           <RefreshCw className="w-2.5 h-2.5 mr-1" />
           Refresh
         </Button>
@@ -180,8 +286,13 @@ export default function BillingContent() {
         <CardContent className="py-2 px-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-md bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-white" />
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-md bg-gradient-to-br flex items-center justify-center",
+                  TIER_GRADIENTS[currentTier] || TIER_GRADIENTS.free
+                )}
+              >
+                {TIER_ICONS[currentTier] || TIER_ICONS.free}
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
@@ -190,25 +301,56 @@ export default function BillingContent() {
                     variant="secondary"
                     className="bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 text-[8px] px-1 py-0"
                   >
-                    Current
+                    Active
                   </Badge>
+                  {subscription?.cancel_at_period_end && (
+                    <Badge className="bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30 text-[8px] px-1 py-0">
+                      Cancels {formatDate(subscription.current_period_end)}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-[10px] text-muted-foreground">
-                  {currentPlan.max_projects === -1 ? "Unlimited" : currentPlan.max_projects} projects • {currentPlan.storage_gb}GB • {currentPlan.support_level}
+                  {currentPlan.max_projects === -1
+                    ? "Unlimited"
+                    : currentPlan.max_projects}{" "}
+                  projects • {currentPlan.storage_gb === -1 ? "Unlimited" : `${currentPlan.storage_gb}GB`} •{" "}
+                  {currentPlan.support_level}
+                  {subscription &&
+                    ` • Renews ${formatDate(subscription.current_period_end)}`}
                 </p>
               </div>
             </div>
-            <Button size="sm" className="h-6 text-[10px] px-2 bg-primary text-primary-foreground hover:bg-primary/90">
-              <ArrowUpRight className="w-2.5 h-2.5 mr-0.5" />
-              Upgrade
-            </Button>
+            <div className="flex items-center gap-1.5">
+              {currentTier !== "free" && !subscription?.cancel_at_period_end && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-[10px] px-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  onClick={() => setShowCancel(true)}
+                >
+                  Cancel
+                </Button>
+              )}
+              <Button
+                size="sm"
+                className="h-6 text-[10px] px-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                onClick={() =>
+                  document.getElementById("plans-section")?.scrollIntoView({ behavior: "smooth" })
+                }
+              >
+                <ArrowUpRight className="w-2.5 h-2.5 mr-0.5" />
+                {currentTier === "free" ? "Upgrade" : "Change Plan"}
+              </Button>
+            </div>
           </div>
 
           {currentPlan.max_projects > 0 && (
             <div className="mt-2">
               <div className="flex items-center justify-between text-[10px] mb-0.5">
                 <span className="text-muted-foreground">Projects</span>
-                <span className="font-medium">{projectBillings.length}/{currentPlan.max_projects}</span>
+                <span className="font-medium">
+                  {projectBillings.length}/{currentPlan.max_projects}
+                </span>
               </div>
               <Progress value={usagePercentage} className="h-1" />
             </div>
@@ -223,8 +365,12 @@ export default function BillingContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[9px] text-muted-foreground uppercase">Spent</p>
-                <p className="text-sm font-bold">{formatCurrency(stats?.total_spent || 0)}</p>
-                <p className="text-[9px] text-muted-foreground">{formatCurrency(stats?.this_month_spent || 0)} /mo</p>
+                <p className="text-sm font-bold">
+                  {formatCurrency(stats?.total_spent || 0)}
+                </p>
+                <p className="text-[9px] text-muted-foreground">
+                  {formatCurrency(stats?.this_month_spent || 0)} /mo
+                </p>
               </div>
               <div className="w-6 h-6 rounded bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                 <ArrowUpRight className="w-3 h-3 text-red-600" />
@@ -238,8 +384,12 @@ export default function BillingContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[9px] text-muted-foreground uppercase">Earned</p>
-                <p className="text-sm font-bold text-green-600">{formatCurrency(stats?.total_earned || 0)}</p>
-                <p className="text-[9px] text-muted-foreground">{formatCurrency(stats?.this_month_earned || 0)} /mo</p>
+                <p className="text-sm font-bold text-green-600">
+                  {formatCurrency(stats?.total_earned || 0)}
+                </p>
+                <p className="text-[9px] text-muted-foreground">
+                  {formatCurrency(stats?.this_month_earned || 0)} /mo
+                </p>
               </div>
               <div className="w-6 h-6 rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                 <ArrowDownRight className="w-3 h-3 text-green-600" />
@@ -252,12 +402,14 @@ export default function BillingContent() {
           <CardContent className="py-2 px-2">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[9px] text-muted-foreground uppercase">Pending</p>
-                <p className="text-sm font-bold text-yellow-600">{formatCurrency(stats?.pending_payments || 0)}</p>
-                <p className="text-[9px] text-muted-foreground">Awaiting</p>
+                <p className="text-[9px] text-muted-foreground uppercase">Balance</p>
+                <p className="text-sm font-bold text-blue-600">
+                  {formatCurrency(walletBalance)}
+                </p>
+                <p className="text-[9px] text-muted-foreground">Available</p>
               </div>
-              <div className="w-6 h-6 rounded bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                <Clock className="w-3 h-3 text-yellow-600" />
+              <div className="w-6 h-6 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <Wallet className="w-3 h-3 text-blue-600" />
               </div>
             </div>
           </CardContent>
@@ -267,12 +419,14 @@ export default function BillingContent() {
           <CardContent className="py-2 px-2">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[9px] text-muted-foreground uppercase">Upcoming</p>
-                <p className="text-sm font-bold">{formatCurrency(stats?.upcoming_bill || 0)}</p>
-                <p className="text-[9px] text-muted-foreground">{formatDate(stats?.next_billing_date || null)}</p>
+                <p className="text-[9px] text-muted-foreground uppercase">Pending</p>
+                <p className="text-sm font-bold text-yellow-600">
+                  {formatCurrency(stats?.pending_payments || 0)}
+                </p>
+                <p className="text-[9px] text-muted-foreground">Awaiting</p>
               </div>
-              <div className="w-6 h-6 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Calendar className="w-3 h-3 text-blue-600" />
+              <div className="w-6 h-6 rounded bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                <Clock className="w-3 h-3 text-yellow-600" />
               </div>
             </div>
           </CardContent>
@@ -280,8 +434,12 @@ export default function BillingContent() {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="usage" className="w-full">
+      <Tabs defaultValue="plans" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-1.5 h-7">
+          <TabsTrigger value="plans" className="text-[10px] h-6">
+            <Sparkles className="w-2.5 h-2.5 mr-0.5" />
+            Plans
+          </TabsTrigger>
           <TabsTrigger value="usage" className="text-[10px] h-6">
             <BarChart3 className="w-2.5 h-2.5 mr-0.5" />
             Usage
@@ -294,11 +452,153 @@ export default function BillingContent() {
             <Receipt className="w-2.5 h-2.5 mr-0.5" />
             Invoices
           </TabsTrigger>
-          <TabsTrigger value="payment" className="text-[10px] h-6">
-            <CreditCard className="w-2.5 h-2.5 mr-0.5" />
-            Payment
-          </TabsTrigger>
         </TabsList>
+
+        {/* Plans Tab */}
+        <TabsContent value="plans" className="space-y-2" id="plans-section">
+          {/* Billing Cycle Toggle */}
+          <div className="flex items-center justify-center gap-2">
+            <Button
+              size="sm"
+              variant={billingCycle === "monthly" ? "default" : "outline"}
+              className="h-6 text-[10px] px-3"
+              onClick={() => setBillingCycle("monthly")}
+            >
+              Monthly
+            </Button>
+            <Button
+              size="sm"
+              variant={billingCycle === "yearly" ? "default" : "outline"}
+              className="h-6 text-[10px] px-3"
+              onClick={() => setBillingCycle("yearly")}
+            >
+              Yearly
+              <Badge className="ml-1 bg-green-500 text-white text-[8px] px-1 py-0">
+                Save 17%
+              </Badge>
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {plans.map((plan) => {
+              const isCurrentPlan = plan.tier === currentTier;
+              const price = getPrice(plan);
+              const tierOrder = ["free", "starter", "professional", "enterprise"];
+              const isDowngrade = tierOrder.indexOf(plan.tier) < tierOrder.indexOf(currentTier);
+
+              return (
+                <Card
+                  key={plan.id}
+                  className={cn(
+                    "relative transition-all hover:shadow-md",
+                    isCurrentPlan
+                      ? cn("ring-2", TIER_BORDERS[plan.tier])
+                      : "border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
+                  )}
+                >
+                  {plan.tier === "professional" && !isCurrentPlan && (
+                    <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                      <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white text-[8px] px-2 py-0">
+                        Popular
+                      </Badge>
+                    </div>
+                  )}
+                  <CardContent className="py-3 px-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div
+                        className={cn(
+                          "w-7 h-7 rounded-md bg-gradient-to-br flex items-center justify-center",
+                          TIER_GRADIENTS[plan.tier]
+                        )}
+                      >
+                        {TIER_ICONS[plan.tier]}
+                      </div>
+                      <div>
+                        <h3 className="text-xs font-semibold">{plan.name}</h3>
+                        {isCurrentPlan && (
+                          <Badge className="bg-cyan-500 text-white text-[7px] px-1 py-0">
+                            Current
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mb-3">
+                      <p className="text-xl font-bold">
+                        ${billingCycle === "yearly" ? Math.round(plan.price_yearly / 12) : plan.price_monthly}
+                        <span className="text-[10px] font-normal text-muted-foreground">
+                          /mo
+                        </span>
+                      </p>
+                      {billingCycle === "yearly" && plan.price_yearly > 0 && (
+                        <p className="text-[9px] text-muted-foreground">
+                          ${plan.price_yearly}/year billed annually
+                        </p>
+                      )}
+                    </div>
+
+                    <ul className="space-y-1 mb-3">
+                      {plan.features.map((feature, idx) => (
+                        <li key={idx} className="text-[10px] flex items-start gap-1">
+                          <CheckCircle2 className="w-2.5 h-2.5 text-green-500 flex-shrink-0 mt-0.5" />
+                          <span>{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+
+                    <Button
+                      className={cn(
+                        "w-full h-7 text-[10px]",
+                        !isCurrentPlan &&
+                          plan.tier === "professional" &&
+                          "bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                      )}
+                      variant={isCurrentPlan ? "outline" : "default"}
+                      disabled={isCurrentPlan}
+                      onClick={() => handleSelectPlan(plan)}
+                    >
+                      {isCurrentPlan
+                        ? "Current Plan"
+                        : isDowngrade
+                          ? "Downgrade"
+                          : plan.price_monthly === 0
+                            ? "Switch to Free"
+                            : "Upgrade"}
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Wallet reminder */}
+          <Card className="dark:bg-gray-800/50 border-none bg-gradient-to-r from-orange-500/10 to-amber-500/10">
+            <CardContent className="py-2 px-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bitcoin className="w-4 h-4 text-orange-500" />
+                  <div>
+                    <p className="text-[11px] font-medium">
+                      Pay with crypto — Wallet balance: {formatCurrency(walletBalance)}
+                    </p>
+                    <p className="text-[9px] text-muted-foreground">
+                      Subscription fees are charged from your wallet balance
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-[10px] px-2"
+                  onClick={() => router.push("/dashboard/wallet")}
+                >
+                  <Wallet className="w-2.5 h-2.5 mr-1" />
+                  Deposit
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Usage Tab */}
         <TabsContent value="usage" className="space-y-1.5">
@@ -312,7 +612,6 @@ export default function BillingContent() {
             </CardHeader>
             <CardContent className="py-1.5 px-3">
               <div className="space-y-2">
-                {/* Chart Legend */}
                 <div className="flex gap-3">
                   <div className="flex items-center gap-1">
                     <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
@@ -324,18 +623,14 @@ export default function BillingContent() {
                   </div>
                 </div>
 
-                {/* Bar Chart */}
                 <div className="h-24 flex items-end justify-between gap-1">
-                  {usageData.map((data, idx) => {
+                  {usageData.map((data) => {
                     const maxValue = getMaxUsageValue();
                     const spentHeight = (data.amount_spent / maxValue) * 100;
                     const earnedHeight = (data.amount_earned / maxValue) * 100;
 
                     return (
-                      <div
-                        key={data.date}
-                        className="flex-1 flex flex-col items-center gap-0.5"
-                      >
+                      <div key={data.date} className="flex-1 flex flex-col items-center gap-0.5">
                         <div className="w-full flex items-end justify-center gap-px h-20">
                           <div
                             className="w-2 bg-red-500 rounded-t transition-all duration-300 hover:bg-red-600"
@@ -356,13 +651,16 @@ export default function BillingContent() {
                   })}
                 </div>
 
-                {/* Monthly Stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5 pt-1.5 border-t border-gray-200 dark:border-gray-700">
                   {usageData.slice(-2).map((data) => (
                     <div key={data.date} className="text-center">
-                      <p className="text-[9px] text-muted-foreground">{formatMonthYear(data.date)}</p>
+                      <p className="text-[9px] text-muted-foreground">
+                        {formatMonthYear(data.date)}
+                      </p>
                       <p className="text-[11px] font-semibold">{data.projects_created} proj</p>
-                      <p className="text-[9px] text-muted-foreground">{data.submissions_received} sub</p>
+                      <p className="text-[9px] text-muted-foreground">
+                        {data.submissions_received} sub
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -386,7 +684,9 @@ export default function BillingContent() {
                 <div className="text-center py-4">
                   <FileText className="w-8 h-8 text-muted-foreground mx-auto mb-1.5 opacity-50" />
                   <h3 className="text-[11px] font-semibold mb-0.5">No billing yet</h3>
-                  <p className="text-[10px] text-muted-foreground">Billing appears when paying for submissions</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Billing appears when paying for submissions
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -396,15 +696,23 @@ export default function BillingContent() {
                       className="flex items-center justify-between p-1.5 bg-gray-50 dark:bg-gray-700/50 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <h4 className="text-[11px] font-semibold truncate">{billing.project_title}</h4>
+                        <h4 className="text-[11px] font-semibold truncate">
+                          {billing.project_title}
+                        </h4>
                         <p className="text-[9px] text-muted-foreground">
-                          {billing.submissions_paid} payments {billing.last_payment_date && `• ${formatDate(billing.last_payment_date)}`}
+                          {billing.submissions_paid} payments{" "}
+                          {billing.last_payment_date &&
+                            `• ${formatDate(billing.last_payment_date)}`}
                         </p>
                       </div>
                       <div className="text-right ml-1.5">
-                        <p className="font-bold text-[11px]">{formatCurrency(billing.total_spent)}</p>
+                        <p className="font-bold text-[11px]">
+                          {formatCurrency(billing.total_spent)}
+                        </p>
                         {billing.pending_payments > 0 && (
-                          <p className="text-[9px] text-yellow-600">+{formatCurrency(billing.pending_payments)}</p>
+                          <p className="text-[9px] text-yellow-600">
+                            +{formatCurrency(billing.pending_payments)}
+                          </p>
                         )}
                       </div>
                       <ChevronRight className="w-3 h-3 text-muted-foreground ml-1" />
@@ -439,7 +747,9 @@ export default function BillingContent() {
                 <div className="text-center py-4">
                   <Receipt className="w-8 h-8 text-muted-foreground mx-auto mb-1.5 opacity-50" />
                   <h3 className="text-[11px] font-semibold mb-0.5">No invoices yet</h3>
-                  <p className="text-[10px] text-muted-foreground">Invoices appear after payments</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Invoices appear after payments
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-1">
@@ -454,12 +764,21 @@ export default function BillingContent() {
                         </div>
                         <div>
                           <p className="text-[11px] font-medium">{invoice.description}</p>
-                          <p className="text-[9px] text-muted-foreground">{formatDate(invoice.invoice_date)}</p>
+                          <p className="text-[9px] text-muted-foreground">
+                            {formatDate(invoice.invoice_date)}
+                          </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-semibold text-[11px]">{formatCurrency(invoice.amount)}</span>
-                        <Badge variant="secondary" className="bg-green-100 dark:bg-green-900/30 text-green-700 text-[8px] px-1 py-0">Paid</Badge>
+                        <span className="font-semibold text-[11px]">
+                          {formatCurrency(invoice.amount)}
+                        </span>
+                        <Badge
+                          variant="secondary"
+                          className="bg-green-100 dark:bg-green-900/30 text-green-700 text-[8px] px-1 py-0"
+                        >
+                          Paid
+                        </Badge>
                         <Button variant="ghost" size="sm" className="h-5 w-5 p-0">
                           <Download className="w-2.5 h-2.5" />
                         </Button>
@@ -471,204 +790,183 @@ export default function BillingContent() {
             </CardContent>
           </Card>
         </TabsContent>
-
-        {/* Payment Tab */}
-        <TabsContent value="payment" className="space-y-2">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
-            {/* Payment Methods */}
-            <Card className="dark:bg-gray-800/50 border-none">
-              <CardHeader className="py-3 px-4">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <CreditCard className="w-4 h-4" />
-                  Payment Methods
-                </CardTitle>
-                <CardDescription className="text-[11px]">Manage your payment options</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 py-2 px-4">
-                {paymentMethods.map((method) => (
-                  <div
-                    key={method.id}
-                    className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md border border-cyan-500"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-5 bg-gradient-to-r from-blue-600 to-blue-800 rounded flex items-center justify-center">
-                        <CreditCard className="w-3 h-3 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium">
-                          {method.brand} •••• {method.last_four}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground">
-                          Expires {method.exp_month}/{method.exp_year}
-                        </p>
-                      </div>
-                    </div>
-                    {method.is_default && (
-                      <Badge
-                        variant="secondary"
-                        className="bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 text-[9px] px-1 py-0"
-                      >
-                        Default
-                      </Badge>
-                    )}
-                  </div>
-                ))}
-
-                <Button variant="outline" className="w-full h-7 text-xs">
-                  <Plus className="w-3 h-3 mr-1" />
-                  Add Payment Method
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Payment Links */}
-            <Card className="dark:bg-gray-800/50 border-none">
-              <CardHeader className="py-3 px-4">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Wallet className="w-4 h-4" />
-                  Quick Actions
-                </CardTitle>
-                <CardDescription className="text-[11px]">Manage payments and billing</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-1.5 py-2 px-4">
-                <Button
-                  variant="outline"
-                  className="w-full justify-between h-auto py-2 px-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                      <CreditCard className="w-3 h-3 text-purple-600" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs font-medium">Stripe Dashboard</p>
-                      <p className="text-[9px] text-muted-foreground">
-                        Manage via Stripe
-                      </p>
-                    </div>
-                  </div>
-                  <ExternalLink className="w-3 h-3" />
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full justify-between h-auto py-2 px-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                      <DollarSign className="w-3 h-3 text-blue-600" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs font-medium">Withdraw Earnings</p>
-                      <p className="text-[9px] text-muted-foreground">
-                        Transfer to bank
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3 h-3" />
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full justify-between h-auto py-2 px-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                      <Receipt className="w-3 h-3 text-green-600" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs font-medium">Billing Portal</p>
-                      <p className="text-[9px] text-muted-foreground">
-                        Update billing info
-                      </p>
-                    </div>
-                  </div>
-                  <ExternalLink className="w-3 h-3" />
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="w-full justify-between h-auto py-2 px-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                      <AlertCircle className="w-3 h-3 text-orange-600" />
-                    </div>
-                    <div className="text-left">
-                      <p className="text-xs font-medium">Tax Documents</p>
-                      <p className="text-[9px] text-muted-foreground">
-                        Download W-9 forms
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-3 h-3" />
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Subscription Plans */}
-          <Card className="dark:bg-gray-800/50 border-none">
-            <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
-                Available Plans
-              </CardTitle>
-              <CardDescription className="text-[11px]">
-                Choose the plan that fits your needs
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="py-2 px-4">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-                {plans.map((plan) => (
-                  <div
-                    key={plan.id}
-                    className={`p-2.5 rounded-lg border transition-all ${
-                      plan.tier === currentPlan.tier
-                        ? "border-cyan-500 bg-cyan-50 dark:bg-cyan-900/20"
-                        : "border-gray-200 dark:border-gray-700 hover:border-cyan-300"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-xs font-semibold">{plan.name}</h3>
-                      {plan.tier === currentPlan.tier && (
-                        <Badge className="bg-cyan-500 text-[8px] px-1 py-0">Current</Badge>
-                      )}
-                    </div>
-                    <p className="text-base font-bold">
-                      ${plan.price_monthly}
-                      <span className="text-[10px] font-normal text-muted-foreground">
-                        /mo
-                      </span>
-                    </p>
-                    <ul className="mt-2 space-y-1">
-                      {plan.features.slice(0, 3).map((feature, idx) => (
-                        <li
-                          key={idx}
-                          className="text-[10px] flex items-center gap-1"
-                        >
-                          <CheckCircle2 className="w-2.5 h-2.5 text-green-500 flex-shrink-0" />
-                          <span className="truncate">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    <Button
-                      className="w-full mt-2 h-6 text-[10px]"
-                      variant={
-                        plan.tier === currentPlan.tier ? "outline" : "default"
-                      }
-                      disabled={plan.tier === currentPlan.tier}
-                    >
-                      {plan.tier === currentPlan.tier
-                        ? "Current"
-                        : "Select"}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
+
+      {/* ─── Subscribe Confirmation Dialog ─── */}
+      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              {selectedPlan && (
+                <div
+                  className={cn(
+                    "w-6 h-6 rounded-md bg-gradient-to-br flex items-center justify-center",
+                    TIER_GRADIENTS[selectedPlan.tier]
+                  )}
+                >
+                  {TIER_ICONS[selectedPlan.tier]}
+                </div>
+              )}
+              {selectedPlan?.name} Plan
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Confirm your subscription change
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedPlan && (
+            <div className="space-y-3 pt-1">
+              <div className="rounded-lg bg-accent/50 p-3 space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Plan</span>
+                  <span className="font-semibold">{selectedPlan.name}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Billing</span>
+                  <span className="font-semibold capitalize">{billingCycle}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Price</span>
+                  <span className="font-semibold">
+                    {formatCurrency(getPrice(selectedPlan))}
+                  </span>
+                </div>
+                <div className="border-t border-border pt-1.5 flex justify-between text-xs">
+                  <span className="text-muted-foreground">Wallet Balance</span>
+                  <span
+                    className={cn(
+                      "font-semibold",
+                      walletBalance >= getPrice(selectedPlan) ? "text-green-600" : "text-red-600"
+                    )}
+                  >
+                    {formatCurrency(walletBalance)}
+                  </span>
+                </div>
+              </div>
+
+              {walletBalance < getPrice(selectedPlan) && getPrice(selectedPlan) > 0 && (
+                <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                      Insufficient balance
+                    </p>
+                    <p className="text-[10px] text-red-500">
+                      You need {formatCurrency(getPrice(selectedPlan) - walletBalance)} more.{" "}
+                      <button
+                        className="underline font-medium"
+                        onClick={() => {
+                          setShowConfirm(false);
+                          router.push("/dashboard/wallet");
+                        }}
+                      >
+                        Deposit funds
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {subscribeError && (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  {subscribeError}
+                </p>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 h-8 text-xs"
+                  onClick={() => setShowConfirm(false)}
+                  disabled={subscribing}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 h-8 text-xs"
+                  onClick={handleSubscribe}
+                  disabled={
+                    subscribing ||
+                    (walletBalance < getPrice(selectedPlan) && getPrice(selectedPlan) > 0)
+                  }
+                >
+                  {subscribing ? (
+                    <>
+                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                      Confirm {getPrice(selectedPlan) > 0 ? `& Pay ${formatCurrency(getPrice(selectedPlan))}` : "Switch"}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Cancel Subscription Dialog ─── */}
+      <Dialog open={showCancel} onOpenChange={setShowCancel}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm text-red-600">
+              <XCircle className="w-4 h-4" />
+              Cancel Subscription
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Your subscription will remain active until the end of the current billing period.
+              After that, you&apos;ll be downgraded to the Free plan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 pt-1">
+            {subscription && (
+              <div className="rounded-lg bg-accent/50 p-3 space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Current Plan</span>
+                  <span className="font-semibold">{currentPlan.name}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Active Until</span>
+                  <span className="font-semibold">
+                    {formatDate(subscription.current_period_end)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 h-8 text-xs"
+                onClick={() => setShowCancel(false)}
+                disabled={cancelling}
+              >
+                Keep Plan
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1 h-8 text-xs"
+                onClick={handleCancel}
+                disabled={cancelling}
+              >
+                {cancelling ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    Cancelling...
+                  </>
+                ) : (
+                  "Cancel Subscription"
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

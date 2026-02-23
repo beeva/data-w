@@ -565,3 +565,207 @@ BEGIN
   WHERE id = p_ticket_id;
 END;
 $$;
+
+-- ═══════════════════════════════════════════════════════════
+-- Crypto Deposits
+-- ═══════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS crypto_deposits (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  payment_id TEXT UNIQUE NOT NULL,
+  order_id TEXT UNIQUE NOT NULL,
+  amount_usd DECIMAL(10, 2) NOT NULL,
+  pay_amount DECIMAL(20, 8),
+  actually_paid DECIMAL(20, 8) DEFAULT 0,
+  pay_currency TEXT NOT NULL,
+  pay_address TEXT,
+  status TEXT DEFAULT 'waiting',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  confirmed_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_crypto_deposits_user ON crypto_deposits(user_id);
+CREATE INDEX IF NOT EXISTS idx_crypto_deposits_payment_id ON crypto_deposits(payment_id);
+CREATE INDEX IF NOT EXISTS idx_crypto_deposits_status ON crypto_deposits(status);
+
+ALTER TABLE crypto_deposits ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own deposits'
+      AND tablename = 'crypto_deposits'
+  ) THEN
+    CREATE POLICY "Users can view their own deposits"
+      ON crypto_deposits FOR SELECT
+      USING (user_id = auth.uid());
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Service can insert deposits'
+      AND tablename = 'crypto_deposits'
+  ) THEN
+    CREATE POLICY "Service can insert deposits"
+      ON crypto_deposits FOR INSERT
+      WITH CHECK (user_id = auth.uid());
+  END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION credit_user_balance(
+  p_user_id UUID,
+  p_amount DECIMAL,
+  p_payment_id TEXT
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+  v_deposit_status TEXT;
+BEGIN
+  SELECT status INTO v_deposit_status
+  FROM crypto_deposits
+  WHERE payment_id = p_payment_id AND user_id = p_user_id
+  FOR UPDATE;
+
+  IF v_deposit_status IS NULL THEN
+    RAISE EXCEPTION 'Deposit not found';
+  END IF;
+
+  IF v_deposit_status = 'confirmed' THEN
+    RETURN TRUE;
+  END IF;
+
+  UPDATE profiles
+  SET balance = balance + p_amount,
+      updated_at = NOW()
+  WHERE id = p_user_id;
+
+  UPDATE crypto_deposits
+  SET status = 'confirmed',
+      confirmed_at = NOW(),
+      updated_at = NOW()
+  WHERE payment_id = p_payment_id;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ═══════════════════════════════════════════════════════════
+-- Subscriptions
+-- ═══════════════════════════════════════════════════════════
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS subscription_tier TEXT DEFAULT 'free';
+
+CREATE TABLE IF NOT EXISTS user_subscriptions (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+  plan_id TEXT NOT NULL,
+  tier TEXT NOT NULL DEFAULT 'free',
+  billing_cycle TEXT NOT NULL DEFAULT 'monthly',
+  price DECIMAL(10, 2) NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'active',
+  current_period_start TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  current_period_end TIMESTAMPTZ NOT NULL,
+  cancel_at_period_end BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_user ON user_subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_subscriptions_status ON user_subscriptions(status);
+
+ALTER TABLE user_subscriptions ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Users can view their own subscriptions'
+      AND tablename = 'user_subscriptions'
+  ) THEN
+    CREATE POLICY "Users can view their own subscriptions"
+      ON user_subscriptions FOR SELECT
+      USING (user_id = auth.uid());
+  END IF;
+END $$;
+
+CREATE OR REPLACE FUNCTION subscribe_to_plan(
+  p_user_id UUID,
+  p_plan_id TEXT,
+  p_tier TEXT,
+  p_billing_cycle TEXT,
+  p_price DECIMAL
+)
+RETURNS UUID AS $$
+DECLARE
+  v_balance DECIMAL;
+  v_sub_id UUID;
+  v_period_end TIMESTAMPTZ;
+BEGIN
+  SELECT balance INTO v_balance
+  FROM profiles WHERE id = p_user_id FOR UPDATE;
+
+  IF v_balance IS NULL THEN
+    RAISE EXCEPTION 'User not found';
+  END IF;
+
+  IF p_price > 0 AND v_balance < p_price THEN
+    RAISE EXCEPTION 'Insufficient balance. Please deposit funds first.';
+  END IF;
+
+  IF p_billing_cycle = 'yearly' THEN
+    v_period_end := NOW() + INTERVAL '1 year';
+  ELSE
+    v_period_end := NOW() + INTERVAL '1 month';
+  END IF;
+
+  UPDATE user_subscriptions
+  SET status = 'cancelled', updated_at = NOW()
+  WHERE user_id = p_user_id AND status = 'active';
+
+  IF p_price > 0 THEN
+    UPDATE profiles
+    SET balance = balance - p_price, updated_at = NOW()
+    WHERE id = p_user_id;
+  END IF;
+
+  UPDATE profiles
+  SET subscription_tier = p_tier, updated_at = NOW()
+  WHERE id = p_user_id;
+
+  INSERT INTO user_subscriptions (
+    user_id, plan_id, tier, billing_cycle, price, status,
+    current_period_start, current_period_end
+  )
+  VALUES (
+    p_user_id, p_plan_id, p_tier, p_billing_cycle, p_price, 'active',
+    NOW(), v_period_end
+  )
+  RETURNING id INTO v_sub_id;
+
+  RETURN v_sub_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION cancel_subscription(
+  p_user_id UUID,
+  p_immediate BOOLEAN DEFAULT FALSE
+)
+RETURNS BOOLEAN AS $$
+BEGIN
+  IF p_immediate THEN
+    UPDATE user_subscriptions
+    SET status = 'cancelled', updated_at = NOW()
+    WHERE user_id = p_user_id AND status = 'active';
+
+    UPDATE profiles
+    SET subscription_tier = 'free', updated_at = NOW()
+    WHERE id = p_user_id;
+  ELSE
+    UPDATE user_subscriptions
+    SET cancel_at_period_end = TRUE, updated_at = NOW()
+    WHERE user_id = p_user_id AND status = 'active';
+  END IF;
+
+  RETURN TRUE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
