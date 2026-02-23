@@ -67,6 +67,7 @@ const CRYPTO_OPTIONS = [
   { value: "trx", label: "TRON", symbol: "TRX" },
   { value: "usdttrc20", label: "USDT (TRC-20)", symbol: "USDT" },
   { value: "usdterc20", label: "USDT (ERC-20)", symbol: "USDT" },
+  { value: "usdtbsc", label: "USDT (BEP-20)", symbol: "USDT" },
   { value: "bnbbsc", label: "BNB (BSC)", symbol: "BNB" },
   { value: "matic", label: "Polygon", symbol: "MATIC" },
   { value: "sol", label: "Solana", symbol: "SOL" },
