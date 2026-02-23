@@ -1,28 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 
 const NOWPAYMENTS_API_KEY = process.env.NOWPAYMENTS_API_KEY!;
 const NOWPAYMENTS_API_URL = "https://api.nowpayments.io/v1";
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const token = authHeader.split(" ")[1];
+    const supabase = await createClient();
     const {
       data: { user },
-      error: authError,
-    } = await supabaseAdmin.auth.getUser(token);
+    } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -75,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     const payment = await paymentRes.json();
 
-    const { error: dbError } = await supabaseAdmin
+    const { error: dbError } = await supabase
       .from("crypto_deposits")
       .insert({
         user_id: user.id,

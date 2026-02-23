@@ -188,15 +188,9 @@ export default function WalletContent() {
     setDepositError("");
 
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-
       const res = await fetch("/api/crypto/create-payment", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: depositAmount,
           currency: depositCurrency,

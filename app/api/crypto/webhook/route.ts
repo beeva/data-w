@@ -6,7 +6,7 @@ const IPN_SECRET = process.env.NOWPAYMENTS_IPN_SECRET!;
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 function sortObject(obj: Record<string, any>): Record<string, any> {
