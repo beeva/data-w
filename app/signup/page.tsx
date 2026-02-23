@@ -3,8 +3,8 @@ import SignUp from '@/components/SignUp'
 
 export default function SignUpPage() {
   return (
-    <Suspense>
+    // <Suspense>
       <SignUp />
-    </Suspense>
+    // </Suspense>
   )
 }

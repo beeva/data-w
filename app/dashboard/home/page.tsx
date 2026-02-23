@@ -3,8 +3,8 @@ import Dashboard from '@/components/Dashboard'
 
 export default function HomePage() {
   return (
-    <Suspense>
+    // <Suspense>
       <Dashboard />
-    </Suspense>
+    // </Suspense>
   )
 }
