@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import DashboardLayout from "./dashboard/shared/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import RequesterDashboard from "./dashboard/requester/RequesterDashboard";
 import CollectorDashboard from "./dashboard/collector/CollectorDashboard";
@@ -18,35 +17,17 @@ export default function Dashboard() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Show a one-time toast after redirect from login
   useEffect(() => {
     const toast = searchParams.get("toast");
     if (toast === "signin-success") {
       setToastMessage("Signed in successfully");
       setShowToast(true);
-
-      // Clean up the URL so the toast doesn't re-trigger on refresh
       router.replace("/dashboard/home");
     }
   }, [searchParams, router]);
 
   const handleCloseToast = useCallback(() => setShowToast(false), []);
 
-  // useEffect(() => {
-  //   if (!loading && !user) {
-  //     router.push("/login");
-  //   }
-  // }, [user, loading, router]);
-
-  // if (loading) {
-  //   return <Loading />;
-  // }
-
-  // if (!user) {
-  //   return null;
-  // }
-
-  // Render role-specific dashboard content
   const renderDashboardContent = () => {
     if (loading || !profile) {
       return <Loading />;
@@ -76,9 +57,7 @@ export default function Dashboard() {
           onClose={handleCloseToast}
         />
       )}
-      <DashboardLayout>
-        {renderDashboardContent()}
-      </DashboardLayout>
+      {renderDashboardContent()}
     </>
   );
 }
