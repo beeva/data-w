@@ -61,7 +61,7 @@ export default function RequesterDashboard() {
 
   useEffect(() => {
     if (!userId) {
-      // setLoading(false);
+      setLoading(false);
       return;
     }
 
@@ -101,7 +101,7 @@ export default function RequesterDashboard() {
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
-        // setLoading(false);
+        setLoading(false);
       }
     };
 

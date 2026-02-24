@@ -61,7 +61,6 @@ export default function ActiveProjectsList() {
     }
 
     try {
-      setLoading(true);
       setError("");
 
       const { data, error: fetchError } = await getProjectsByRequester(userId);

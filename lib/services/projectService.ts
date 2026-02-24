@@ -22,7 +22,6 @@ export async function getProjectsByRequester(
     if (error) {
       return { data: null, error: new Error(error.message) };
     }
-
     return { data: data as Project[], error: null };
   } catch (err) {
     return {
