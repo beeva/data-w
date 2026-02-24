@@ -59,10 +59,11 @@ export default function ActiveProjectsList() {
       setLoading(false);
       return;
     }
+    
+    setLoading(true);
+    setError("");
 
     try {
-      setError("");
-
       const { data, error: fetchError } = await getProjectsByRequester(userId);
 
       if (fetchError) {
@@ -87,7 +88,6 @@ export default function ActiveProjectsList() {
     }
 
     fetchProjects();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, authLoading]);
 
   // Fetch real submission stats for all projects

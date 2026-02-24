@@ -2,7 +2,7 @@
  * Supabase service functions for Notifications
  */
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient, supabase } from "@/lib/supabase/client";
 import type {
   AppNotification,
   CreateNotificationInput,
@@ -15,7 +15,7 @@ export async function getNotifications(
   limit: number = 20
 ): Promise<{ data: AppNotification[] | null; error: Error | null }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { data: [], error: null };
 
@@ -50,7 +50,7 @@ export async function getUnreadNotificationCount(): Promise<{
   error: Error | null;
 }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { count: 0, error: null };
 
@@ -83,7 +83,7 @@ export async function markNotificationAsRead(
   id: string
 ): Promise<{ error: Error | null }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
 
     const { error } = await supabase
       .from("notifications")
@@ -112,7 +112,7 @@ export async function markAllNotificationsAsRead(): Promise<{
   error: Error | null;
 }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: null };
 
@@ -144,7 +144,7 @@ export async function createNotification(
   input: CreateNotificationInput
 ): Promise<{ error: Error | null }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
 
     const { error } = await supabase.from("notifications").insert({
       user_id: input.userId,

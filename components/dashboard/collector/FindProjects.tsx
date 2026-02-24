@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, supabase } from "@/lib/supabase/client";
 import { getOpenProjects } from "@/lib/services/projectService";
 import type { Project } from "@/types/project";
 import {
@@ -33,7 +33,6 @@ import {
   Loader2,
   FileText,
   Clock,
-  ArrowRight,
   Briefcase,
   Camera,
   Video,
@@ -42,10 +41,8 @@ import {
   MapPinned,
   Cpu,
   MoreHorizontal,
-  X,
   ChevronDown,
   ChevronUp,
-  TrendingUp,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
@@ -127,7 +124,7 @@ export default function FindProjects() {
   useEffect(() => {
     if (!userId) return;
 
-    const supabase = createClient();
+    // const supabase = createClient();
     const channel = supabase
       .channel(`proposals-collector-${userId}`)
       .on(

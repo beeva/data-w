@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -62,7 +62,7 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       setError("");
-      const supabase = createClient();
+      // const supabase = createClient();
 
       const [statsRes, activityRes] = await Promise.all([
         supabase.rpc("get_admin_stats"),

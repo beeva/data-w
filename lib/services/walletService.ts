@@ -2,7 +2,7 @@
  * Supabase service functions for Wallet operations
  */
 
-import { createClient } from "@/lib/supabase/client";
+import { createClient, supabase } from "@/lib/supabase/client";
 
 export interface WalletTransaction {
   id: string;
@@ -28,7 +28,7 @@ export async function getWalletBalance(
   userId: string
 ): Promise<{ balance: number; error: Error | null }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
     const { data, error } = await supabase
       .from("profiles")
       .select("balance")
@@ -56,7 +56,7 @@ export async function getWalletTransactions(
   limit = 50
 ): Promise<{ data: WalletTransaction[] | null; error: Error | null }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
     const { data, error } = await supabase
       .from("transactions")
       .select(
@@ -94,7 +94,7 @@ export async function transferFunds(
   platformFee = 0
 ): Promise<{ transactionId: string | null; error: Error | null }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
     const { data, error } = await supabase.rpc("transfer_funds", {
       p_requester_id: requesterId,
       p_collector_id: collectorId,
@@ -128,7 +128,7 @@ export async function deductProjectBudget(
   amount: number
 ): Promise<{ success: boolean; error: Error | null }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
     const { error } = await supabase.rpc("deduct_project_budget", {
       p_requester_id: requesterId,
       p_amount: amount,
@@ -162,7 +162,7 @@ export async function creditCollector(
   amount: number
 ): Promise<{ transactionId: string | null; error: Error | null }> {
   try {
-    const supabase = createClient();
+    // const supabase = createClient();
     const { data, error } = await supabase.rpc("credit_collector", {
       p_requester_id: requesterId,
       p_collector_id: collectorId,

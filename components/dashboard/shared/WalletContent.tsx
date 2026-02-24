@@ -7,7 +7,7 @@ import {
   getWalletTransactions,
   type WalletTransaction,
 } from "@/lib/services/walletService";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, supabase } from "@/lib/supabase/client";
 import {
   Card,
   CardContent,
@@ -46,7 +46,6 @@ import {
   Copy,
   Check,
   Bitcoin,
-  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -110,7 +109,7 @@ export default function WalletContent() {
         if (showSpinner) setLoading(true);
         setError("");
 
-        const supabase = createClient();
+        // const supabase = createClient();
         const [balanceResult, txResult, depositResult] = await Promise.all([
           getWalletBalance(userId),
           getWalletTransactions(userId),

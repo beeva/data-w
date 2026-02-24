@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { getCategoryColor } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -142,7 +142,7 @@ export default function AgentDashboard() {
     try {
       setLoading(true);
       setError("");
-      const supabase = createClient();
+      // const supabase = createClient();
       const { data: result, error: rpcError } = await supabase.rpc(
         "get_agent_dashboard",
         { p_agent_id: userId, p_status_filter: statusFilter }
@@ -167,7 +167,7 @@ export default function AgentDashboard() {
     if (!itemsMap[submissionId]) {
       try {
         setLoadingItems(submissionId);
-        const supabase = createClient();
+        // const supabase = createClient();
         const { data: items, error } = await supabase.rpc("agent_get_submission_items", {
           p_agent_id: userId,
           p_submission_id: submissionId,
@@ -190,7 +190,7 @@ export default function AgentDashboard() {
     if (!files) {
       try {
         setLoadingItems(submissionId);
-        const supabase = createClient();
+        // const supabase = createClient();
         const { data: items, error } = await supabase.rpc("agent_get_submission_items", {
           p_agent_id: userId,
           p_submission_id: submissionId,
@@ -233,7 +233,7 @@ export default function AgentDashboard() {
       const result: AiValidationResult = await res.json();
       setAiResults((prev) => ({ ...prev, [submissionId]: result }));
 
-      const supabase = createClient();
+      // const supabase = createClient();
       await supabase.rpc("agent_validate_submission", {
         p_agent_id: userId,
         p_submission_id: submissionId,
