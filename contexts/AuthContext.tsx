@@ -68,6 +68,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
         ])
 
+        // if (!sessionResult?.user?.id) {
+        //   return { data: null, error: new Error("User not authenticated") };
+        // }
+
         if (!isMounted) return
 
         if (!sessionResult) {

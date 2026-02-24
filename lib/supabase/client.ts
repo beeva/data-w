@@ -42,13 +42,16 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      global: {
-        fetch: fetchWithTimeout,
-      },
+      // global: {
+      //   fetch: fetchWithTimeout,
+      // },
       auth: {
-        lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => {
-          return await fn()
-        },
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        // lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => {
+        //   return await fn()
+        // },
       },
     }
   )

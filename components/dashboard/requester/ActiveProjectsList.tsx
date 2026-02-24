@@ -37,7 +37,7 @@ export default function ActiveProjectsList() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
