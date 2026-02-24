@@ -5,6 +5,21 @@
 import { supabase } from "@/lib/supabase/client";
 import type { Project, CreateProjectInput, ProjectStatus } from "@/types/project";
 
+const PROJECT_QUERY_TIMEOUT_MS = 12000;
+
+async function withTimeout<T>(promiseLike: PromiseLike<T>, timeoutMs: number, message: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([Promise.resolve(promiseLike), timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 /**
  * Fetch all projects created by a specific requester
  */
@@ -12,11 +27,15 @@ export async function getProjectsByRequester(
   requesterId: string
 ): Promise<{ data: Project[] | null; error: Error | null }> {
   try {
-    const { data, error } = await supabase
-      .from("requests")
-      .select("*")
-      .eq("requester_id", requesterId)
-      .order("created_at", { ascending: false });
+    const { data, error } = await withTimeout(
+      supabase
+        .from("requests")
+        .select("*")
+        .eq("requester_id", requesterId)
+        .order("created_at", { ascending: false }),
+      PROJECT_QUERY_TIMEOUT_MS,
+      "Project list request timed out"
+    );
 
     if (error) {
       return { data: null, error: new Error(error.message) };
