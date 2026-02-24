@@ -335,17 +335,17 @@ export async function getInvoices(
       return { data: null, error: new Error(txError.message) };
     }
 
-    const invoices: Invoice[] = (transactions || []).map((tx: TransactionRow, idx: number) => ({
+    const invoices: Invoice[] = (transactions || []).map((tx: TransactionRow) => ({
       id: tx.id,
-      user_id: tx.requester_id,
+      user_id: tx.requester_id ?? userId,
       amount: parseFloat(tx.amount) + parseFloat(tx.platform_fee),
       currency: tx.currency || "USD",
       status: tx.status as "completed",
       description: `Payment for submission`,
       invoice_date: tx.created_at,
       due_date: tx.created_at,
-      paid_at: tx.completed_at,
-      stripe_invoice_id: tx.stripe_payment_intent_id,
+      paid_at: tx.completed_at ?? null,
+      stripe_invoice_id: tx.stripe_payment_intent_id ?? null,
     }));
 
     return { data: invoices, error: null };
