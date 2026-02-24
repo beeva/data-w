@@ -7,7 +7,7 @@ import {
   getWalletTransactions,
   type WalletTransaction,
 } from "@/lib/services/walletService";
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import {
   Card,
   CardContent,
@@ -109,7 +109,6 @@ export default function WalletContent() {
         if (showSpinner) setLoading(true);
         setError("");
 
-        // const supabase = createClient();
         const [balanceResult, txResult, depositResult] = await Promise.all([
           getWalletBalance(userId),
           getWalletTransactions(userId),

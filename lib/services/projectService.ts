@@ -2,7 +2,7 @@
  * Supabase service functions for Project/Request operations
  */
 
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import type { Project, CreateProjectInput, ProjectStatus } from "@/types/project";
 
 /**
@@ -12,7 +12,6 @@ export async function getProjectsByRequester(
   requesterId: string
 ): Promise<{ data: Project[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("requests")
       .select("*")
@@ -38,7 +37,6 @@ export async function getProjectById(
   projectId: string
 ): Promise<{ data: Project | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("requests")
       .select("*")
@@ -66,7 +64,6 @@ export async function getOpenProjects(): Promise<{
   error: Error | null;
 }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("requests")
       .select("*")
@@ -94,7 +91,6 @@ export async function searchProjects(
   limit: number = 10
 ): Promise<{ data: Project[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("requests")
       .select("*")
@@ -130,8 +126,6 @@ export async function createProject(
   projectData: CreateProjectInput
 ): Promise<{ data: Project | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     // Check subscription project limit
     const { data: profile } = await supabase
       .from("profiles")
@@ -202,7 +196,6 @@ export async function updateProject(
   updates: Partial<CreateProjectInput> & { status?: ProjectStatus }
 ): Promise<{ data: Project | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     // Convert deadline if provided
     const updateData: any = { ...updates };
     if (updates.deadline !== undefined) {
@@ -240,7 +233,6 @@ export async function deleteProject(
   requesterId: string
 ): Promise<{ error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { error } = await supabase
       .from("requests")
       .delete()
@@ -268,7 +260,6 @@ export async function updateProjectStatus(
   status: ProjectStatus
 ): Promise<{ data: Project | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("requests")
       .update({ status })

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,9 +30,7 @@ import {
   Clock,
   CheckCircle2,
   Bot,
-  User,
   Loader2,
-  ExternalLink,
   Book,
   Video,
   Zap,
@@ -177,7 +175,6 @@ export default function HelpSupport() {
   const fetchMyTickets = useCallback(async () => {
     if (!userId) { setTicketsLoading(false); return; }
     try {
-      // const supabase = createClient();
       const { data, error } = await supabase
         .from("support_tickets")
         .select("*")
@@ -196,7 +193,6 @@ export default function HelpSupport() {
   const fetchReplies = async (ticketId: string) => {
     setRepliesLoading(true);
     try {
-      // const supabase = createClient();
       const { data, error } = await supabase
         .from("ticket_replies")
         .select("id, message, created_at, user_id, profiles(full_name, role)")
@@ -225,7 +221,6 @@ export default function HelpSupport() {
     if (!replyText.trim() || !selectedTicket || !userId) return;
     setReplySubmitting(true);
     try {
-      // const supabase = createClient();
       const { error } = await supabase.from("ticket_replies").insert({
         ticket_id: selectedTicket.id,
         user_id: userId,
@@ -287,7 +282,6 @@ export default function HelpSupport() {
     if (!ticketSubject.trim() || !ticketMessage.trim() || !userId) return;
     setTicketSubmitting(true);
     try {
-      // const supabase = createClient();
       const { error } = await supabase.from("support_tickets").insert({
         user_id: userId,
         subject: ticketSubject.trim(),

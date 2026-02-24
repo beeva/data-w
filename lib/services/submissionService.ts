@@ -2,7 +2,7 @@
  * Supabase service functions for Submission operations
  */
 
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import type {
   Submission,
   SubmissionWithCollector,
@@ -24,7 +24,6 @@ export async function getSubmissionsByProject(
   projectId: string
 ): Promise<{ data: SubmissionWithCollector[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("submissions")
       .select(
@@ -63,7 +62,6 @@ export async function getProjectStats(
   projectId: string
 ): Promise<{ data: ProjectStats | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("submissions")
       .select("status, validation_score")
@@ -119,7 +117,6 @@ export async function getDataItemsBySubmission(
   submissionId: string
 ): Promise<{ data: DataItem[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("data_items")
       .select("*")
@@ -147,7 +144,6 @@ export async function getValidationsBySubmission(
   submissionId: string
 ): Promise<{ data: Validation[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("validations")
       .select("*")
@@ -178,7 +174,6 @@ export async function updateSubmissionStatus(
   validationScore?: number
 ): Promise<{ data: Submission | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const updates: any = {
       status,
       validated_at: status === "validated" || status === "rejected" ? new Date().toISOString() : null,
@@ -223,7 +218,6 @@ export async function createSubmission(
   metadata?: SubmissionMetadata | null
 ): Promise<{ data: Submission | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("submissions")
       .insert({
@@ -259,7 +253,6 @@ export async function uploadSubmissionFile(
   file: File
 ): Promise<{ url: string | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const timestamp = Date.now();
     const filePath = `${collectorId}/${submissionId}/${timestamp}_${file.name}`;
 
@@ -299,7 +292,6 @@ export async function createDataItem(
   mimeType: string
 ): Promise<{ data: DataItem | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("data_items")
       .insert({

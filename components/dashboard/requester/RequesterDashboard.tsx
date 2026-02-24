@@ -19,7 +19,6 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertTriangle,
   DollarSign,
   Bell,
   Calendar,
@@ -55,7 +54,7 @@ export default function RequesterDashboard() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
   const [projectProgress, setProjectProgress] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const userId = user?.id;
 

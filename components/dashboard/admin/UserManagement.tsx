@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -83,7 +83,6 @@ export default function UserManagement() {
     try {
       setLoading(true);
       setError("");
-      // const supabase = createClient();
 
       const { data, error: rpcError } = await supabase.rpc("admin_get_users", {
         search_term: searchTerm,
@@ -120,7 +119,6 @@ export default function UserManagement() {
 
     setUpdatingId(targetUserId);
     try {
-      // const supabase = createClient();
       const { error: rpcError } = await supabase.rpc("admin_update_user_role", {
         target_user_id: targetUserId,
         new_role: newRole,

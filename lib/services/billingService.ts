@@ -2,7 +2,7 @@
  * Supabase service functions for Billing operations
  */
 
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import type {
   BillingStats,
   ProjectBilling,
@@ -46,8 +46,6 @@ export async function getBillingStats(
   userId: string
 ): Promise<{ data: BillingStats | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     // Fetch transactions for this user
     const { data: transactions, error: txError } = await supabase
       .from("transactions")
@@ -127,8 +125,6 @@ export async function getProjectBillings(
   userId: string
 ): Promise<{ data: ProjectBilling[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     // Fetch user's projects
     const { data: projects, error: projError } = await supabase
       .from("requests")
@@ -229,7 +225,6 @@ export async function getUsageData(
   userId: string
 ): Promise<{ data: UsageData[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const now = new Date();
     const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
 
@@ -327,8 +322,6 @@ export async function getInvoices(
   userId: string
 ): Promise<{ data: Invoice[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     // Fetch completed transactions as invoices
     const { data: transactions, error: txError } = await supabase
       .from("transactions")
@@ -452,7 +445,6 @@ export async function getUserSubscription(
   userId: string
 ): Promise<{ data: UserSubscription | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("user_subscriptions")
       .select("*")
@@ -507,7 +499,6 @@ export async function subscribeToPlan(
   price: number
 ): Promise<{ subscriptionId: string | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase.rpc("subscribe_to_plan", {
       p_user_id: userId,
       p_plan_id: planId,
@@ -541,7 +532,6 @@ export async function cancelSubscription(
   immediate = false
 ): Promise<{ success: boolean; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { error } = await supabase.rpc("cancel_subscription", {
       p_user_id: userId,
       p_immediate: immediate,

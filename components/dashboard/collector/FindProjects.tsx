@@ -3,14 +3,12 @@
 import { useState, useEffect } from "react";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { getOpenProjects } from "@/lib/services/projectService";
 import type { Project } from "@/types/project";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -124,7 +122,6 @@ export default function FindProjects() {
   useEffect(() => {
     if (!userId) return;
 
-    // const supabase = createClient();
     const channel = supabase
       .channel(`proposals-collector-${userId}`)
       .on(

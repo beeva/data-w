@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,6 @@ import {
   Inbox,
   Clock,
   CheckCircle2,
-  AlertCircle,
   XCircle,
   MessageSquare,
 } from "lucide-react";
@@ -101,7 +100,7 @@ export default function AdminTickets() {
     try {
       setLoading(true);
       setError("");
-      // const supabase = createClient();
+
       const { data, error: rpcError } = await supabase.rpc("admin_get_tickets", {
         status_filter: statusFilter,
         search_term: searchTerm,
@@ -127,7 +126,6 @@ export default function AdminTickets() {
   const fetchReplies = async (ticketId: string) => {
     setRepliesLoading(true);
     try {
-      // const supabase = createClient();
       const { data, error } = await supabase.rpc("admin_get_ticket_replies", {
         p_ticket_id: ticketId,
       });
@@ -151,7 +149,6 @@ export default function AdminTickets() {
     if (!replyText.trim() || !selectedTicket) return;
     setReplySubmitting(true);
     try {
-      // const supabase = createClient();
       const { error } = await supabase.rpc("admin_reply_ticket", {
         p_ticket_id: selectedTicket.id,
         p_message: replyText.trim(),
@@ -176,7 +173,6 @@ export default function AdminTickets() {
 
   const handleStatusChange = async (ticketId: string, newStatus: string) => {
     try {
-      // const supabase = createClient();
       const { error } = await supabase.rpc("admin_update_ticket_status", {
         p_ticket_id: ticketId,
         p_status: newStatus,

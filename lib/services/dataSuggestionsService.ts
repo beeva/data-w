@@ -2,8 +2,7 @@
  * Service for fetching data suggestions from existing projects and Hugging Face
  */
 
-import { createClient, supabase } from "@/lib/supabase/client";
-import type { Project } from "@/types/project";
+import { supabase } from "@/lib/supabase/client";
 
 export interface SimilarProject {
   id: string;
@@ -56,8 +55,6 @@ export async function searchSimilarProjects(
       return { data: [], error: null };
     }
 
-    // const supabase = createClient();
-    
     // Extract keywords from title and description
     const searchText = `${title} ${description}`.trim();
     

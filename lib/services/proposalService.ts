@@ -2,7 +2,7 @@
  * Supabase service functions for Proposal operations
  */
 
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import { createNotification } from "@/lib/services/notificationService";
 import type {
   Proposal,
@@ -19,8 +19,6 @@ export async function createProposal(
   proposalData: CreateProposalInput
 ): Promise<{ data: Proposal | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     const { data, error } = await supabase
       .from("proposals")
       .insert({
@@ -99,8 +97,6 @@ export async function getProposalsByProject(
   projectId: string
 ): Promise<{ data: ProposalWithCollector[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     const { data, error } = await supabase
       .from("proposals")
       .select(
@@ -144,8 +140,6 @@ export async function getProposalsByCollector(
   collectorId: string
 ): Promise<{ data: Proposal[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     const { data, error } = await supabase
       .from("proposals")
       .select("*")
@@ -174,8 +168,6 @@ export async function updateProposalStatus(
   requesterId: string
 ): Promise<{ data: Proposal | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     // Verify requester owns the project
     const { data: proposal, error: fetchError } = await supabase
       .from("proposals")
@@ -245,8 +237,6 @@ export async function acceptProposals(
   requesterId: string
 ): Promise<{ data: CollectorAssignment[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     // Verify requester owns all projects
     const { data: proposals, error: fetchError } = await supabase
       .from("proposals")
@@ -354,8 +344,6 @@ export async function getAssignmentByToken(
   token: string
 ): Promise<{ data: CollectorAssignment | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     const queryPromise = supabase
       .from("collector_assignments")
       .select("*")
@@ -401,8 +389,6 @@ export async function getAssignmentsByCollector(
   collectorId: string
 ): Promise<{ data: (CollectorAssignment & { project?: { id: string; title: string } })[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     const { data, error } = await supabase
       .from("collector_assignments")
       .select(`
@@ -446,8 +432,6 @@ export async function getAssignmentsByProject(
   projectId: string
 ): Promise<{ data: CollectorAssignment[] | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-
     const { data, error } = await supabase
       .from("collector_assignments")
       .select("*")
@@ -488,7 +472,6 @@ export async function getAssignmentCountsByProjects(
   if (projectIds.length === 0) return { data: {}, error: null };
 
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("collector_assignments")
       .select("request_id")

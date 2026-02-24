@@ -2,7 +2,7 @@
  * Supabase service functions for Profile operations
  */
 
-import { createClient, supabase } from "@/lib/supabase/client";
+import { supabase } from "@/lib/supabase/client";
 import type { UserProfile } from "@/types/user";
 
 /**
@@ -12,7 +12,6 @@ export async function getProfileById(
   userId: string
 ): Promise<{ data: UserProfile | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
@@ -40,7 +39,6 @@ export async function updateProfile(
   updates: Partial<UserProfile>
 ): Promise<{ data: UserProfile | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
     const { data, error } = await supabase
       .from("profiles")
       .update(updates)
@@ -69,8 +67,6 @@ export async function uploadAvatar(
   file: File
 ): Promise<{ url: string | null; error: Error | null }> {
   try {
-    // const supabase = createClient();
-    
     // Note: File validation and resizing should be done before calling this function
     // This service accepts pre-optimized images
     
@@ -134,8 +130,6 @@ export async function deleteAvatar(
   userId: string
 ): Promise<{ error: Error | null }> {
   try {
-    // const supabase = createClient();
-    
     // Delete avatar files from storage
     const { data: existingFiles } = await supabase
       .storage
