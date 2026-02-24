@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { searchProjects } from "@/lib/services/projectService";
 import type { Project } from "@/types/project";
 import {
@@ -147,7 +148,7 @@ export default function DashboardHeader({
           table: "notifications",
           filter: `user_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<AppNotification>) => {
           const notif = payload.new as AppNotification;
           // Guard: only process notifications for this user
           if (notif.user_id !== userId) return;

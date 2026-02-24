@@ -85,7 +85,7 @@ export async function uploadAvatar(
       .list(userId);
     
     if (existingFiles && existingFiles.length > 0) {
-      const filesToDelete = existingFiles.map(f => `${userId}/${f.name}`);
+      const filesToDelete = existingFiles.map((f: { name: string }) => `${userId}/${f.name}`);
       await supabase.storage.from('avatars').remove(filesToDelete);
     }
     
@@ -143,7 +143,7 @@ export async function deleteAvatar(
       .list(userId);
     
     if (existingFiles && existingFiles.length > 0) {
-      const filesToDelete = existingFiles.map(f => `${userId}/${f.name}`);
+      const filesToDelete = existingFiles.map((f: { name: string }) => `${userId}/${f.name}`);
       await supabase.storage.from('avatars').remove(filesToDelete);
     }
     

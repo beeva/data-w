@@ -14,6 +14,32 @@ import type {
   BillingCycle,
 } from "@/types/billing";
 
+type TransactionRow = {
+  id: string;
+  created_at: string;
+  requester_id: string | null;
+  collector_id: string | null;
+  submission_id?: string | null;
+  amount: string;
+  platform_fee: string;
+  status: string;
+  completed_at?: string | null;
+  currency?: string | null;
+  stripe_payment_intent_id?: string | null;
+};
+
+type ProjectRow = {
+  id: string;
+  title?: string;
+  created_at?: string;
+};
+
+type SubmissionRow = {
+  id: string;
+  request_id: string;
+  submitted_at?: string;
+};
+
 /**
  * Get billing statistics for a user
  */
@@ -43,7 +69,7 @@ export async function getBillingStats(
     let thisMonthSpent = 0;
     let thisMonthEarned = 0;
 
-    (transactions || []).forEach((tx) => {
+    (transactions || []).forEach((tx: TransactionRow) => {
       const txDate = new Date(tx.created_at);
       const isThisMonth = txDate >= startOfMonth && txDate <= endOfMonth;
 
@@ -134,7 +160,7 @@ export async function getProjectBillings(
       .select("id, request_id")
       .in(
         "request_id",
-        projects.map((p) => p.id)
+        projects.map((p: ProjectRow) => p.id)
       );
 
     if (subError) {
@@ -143,17 +169,17 @@ export async function getProjectBillings(
 
     // Create submission to project mapping
     const submissionToProject: Record<string, string> = {};
-    (submissions || []).forEach((sub) => {
+    (submissions || []).forEach((sub: SubmissionRow) => {
       submissionToProject[sub.id] = sub.request_id;
     });
 
     // Aggregate billing per project
     const projectBillings: Record<string, ProjectBilling> = {};
 
-    projects.forEach((project) => {
+    projects.forEach((project: ProjectRow) => {
       projectBillings[project.id] = {
         project_id: project.id,
-        project_title: project.title,
+        project_title: project.title || "Untitled Project",
         total_spent: 0,
         submissions_paid: 0,
         pending_payments: 0,
@@ -161,7 +187,7 @@ export async function getProjectBillings(
       };
     });
 
-    (transactions || []).forEach((tx) => {
+    (transactions || []).forEach((tx: TransactionRow) => {
       if (tx.submission_id && submissionToProject[tx.submission_id]) {
         const projectId = submissionToProject[tx.submission_id];
         if (projectBillings[projectId]) {
@@ -169,12 +195,14 @@ export async function getProjectBillings(
           if (tx.status === "completed") {
             projectBillings[projectId].total_spent += amount;
             projectBillings[projectId].submissions_paid += 1;
-            if (
-              !projectBillings[projectId].last_payment_date ||
-              new Date(tx.completed_at) >
-                new Date(projectBillings[projectId].last_payment_date!)
-            ) {
-              projectBillings[projectId].last_payment_date = tx.completed_at;
+            if (tx.completed_at) {
+              if (
+                !projectBillings[projectId].last_payment_date ||
+                new Date(tx.completed_at) >
+                  new Date(projectBillings[projectId].last_payment_date!)
+              ) {
+                projectBillings[projectId].last_payment_date = tx.completed_at;
+              }
             }
           } else if (tx.status === "pending") {
             projectBillings[projectId].pending_payments += amount;
@@ -236,9 +264,9 @@ export async function getUsageData(
 
     // Filter submissions to only include those for user's projects
     const userProjectIds =
-      projects?.map((p) => p.id) || [];
+      projects?.map((p: ProjectRow) => p.id) || [];
     const userSubmissions =
-      submissions?.filter((s) => userProjectIds.includes(s.request_id)) || [];
+      submissions?.filter((s: SubmissionRow) => userProjectIds.includes(s.request_id)) || [];
 
     // Generate monthly usage data
     const usageData: UsageData[] = [];
@@ -251,7 +279,7 @@ export async function getUsageData(
       let amountSpent = 0;
       let amountEarned = 0;
 
-      (transactions || []).forEach((tx) => {
+      (transactions || []).forEach((tx: TransactionRow) => {
         const txDate = new Date(tx.created_at);
         if (txDate >= monthStart && txDate <= monthEnd && tx.status === "completed") {
           if (tx.requester_id === userId) {
@@ -262,12 +290,14 @@ export async function getUsageData(
         }
       });
 
-      const projectsCreated = (projects || []).filter((p) => {
+      const projectsCreated = (projects || []).filter((p: ProjectRow) => {
+        if (!p.created_at) return false;
         const pDate = new Date(p.created_at);
         return pDate >= monthStart && pDate <= monthEnd;
       }).length;
 
-      const submissionsReceived = userSubmissions.filter((s) => {
+      const submissionsReceived = userSubmissions.filter((s: SubmissionRow) => {
+        if (!s.submitted_at) return false;
         const sDate = new Date(s.submitted_at);
         return sDate >= monthStart && sDate <= monthEnd;
       }).length;
@@ -313,7 +343,7 @@ export async function getInvoices(
       return { data: null, error: new Error(txError.message) };
     }
 
-    const invoices: Invoice[] = (transactions || []).map((tx, idx) => ({
+    const invoices: Invoice[] = (transactions || []).map((tx: TransactionRow, idx: number) => ({
       id: tx.id,
       user_id: tx.requester_id,
       amount: parseFloat(tx.amount) + parseFloat(tx.platform_fee),

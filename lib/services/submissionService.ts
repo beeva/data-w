@@ -12,6 +12,11 @@ import type {
   SubmissionMetadata,
 } from "@/types/submission";
 
+type SubmissionStatsRow = {
+  status: Submission["status"];
+  validation_score: Submission["validation_score"];
+};
+
 /**
  * Get all submissions for a project
  */
@@ -68,26 +73,26 @@ export async function getProjectStats(
       return { data: null, error: new Error(error.message) };
     }
 
-    const submissions = data || [];
+    const submissions: SubmissionStatsRow[] = (data || []) as SubmissionStatsRow[];
     const stats: ProjectStats = {
       total_submissions: submissions.length,
-      pending_submissions: submissions.filter((s) => s.status === "pending")
+      pending_submissions: submissions.filter((s: SubmissionStatsRow) => s.status === "pending")
         .length,
-      validated_submissions: submissions.filter((s) => s.status === "validated")
+      validated_submissions: submissions.filter((s: SubmissionStatsRow) => s.status === "validated")
         .length,
-      rejected_submissions: submissions.filter((s) => s.status === "rejected")
+      rejected_submissions: submissions.filter((s: SubmissionStatsRow) => s.status === "rejected")
         .length,
-      disputed_submissions: submissions.filter((s) => s.status === "disputed")
+      disputed_submissions: submissions.filter((s: SubmissionStatsRow) => s.status === "disputed")
         .length,
       average_validation_score: null,
     };
 
     const validatedWithScore = submissions.filter(
-      (s) => s.status === "validated" && s.validation_score !== null
+      (s: SubmissionStatsRow) => s.status === "validated" && s.validation_score !== null
     );
     if (validatedWithScore.length > 0) {
       const totalScore = validatedWithScore.reduce(
-        (sum, s) => sum + (s.validation_score || 0),
+        (sum: number, s: SubmissionStatsRow) => sum + (s.validation_score || 0),
         0
       );
       stats.average_validation_score = Math.round(

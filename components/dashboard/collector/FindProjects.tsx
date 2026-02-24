@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { createClient } from "@/lib/supabase/client";
 import { getOpenProjects } from "@/lib/services/projectService";
@@ -137,7 +138,7 @@ export default function FindProjects() {
           table: "proposals",
           filter: `collector_id=eq.${userId}`,
         },
-        (payload) => {
+        (payload: RealtimePostgresChangesPayload<Proposal>) => {
           const updated = payload.new as Proposal;
           setProposalStatuses((prev) => ({
             ...prev,

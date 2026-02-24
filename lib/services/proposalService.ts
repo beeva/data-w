@@ -465,7 +465,7 @@ export async function getAssignmentsByProject(
         : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
     return {
-      data: (data || []).map((assignment) => ({
+      data: (data || []).map((assignment: CollectorAssignment) => ({
         ...assignment,
         submission_link: `${baseUrl}/submit/${assignment.submission_token}`,
       })) as CollectorAssignment[],
@@ -500,7 +500,7 @@ export async function getAssignmentCountsByProjects(
     }
 
     const counts: Record<string, number> = {};
-    (data || []).forEach((row) => {
+    (data || []).forEach((row: { request_id: string }) => {
       counts[row.request_id] = (counts[row.request_id] || 0) + 1;
     });
 

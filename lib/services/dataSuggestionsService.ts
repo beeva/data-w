@@ -34,6 +34,15 @@ export interface BudgetSuggestions {
   count: number;
 }
 
+type ProjectSuggestionRow = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  budget: number;
+  created_at: string;
+};
+
 /**
  * Search for similar projects based on title and description keywords
  */
@@ -74,7 +83,7 @@ export async function searchSimilarProjects(
     }
 
     return {
-      data: (data || []).map((p) => ({
+      data: (data || []).map((p: ProjectSuggestionRow) => ({
         id: p.id,
         title: p.title,
         description: p.description,
