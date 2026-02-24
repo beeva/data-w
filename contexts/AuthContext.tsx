@@ -1,8 +1,8 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
+import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { User, type AuthChangeEvent, type Session } from '@supabase/supabase-js'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from '@/lib/supabase/client'
 import { getProfileById } from '@/lib/services/profileService'
 import type { UserProfile } from '@/types/user'
 
@@ -26,10 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const lastUserIdRef = useRef<string | null>(null)
   
-  // Memoize supabase client to prevent re-creation on every render
-  const supabase = useMemo(() => createClient(), [])
-
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
   const fetchProfile = useCallback(async (userId: string) => {
@@ -59,6 +57,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true
     let subscription: { unsubscribe: () => void } | null = null
+    let consecutiveRefreshFailures = 0
+
+    const performLocalSignOut = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' })
+      } catch (error) {
+        console.error('Error signing out after refresh failure:', error)
+      } finally {
+        if (isMounted) {
+          setUser(null)
+          setProfile(null)
+        }
+      }
+    }
 
     const initializeAuth = async () => {
       try {
@@ -67,10 +79,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           supabase.auth.getSession(),
           new Promise<null>((resolve) => setTimeout(() => resolve(null), 5000))
         ])
-
-        // if (!sessionResult?.user?.id) {
-        //   return { data: null, error: new Error("User not authenticated") };
-        // }
 
         if (!isMounted) return
 
@@ -90,6 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (isMounted) {
           setUser(session?.user ?? null)
+          lastUserIdRef.current = session?.user?.id ?? null
           if (session?.user) {
             const userProfile = await fetchProfile(session.user.id)
             if (isMounted) setProfile(userProfile)
@@ -111,42 +120,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription: authSubscription },
-    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
+    } = supabase.auth.onAuthStateChange((event: AuthChangeEvent, session: Session | null) => {
       if (!isMounted) return
 
       // Token refresh doesn't change user identity — skip to avoid cascading re-renders
       if (event === 'TOKEN_REFRESHED') return
-      
-      setUser(session?.user ?? null)
-      if (session?.user) {
-        const userProfile = await fetchProfile(session.user.id)
-        if (isMounted) setProfile(userProfile)
-      } else {
+
+      const nextUser = session?.user ?? null
+      const nextUserId = nextUser?.id ?? null
+      const previousUserId = lastUserIdRef.current
+      const shouldFetchProfile = Boolean(nextUserId) && nextUserId !== previousUserId
+
+      setUser(nextUser)
+      lastUserIdRef.current = nextUserId
+
+      if (!nextUserId) {
         setProfile(null)
+        return
       }
+
+      // Avoid supabase queries directly inside auth callback to prevent auth-lock deadlocks.
+      if (!shouldFetchProfile) {
+        return
+      }
+
+      Promise.resolve().then(async () => {
+        if (!isMounted) return
+        const userProfile = await fetchProfile(nextUserId)
+        if (isMounted) setProfile(userProfile)
+      })
     })
     
     subscription = authSubscription
 
     // Refresh session when tab becomes visible after inactivity.
     // Keep session fresh proactively (some projects use short JWT lifetimes, e.g. ~5 minutes).
-    const refreshSessionSafely = () => {
+    const refreshSessionSafely = async () => {
       if (!isMounted) return
-      Promise.race([
-        supabase.auth.refreshSession(),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Auth refresh timeout')), 8000)
-        ),
-      ]).catch(() => {})
+      const refreshWithTimeout = () =>
+        Promise.race([
+          supabase.auth.refreshSession(),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Auth refresh timeout')), 8000)
+          ),
+        ])
+
+      try {
+        const { error } = await refreshWithTimeout()
+        if (error) throw error
+        consecutiveRefreshFailures = 0
+        return
+      } catch (error) {
+        console.warn('Session refresh attempt failed, retrying once...', error)
+      }
+
+      await sleep(1000)
+
+      try {
+        const { error } = await refreshWithTimeout()
+        if (error) throw error
+        consecutiveRefreshFailures = 0
+      } catch (error) {
+        consecutiveRefreshFailures += 1
+        console.error('Session refresh failed after retry:', error)
+
+        if (consecutiveRefreshFailures >= 2) {
+          console.warn('Signing out due to repeated session refresh failures')
+          await performLocalSignOut()
+        }
+      }
     }
 
-    const refreshInterval = setInterval(refreshSessionSafely, 4 * 60 * 1000)
+    const refreshInterval = setInterval(() => {
+      void refreshSessionSafely()
+    }, 4 * 60 * 1000)
 
     // Refresh session when tab becomes visible after inactivity.
     // onAuthStateChange handles user/profile updates.
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isMounted) {
-        refreshSessionSafely()
+        void refreshSessionSafely()
       }
     }
 
@@ -172,7 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
-  }, [supabase])
+  }, [])
 
   const value = useMemo(() => ({
     user,

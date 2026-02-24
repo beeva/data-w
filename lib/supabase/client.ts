@@ -3,11 +3,6 @@ import { createBrowserClient } from '@supabase/ssr'
 let browserClient: ReturnType<typeof createBrowserClient> | null = null
 const SUPABASE_REQUEST_TIMEOUT_MS = 15000
 
-export const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 const fetchWithTimeout: typeof fetch = async (input, init = {}) => {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), SUPABASE_REQUEST_TIMEOUT_MS)
@@ -22,8 +17,6 @@ const fetchWithTimeout: typeof fetch = async (input, init = {}) => {
     })
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      // Reset cached client so next call starts with a fresh instance.
-      browserClient = null
       throw new Error('Supabase request timed out')
     }
     throw error
@@ -42,9 +35,9 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      // global: {
-      //   fetch: fetchWithTimeout,
-      // },
+      global: {
+        fetch: fetchWithTimeout,
+      },
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -58,4 +51,6 @@ export function createClient() {
 
   return browserClient
 }
+
+export const supabase = createClient()
 
