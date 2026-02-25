@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, Save, MapPin } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import { LocationMapPreview } from "@/components/ui/location-map-preview";
 
 interface EditProjectDialogProps {
   project: Project;
@@ -91,8 +92,15 @@ export default function EditProjectDialog({
     location_address: "",
     location_lat: "",
     location_lng: "",
-    radius_km: "",
+    radius_km: "5",
   });
+  const hasLocationCoordinates =
+    formData.location_lat.trim() !== "" && formData.location_lng.trim() !== "";
+  const locationLat = hasLocationCoordinates ? parseFloat(formData.location_lat) : NaN;
+  const locationLng = hasLocationCoordinates ? parseFloat(formData.location_lng) : NaN;
+  const radiusKm = Number.isFinite(parseFloat(formData.radius_km))
+    ? parseFloat(formData.radius_km)
+    : 5;
 
   // Initialize form with project data
   useEffect(() => {
@@ -112,7 +120,7 @@ export default function EditProjectDialog({
         location_address: project.location?.address || "",
         location_lat: project.location?.lat?.toString() || "",
         location_lng: project.location?.lng?.toString() || "",
-        radius_km: project.location?.radius_km?.toString() || "",
+        radius_km: project.location?.radius_km?.toString() || "5",
       });
     }
   }, [project]);
@@ -402,6 +410,7 @@ export default function EditProjectDialog({
                     location_address: result.address,
                     location_lat: result.lat?.toString() || "",
                     location_lng: result.lng?.toString() || "",
+                    radius_km: prev.radius_km || "5",
                   }))
                 }
                 placeholder="Search for a location..."
@@ -449,6 +458,19 @@ export default function EditProjectDialog({
                 />
               </div>
             </div>
+
+            {hasLocationCoordinates && (
+              <div className="space-y-0.5">
+                <Label className="text-[10px]">Map Preview</Label>
+                <div className="overflow-hidden rounded border border-gray-200 dark:border-gray-700">
+                  <LocationMapPreview
+                    lat={locationLat}
+                    lng={locationLng}
+                    radiusKm={radiusKm}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter className="pt-2">

@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { MapPin, DollarSign, Calendar, Users, FileText } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import DataSuggestionsPanel from "./DataSuggestionsPanel";
 
 export default function NewProjectForm() {
@@ -48,8 +49,15 @@ export default function NewProjectForm() {
     location_address: "",
     location_lat: "",
     location_lng: "",
-    radius_km: "",
+    radius_km: "5",
   });
+  const hasLocationCoordinates =
+    formData.location_lat.trim() !== "" && formData.location_lng.trim() !== "";
+  const locationLat = hasLocationCoordinates ? parseFloat(formData.location_lat) : NaN;
+  const locationLng = hasLocationCoordinates ? parseFloat(formData.location_lng) : NaN;
+  const radiusKm = Number.isFinite(parseFloat(formData.radius_km))
+    ? parseFloat(formData.radius_km)
+    : 5;
 
   const categories = [
     "Photography",
@@ -397,6 +405,7 @@ export default function NewProjectForm() {
                     location_address: result.address,
                     location_lat: result.lat?.toString() || "",
                     location_lng: result.lng?.toString() || "",
+                    radius_km: prev.radius_km || "5",
                   }))
                 }
                 placeholder="Search for a location..."
@@ -444,6 +453,19 @@ export default function NewProjectForm() {
                 />
               </div>
             </div>
+
+            {hasLocationCoordinates && (
+              <div className="space-y-0.5">
+                <Label className="text-[10px]">Map Preview</Label>
+                <div className="overflow-hidden rounded border border-gray-200 dark:border-gray-700">
+                  <LocationMapPreview
+                    lat={locationLat}
+                    lng={locationLng}
+                    radiusKm={radiusKm}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
             </CardContent>
