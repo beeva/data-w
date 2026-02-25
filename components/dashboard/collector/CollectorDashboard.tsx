@@ -37,6 +37,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import SubmitProposalDialog from "./SubmitProposalDialog";
+import { LocationMapPreview } from "@/components/ui/location-map-preview";
 
 /** Haversine distance in km between two lat/lng points */
 function getDistanceKm(
@@ -72,7 +73,7 @@ export default function CollectorDashboard() {
   const [assignmentCounts, setAssignmentCounts] = useState<Record<string, number>>({});
   const [activeAssignments, setActiveAssignments] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [maxDistance, setMaxDistance] = useState<number>(0); // 0 = all
+  const [maxDistance, setMaxDistance] = useState<number>(5); // default radius shown on map
 
   const collectorLat = profile?.location?.lat;
   const collectorLng = profile?.location?.lng;
@@ -274,7 +275,6 @@ export default function CollectorDashboard() {
         </Card>
       )}
 
-      {/* Nearby Projects */}
       <Card className="dark:bg-gray-800/50 border-none">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -330,143 +330,163 @@ export default function CollectorDashboard() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          {nearbyProjects.length === 0 ? (
-            <div className="text-center py-8">
-              <Briefcase className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-50" />
-              <p className="text-sm text-muted-foreground">
-                {maxDistance > 0
-                  ? `No projects found within ${maxDistance} km. Try increasing the distance.`
-                  : "No open projects available right now."}
-              </p>
-              {maxDistance > 0 && (
-                <Button
-                  variant="link"
-                  className="text-xs mt-1 text-cyan-600 dark:text-cyan-400"
-                  onClick={() => setMaxDistance(0)}
-                >
-                  Show all distances
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {nearbyProjects.slice(0, 6).map((project) => {
-                const rawKm = getRawDistanceKm(project);
-                const distance = rawKm !== null ? formatDistance(rawKm) : null;
-                const proposal = proposalStatuses[project.id];
-                const slotsFilled = (assignmentCounts[project.id] || 0) >= (project.max_collectors || 1);
+      </Card>
 
-                return (
-                  <div
-                    key={project.id}
-                    className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <h3 className="text-sm font-semibold truncate">
-                            {project.title}
-                          </h3>
-                          <Badge className={`text-[9px] px-1.5 py-0 ${getCategoryColor(project.category)}`}>
-                            {project.category}
-                          </Badge>
-                          {proposal && (
-                            <Badge
-                              className={
-                                proposal.status === "accepted"
-                                  ? "bg-green-500/20 text-green-600 border-green-500/30 text-[9px] px-1.5 py-0"
-                                  : proposal.status === "rejected"
-                                  ? "bg-red-500/20 text-red-600 border-red-500/30 text-[9px] px-1.5 py-0"
-                                  : "bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-[9px] px-1.5 py-0"
-                              }
-                            >
-                              {proposal.status === "accepted"
-                                ? "Accepted"
-                                : proposal.status === "rejected"
-                                ? "Rejected"
-                                : "Pending"}
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
-                          {project.description}
-                        </p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                          {distance && (
-                            <div className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400 font-medium">
-                              <MapPin className="w-3 h-3" />
-                              <span>{distance}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <DollarSign className="w-3 h-3" />
-                            <span className="font-semibold text-foreground">
-                              ${project.budget.toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            <span>{formatDate(project.deadline)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            <span>{project.max_collectors} collector{project.max_collectors !== 1 ? "s" : ""}</span>
-                          </div>
-                          {project.location?.address && !distance && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              <span className="truncate max-w-[150px]">{project.location.address}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="shrink-0">
-                        {proposal ? (
-                          <p className="text-[10px] text-muted-foreground text-right">
-                            Submitted<br />
-                            {new Date(proposal.submitted_at).toLocaleDateString()}
-                          </p>
-                        ) : slotsFilled ? (
-                          <Badge variant="secondary" className="text-[10px] bg-gray-500/20 text-gray-400">
-                            Slots Full
-                          </Badge>
-                        ) : (
-                          <SubmitProposalDialog
-                            project={project}
-                            onSuccess={() => {
-                              if (user) {
-                                getProposalsByCollector(user.id).then((res) => {
-                                  if (res.data) {
-                                    const map: Record<string, Proposal> = {};
-                                    res.data.forEach((p) => { map[p.request_id] = p; });
-                                    setProposalStatuses(map);
-                                  }
-                                });
-                              }
-                            }}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {nearbyProjects.length > 6 && (
-                <div className="text-center pt-2">
+      {/* Map + Nearby Projects */}
+      <div className={`grid grid-cols-1 ${hasLocation ? "xl:grid-cols-2" : ""} gap-4 items-start`}>
+        {hasLocation && (
+          <Card className="dark:bg-gray-800/50 border-none">
+            <CardContent>
+              <div className="overflow-hidden rounded border border-gray-200 dark:border-gray-700">
+                <LocationMapPreview
+                  lat={collectorLat!}
+                  lng={collectorLng!}
+                  radiusKm={maxDistance > 0 ? maxDistance : 0}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="dark:bg-gray-800/50 border-none">
+          <CardContent>
+            {nearbyProjects.length === 0 ? (
+              <div className="text-center py-8">
+                <Briefcase className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-50" />
+                <p className="text-sm text-muted-foreground">
+                  {maxDistance > 0
+                    ? `No projects found within ${maxDistance} km. Try increasing the distance.`
+                    : "No open projects available right now."}
+                </p>
+                {maxDistance > 0 && (
                   <Button
                     variant="link"
-                    className="text-xs text-cyan-600 dark:text-cyan-400"
-                    onClick={() => router.push("/dashboard/projects/find")}
+                    className="text-xs mt-1 text-cyan-600 dark:text-cyan-400"
+                    onClick={() => setMaxDistance(0)}
                   >
-                    View all {nearbyProjects.length} projects →
+                    Show all distances
                   </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {nearbyProjects.slice(0, 6).map((project) => {
+                  const rawKm = getRawDistanceKm(project);
+                  const distance = rawKm !== null ? formatDistance(rawKm) : null;
+                  const proposal = proposalStatuses[project.id];
+                  const slotsFilled = (assignmentCounts[project.id] || 0) >= (project.max_collectors || 1);
+
+                  return (
+                    <div
+                      key={project.id}
+                      className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <h3 className="text-sm font-semibold truncate">
+                              {project.title}
+                            </h3>
+                            <Badge className={`text-[9px] px-1.5 py-0 ${getCategoryColor(project.category)}`}>
+                              {project.category}
+                            </Badge>
+                            {proposal && (
+                              <Badge
+                                className={
+                                  proposal.status === "accepted"
+                                    ? "bg-green-500/20 text-green-600 border-green-500/30 text-[9px] px-1.5 py-0"
+                                    : proposal.status === "rejected"
+                                    ? "bg-red-500/20 text-red-600 border-red-500/30 text-[9px] px-1.5 py-0"
+                                    : "bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-[9px] px-1.5 py-0"
+                                }
+                              >
+                                {proposal.status === "accepted"
+                                  ? "Accepted"
+                                  : proposal.status === "rejected"
+                                  ? "Rejected"
+                                  : "Pending"}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
+                            {project.description}
+                          </p>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                            {distance && (
+                              <div className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400 font-medium">
+                                <MapPin className="w-3 h-3" />
+                                <span>{distance}</span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1">
+                              <DollarSign className="w-3 h-3" />
+                              <span className="font-semibold text-foreground">
+                                ${project.budget.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              <span>{formatDate(project.deadline)}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Users className="w-3 h-3" />
+                              <span>{project.max_collectors} collector{project.max_collectors !== 1 ? "s" : ""}</span>
+                            </div>
+                            {project.location?.address && !distance && (
+                              <div className="flex items-center gap-1">
+                                <MapPin className="w-3 h-3" />
+                                <span className="truncate max-w-[150px]">{project.location.address}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="shrink-0">
+                          {proposal ? (
+                            <p className="text-[10px] text-muted-foreground text-right">
+                              Submitted<br />
+                              {new Date(proposal.submitted_at).toLocaleDateString()}
+                            </p>
+                          ) : slotsFilled ? (
+                            <Badge variant="secondary" className="text-[10px] bg-gray-500/20 text-gray-400">
+                              Slots Full
+                            </Badge>
+                          ) : (
+                            <SubmitProposalDialog
+                              project={project}
+                              onSuccess={() => {
+                                if (user) {
+                                  getProposalsByCollector(user.id).then((res) => {
+                                    if (res.data) {
+                                      const map: Record<string, Proposal> = {};
+                                      res.data.forEach((p) => { map[p.request_id] = p; });
+                                      setProposalStatuses(map);
+                                    }
+                                  });
+                                }
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {nearbyProjects.length > 6 && (
+                  <div className="text-center pt-2">
+                    <Button
+                      variant="link"
+                      className="text-xs text-cyan-600 dark:text-cyan-400"
+                      onClick={() => router.push("/dashboard/projects/find")}
+                    >
+                      View all {nearbyProjects.length} projects →
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
