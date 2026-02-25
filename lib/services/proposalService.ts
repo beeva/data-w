@@ -11,6 +11,13 @@ import type {
   CollectorAssignment,
 } from "@/types/proposal";
 
+const PLAN_PROPOSAL_LIMITS: Record<string, number> = {
+  free: 10,
+  starter: 50,
+  professional: -1,
+  enterprise: -1,
+};
+
 /**
  * Create a new proposal
  */
@@ -19,6 +26,33 @@ export async function createProposal(
   proposalData: CreateProposalInput
 ): Promise<{ data: Proposal | null; error: Error | null }> {
   try {
+    // Check subscription proposal limit
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("subscription_tier")
+      .eq("id", collectorId)
+      .single();
+
+    const tier = profile?.subscription_tier || "free";
+    const limit = PLAN_PROPOSAL_LIMITS[tier] ?? 10;
+
+    if (limit > 0) {
+      const { count } = await supabase
+        .from("proposals")
+        .select("id", { count: "exact", head: true })
+        .eq("collector_id", collectorId)
+        .in("status", ["pending", "accepted"]);
+
+      if ((count ?? 0) >= limit) {
+        return {
+          data: null,
+          error: new Error(
+            `You've reached the maximum of ${limit} active proposals on the ${tier.charAt(0).toUpperCase() + tier.slice(1)} plan. Upgrade your plan to submit more.`
+          ),
+        };
+      }
+    }
+
     const { data, error } = await supabase
       .from("proposals")
       .insert({
