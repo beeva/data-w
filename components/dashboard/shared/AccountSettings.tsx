@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import ToastNotification from "@/components/ui/toast-notification";
 import {
   User,
@@ -88,6 +89,10 @@ export default function AccountSettings() {
     company_name: "",
     company_website: "",
   });
+  const hasLocationCoordinates =
+    formData.location_lat.trim() !== "" && formData.location_lng.trim() !== "";
+  const locationLat = hasLocationCoordinates ? parseFloat(formData.location_lat) : NaN;
+  const locationLng = hasLocationCoordinates ? parseFloat(formData.location_lng) : NaN;
 
   // Initialize form with profile data when available
   useEffect(() => {
@@ -639,6 +644,15 @@ export default function AccountSettings() {
                     />
                   </div>
                 </div>
+
+                {hasLocationCoordinates && Number.isFinite(locationLat) && Number.isFinite(locationLng) && (
+                  <div className="space-y-0.5">
+                    <Label className="text-[10px]">Map Preview</Label>
+                    <div className="overflow-hidden rounded border border-gray-200 dark:border-gray-700">
+                      <LocationMapPreview lat={locationLat} lng={locationLng} radiusKm={0} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
