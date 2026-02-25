@@ -318,7 +318,7 @@ export default function AdminDashboard() {
                 No recent activity
               </p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
                 {activity.map((item, idx) => (
                   <div key={idx} className="flex items-start gap-3">
                     <div className="mt-0.5">{getActivityIcon(item.activity_type)}</div>
