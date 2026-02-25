@@ -25,16 +25,7 @@ interface AddressAutocompleteProps {
 
 declare global {
   interface Window {
-    google?: {
-      maps: {
-        places: {
-          AutocompleteService: new () => google.maps.places.AutocompleteService;
-          PlacesService: new (
-            attrContainer: HTMLDivElement
-          ) => google.maps.places.PlacesService;
-        };
-      };
-    };
+    google?: typeof google;
   }
 }
 
