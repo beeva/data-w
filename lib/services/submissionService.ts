@@ -7,6 +7,7 @@ import type {
   Submission,
   SubmissionWithCollector,
   DataItem,
+  DataVisibility,
   Validation,
   ProjectStats,
   SubmissionMetadata,
@@ -315,6 +316,42 @@ export async function createDataItem(
       data: null,
       error:
         err instanceof Error ? err : new Error("Failed to create data item"),
+    };
+  }
+}
+
+/**
+ * Update a data item's visibility and price.
+ * Intended for collectors after project completion.
+ */
+export async function updateDataItemAccess(
+  dataItemId: string,
+  visibility: DataVisibility,
+  price: number
+): Promise<{ data: DataItem | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("data_items")
+      .update({
+        visibility,
+        price,
+      })
+      .eq("id", dataItemId)
+      .select()
+      .single();
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    return { data: data as DataItem, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to update data item access settings"),
     };
   }
 }

@@ -3,6 +3,7 @@
  */
 
 export type SubmissionStatus = "pending" | "validated" | "rejected" | "disputed";
+export type DataVisibility = "public" | "private";
 
 export interface SubmissionMetadata {
   device_info?: string;
@@ -50,6 +51,8 @@ export interface DataItem {
   file_size: number | null;
   mime_type: string | null;
   thumbnail_url: string | null;
+  visibility: DataVisibility | null;
+  price: number | null;
   metadata: Record<string, any> | null;
   created_at: string;
 }

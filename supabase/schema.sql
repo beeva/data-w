@@ -363,6 +363,8 @@ CREATE TABLE data_items (
   file_size BIGINT,
   mime_type TEXT,
   thumbnail_url TEXT,
+  visibility TEXT CHECK (visibility IN ('public', 'private')),
+  price DECIMAL(10, 2),
   metadata JSONB, -- EXIF data, duration, dimensions, etc.
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -395,6 +397,23 @@ CREATE POLICY "Users can view data items for accessible submissions"
 
 CREATE POLICY "Collectors can create data items for their submissions"
   ON data_items FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM submissions
+      WHERE submissions.id = data_items.submission_id
+      AND submissions.collector_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Collectors can update data items for their submissions"
+  ON data_items FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM submissions
+      WHERE submissions.id = data_items.submission_id
+      AND submissions.collector_id = auth.uid()
+    )
+  )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM submissions

@@ -195,6 +195,32 @@ export default function ActiveProjectsList() {
     }
   };
 
+  const handleCompleteProject = async (projectId: string) => {
+    if (!user) return;
+
+    try {
+      setError("");
+
+      const { data, error } = await updateProjectStatus(
+        projectId,
+        user.id,
+        "completed" as ProjectStatus
+      );
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setProjects((prev) =>
+          prev.map((p) => (p.id === projectId ? (data as Project) : p))
+        );
+      }
+    } catch (err: any) {
+      console.error("Error completing project:", err);
+      setError(err.message || "Failed to complete project");
+    }
+  };
+
   const handleCancelProject = (projectId: string) => {
     setPendingCancelProjectId(projectId);
   };
@@ -351,6 +377,18 @@ export default function ActiveProjectsList() {
                 >
                   <Play className="w-3 h-3 mr-1" />
                   Resume
+                </Button>
+              )}
+              {!isCancelled && !isCompleted && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[10px] px-2 border-green-500 text-green-600 hover:bg-green-50"
+                  onClick={() => handleCompleteProject(project.id)}
+                  title="Complete Project"
+                >
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Complete
                 </Button>
               )}
               {!isCancelled && !isCompleted && (

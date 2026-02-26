@@ -8,6 +8,7 @@ import { getProjectById } from "@/lib/services/projectService";
 import {
   getSubmissionsByProject,
   getDataItemsBySubmission,
+  updateDataItemAccess,
 } from "@/lib/services/submissionService";
 import type { CollectorAssignment, Project } from "@/types";
 import type { Submission, DataItem } from "@/types/submission";
@@ -113,6 +114,10 @@ export default function SubmitPage() {
 
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [dataItemsMap, setDataItemsMap] = useState<Record<string, DataItem[]>>({});
+  const [itemConfigDrafts, setItemConfigDrafts] = useState<
+    Record<string, { visibility: "public" | "private"; price: string }>
+  >({});
+  const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
   const [loadingItems, setLoadingItems] = useState<string | null>(null);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
@@ -189,6 +194,128 @@ export default function SubmitPage() {
       fetchSubmissions();
     }
   }, [project, userId, fetchSubmissions]);
+
+  useEffect(() => {
+    if (project?.status !== "completed") return;
+    if (submissions.length === 0) return;
+
+    const missingSubmissionIds = submissions
+      .map((submission) => submission.id)
+      .filter((submissionId) => !dataItemsMap[submissionId]);
+
+    if (missingSubmissionIds.length === 0) return;
+
+    const loadMissingDataItems = async () => {
+      const results = await Promise.all(
+        missingSubmissionIds.map(async (submissionId) => {
+          const { data } = await getDataItemsBySubmission(submissionId);
+          return { submissionId, items: data || [] };
+        })
+      );
+
+      setDataItemsMap((prev) => {
+        const next = { ...prev };
+        results.forEach(({ submissionId, items }) => {
+          next[submissionId] = items;
+        });
+        return next;
+      });
+    };
+
+    loadMissingDataItems();
+  }, [project?.status, submissions, dataItemsMap]);
+
+  const isAccessConfigured = (item: DataItem) => {
+    const hasVisibility = item.visibility === "public" || item.visibility === "private";
+    const hasValidPrice = typeof item.price === "number" && Number.isFinite(item.price);
+    return hasVisibility && hasValidPrice;
+  };
+
+  const getItemDraft = (item: DataItem) => {
+    return (
+      itemConfigDrafts[item.id] || {
+        visibility: item.visibility || "private",
+        price:
+          typeof item.price === "number" && Number.isFinite(item.price)
+            ? String(item.price)
+            : "",
+      }
+    );
+  };
+
+  const updateItemDraft = (
+    itemId: string,
+    field: "visibility" | "price",
+    value: string
+  ) => {
+    setItemConfigDrafts((prev) => {
+      const current = prev[itemId] || { visibility: "private" as const, price: "" };
+      return {
+        ...prev,
+        [itemId]:
+          field === "visibility"
+            ? { ...current, visibility: value as "public" | "private" }
+            : { ...current, price: value },
+      };
+    });
+  };
+
+  const handleSaveItemAccess = async (submissionId: string, item: DataItem) => {
+    const draft = getItemDraft(item);
+    const priceValue = Number(draft.price);
+
+    if (Number.isNaN(priceValue) || priceValue < 0) {
+      setToast({
+        message: "Please enter a valid non-negative price.",
+        type: "error",
+      });
+      return;
+    }
+
+    try {
+      setSavingItemId(item.id);
+      const { data, error: updateError } = await updateDataItemAccess(
+        item.id,
+        draft.visibility,
+        priceValue
+      );
+
+      if (updateError || !data) {
+        throw new Error(updateError?.message || "Failed to update data item");
+      }
+
+      setDataItemsMap((prev) => ({
+        ...prev,
+        [submissionId]: (prev[submissionId] || []).map((existing) =>
+          existing.id === item.id ? data : existing
+        ),
+      }));
+
+      setItemConfigDrafts((prev) => {
+        const next = { ...prev };
+        delete next[item.id];
+        return next;
+      });
+
+      setToast({
+        message: "Data visibility and price updated.",
+        type: "success",
+      });
+    } catch (err: any) {
+      setToast({
+        message: err.message || "Failed to update data item access settings.",
+        type: "error",
+      });
+    } finally {
+      setSavingItemId(null);
+    }
+  };
+
+  const requiresAccessSetup = project?.status === "completed";
+  const allLoadedItems = Object.values(dataItemsMap).flat();
+  const pendingConfigCount = requiresAccessSetup
+    ? allLoadedItems.filter((item) => !isAccessConfigured(item)).length
+    : 0;
 
   const toggleSubmissionFiles = async (submissionId: string) => {
     if (expandedSubmission === submissionId) {
@@ -350,34 +477,46 @@ export default function SubmitPage() {
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              Submission Instructions
+              {project.status === "completed"
+                ? "Submission Closed"
+                : "Submission Instructions"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="space-y-2 text-sm">
-              <p>
-                Please submit your data collection according to the project requirements.
-                Make sure to:
-              </p>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
-                <li>Follow all data type and format requirements</li>
-                <li>Include accurate location data if required</li>
-                <li>Ensure all files meet quality standards</li>
-                <li>Submit before the project deadline</li>
-              </ul>
-            </div>
+            {project.status === "completed" ? (
+              <div className="p-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-yellow-500/30 dark:bg-yellow-500/10">
+                <p className="text-sm text-amber-800 dark:text-yellow-200">
+                  This project has been marked as completed by the requester. New submissions are no longer allowed.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2 text-sm">
+                  <p>
+                    Please submit your data collection according to the project requirements.
+                    Make sure to:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-muted-foreground ml-4">
+                    <li>Follow all data type and format requirements</li>
+                    <li>Include accurate location data if required</li>
+                    <li>Ensure all files meet quality standards</li>
+                    <li>Submit before the project deadline</li>
+                  </ul>
+                </div>
 
-            <div className="pt-4 border-t border-border">
-              <SubmissionDialog
-                project={project}
-                assignment={assignment}
-                onSuccess={() => {
-                  fetchAssignment();
-                  fetchSubmissions();
-                }}
-                onToast={setToast}
-              />
-            </div>
+                <div className="pt-4 border-t border-border">
+                  <SubmissionDialog
+                    project={project}
+                    assignment={assignment}
+                    onSuccess={() => {
+                      fetchAssignment();
+                      fetchSubmissions();
+                    }}
+                    onToast={setToast}
+                  />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -406,6 +545,14 @@ export default function SubmitPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {requiresAccessSetup && (
+              <div className="mb-4 p-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-yellow-500/30 dark:bg-yellow-500/10">
+                <p className="text-xs text-amber-800 dark:text-yellow-200">
+                  This project is completed. You must set each file as public or private and add a price.
+                  {pendingConfigCount > 0 ? ` Pending files: ${pendingConfigCount}.` : " All files are configured."}
+                </p>
+              </div>
+            )}
             {loadingSubmissions && submissions.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -488,46 +635,106 @@ export default function SubmitPage() {
                                         <TableHead className="text-xs">File Name</TableHead>
                                         <TableHead className="text-xs">Size</TableHead>
                                         <TableHead className="text-xs">Uploaded</TableHead>
+                                        {requiresAccessSetup && (
+                                          <>
+                                            <TableHead className="text-xs">Visibility</TableHead>
+                                            <TableHead className="text-xs">Price</TableHead>
+                                            <TableHead className="text-xs">Save</TableHead>
+                                          </>
+                                        )}
                                         <TableHead className="text-xs w-[60px]"></TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {items.map((item) => (
-                                        <TableRow
-                                          key={item.id}
-                                          className="border-border"
-                                        >
-                                          <TableCell>
-                                            <div className="flex items-center gap-1.5">
-                                              {getFileIcon(item.file_type)}
-                                              <span className="text-xs capitalize text-muted-foreground">
-                                                {item.file_type}
-                                              </span>
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="text-xs font-medium max-w-[200px] truncate">
-                                            {item.file_name}
-                                          </TableCell>
-                                          <TableCell className="text-xs text-muted-foreground">
-                                            {formatFileSize(item.file_size)}
-                                          </TableCell>
-                                          <TableCell className="text-xs text-muted-foreground">
-                                            {new Date(item.created_at).toLocaleString()}
-                                          </TableCell>
-                                          <TableCell>
-                                            <a
-                                              href={item.file_url}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              onClick={(e) => e.stopPropagation()}
-                                              className="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 transition-colors"
-                                            >
-                                              <ExternalLink className="w-3 h-3" />
-                                              View
-                                            </a>
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
+                                      {items.map((item) => {
+                                        const draft = getItemDraft(item);
+                                        const alreadyConfigured = isAccessConfigured(item);
+
+                                        return (
+                                          <TableRow
+                                            key={item.id}
+                                            className="border-border"
+                                          >
+                                            <TableCell>
+                                              <div className="flex items-center gap-1.5">
+                                                {getFileIcon(item.file_type)}
+                                                <span className="text-xs capitalize text-muted-foreground">
+                                                  {item.file_type}
+                                                </span>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell className="text-xs font-medium max-w-[200px] truncate">
+                                              {item.file_name}
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                              {formatFileSize(item.file_size)}
+                                            </TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                              {new Date(item.created_at).toLocaleString()}
+                                            </TableCell>
+                                            {requiresAccessSetup && (
+                                              <>
+                                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                                  <select
+                                                    className="h-7 rounded border border-border bg-background px-2 text-xs"
+                                                    value={draft.visibility}
+                                                    onChange={(e) =>
+                                                      updateItemDraft(item.id, "visibility", e.target.value)
+                                                    }
+                                                  >
+                                                    <option value="public">Public</option>
+                                                    <option value="private">Private</option>
+                                                  </select>
+                                                </TableCell>
+                                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                                  <input
+                                                    type="number"
+                                                    min={0}
+                                                    step="0.01"
+                                                    value={draft.price}
+                                                    onChange={(e) =>
+                                                      updateItemDraft(item.id, "price", e.target.value)
+                                                    }
+                                                    placeholder="0.00"
+                                                    className="h-7 w-24 rounded border border-border bg-background px-2 text-xs"
+                                                  />
+                                                </TableCell>
+                                                <TableCell onClick={(e) => e.stopPropagation()}>
+                                                  <Button
+                                                    size="sm"
+                                                    variant={alreadyConfigured ? "outline" : "default"}
+                                                    className="h-7 text-[10px]"
+                                                    onClick={() =>
+                                                      handleSaveItemAccess(submission.id, item)
+                                                    }
+                                                    disabled={savingItemId === item.id}
+                                                  >
+                                                    {savingItemId === item.id ? (
+                                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                                    ) : alreadyConfigured ? (
+                                                      "Update"
+                                                    ) : (
+                                                      "Save"
+                                                    )}
+                                                  </Button>
+                                                </TableCell>
+                                              </>
+                                            )}
+                                            <TableCell>
+                                              <a
+                                                href={item.file_url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="inline-flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-500 dark:hover:text-cyan-300 transition-colors"
+                                              >
+                                                <ExternalLink className="w-3 h-3" />
+                                                View
+                                              </a>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
                                     </TableBody>
                                   </Table>
                                   </div>

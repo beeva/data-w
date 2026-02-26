@@ -176,6 +176,29 @@ export default function RequesterDashboard() {
     }
   };
 
+  const handleCompleteProject = async (projectId: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await updateProjectStatus(
+        projectId,
+        user.id,
+        "completed" as ProjectStatus
+      );
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setProjects((prev) =>
+          prev.map((p) => (p.id === projectId ? (data as Project) : p))
+        );
+      }
+    } catch (err) {
+      console.error("Error completing project:", err);
+    }
+  };
+
   const handleCancelProject = (projectId: string) => {
     setPendingCancelProjectId(projectId);
   };
@@ -438,6 +461,15 @@ export default function RequesterDashboard() {
                                     variant="ghost"
                                     size="sm"
                                     className="h-5 w-5 p-0"
+                                    onClick={(e) => { e.stopPropagation(); handleCompleteProject(project.id); }}
+                                    title="Complete Project"
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 w-5 p-0"
                                     onClick={(e) => { e.stopPropagation(); handleCancelProject(project.id); }}
                                     title="Cancel Project"
                                   >
@@ -494,6 +526,15 @@ export default function RequesterDashboard() {
                                 >
                                   <Play className="w-3 h-3 mr-0.5" />
                                   Resume
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-[9px] px-2 border-green-500 text-green-600 hover:bg-green-50"
+                                  onClick={(e) => { e.stopPropagation(); handleCompleteProject(project.id); }}
+                                >
+                                  <CheckCircle2 className="w-3 h-3 mr-0.5" />
+                                  Complete
                                 </Button>
                                 <Button
                                   variant="outline"
