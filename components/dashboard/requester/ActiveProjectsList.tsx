@@ -17,7 +17,6 @@ import {
   DollarSign,
   MapPin,
   Users,
-  FileText,
   Clock,
   CheckCircle2,
   XCircle,
