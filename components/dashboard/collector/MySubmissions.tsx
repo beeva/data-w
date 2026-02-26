@@ -34,58 +34,8 @@ interface Submission {
 }
 
 export default function MySubmissions() {
-  const { user } = useAuth();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  // Mock data for demonstration
-  const mockSubmissions: Submission[] = [
-    {
-      id: "1",
-      project_title: "Street Sign Photography",
-      status: "validated",
-      submitted_at: "2026-01-25T10:30:00Z",
-      validated_at: "2026-01-26T14:20:00Z",
-      amount: 25.0,
-      files_count: 12,
-    },
-    {
-      id: "2",
-      project_title: "Store Front Images",
-      status: "pending",
-      submitted_at: "2026-01-27T08:15:00Z",
-      validated_at: null,
-      amount: 35.0,
-      files_count: 8,
-    },
-    {
-      id: "3",
-      project_title: "Traffic Pattern Survey",
-      status: "rejected",
-      submitted_at: "2026-01-24T16:45:00Z",
-      validated_at: "2026-01-25T11:30:00Z",
-      amount: 0,
-      files_count: 5,
-    },
-    {
-      id: "4",
-      project_title: "Restaurant Menu Collection",
-      status: "validated",
-      submitted_at: "2026-01-23T12:00:00Z",
-      validated_at: "2026-01-24T09:00:00Z",
-      amount: 50.0,
-      files_count: 20,
-    },
-  ];
-
-  useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setSubmissions(mockSubmissions);
-      setLoading(false);
-    }, 500);
-  }, []);
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
