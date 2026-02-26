@@ -28,7 +28,6 @@ import {
   XCircle,
   Clock,
   Copy,
-  ExternalLink,
   Users,
   ChevronLeft,
   ChevronRight,

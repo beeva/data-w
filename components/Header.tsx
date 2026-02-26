@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import Logo from "./Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 

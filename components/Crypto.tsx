@@ -8,19 +8,11 @@ import PageHero from './PageHero'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Wallet,
   Globe,
   Zap,
   Shield,
-  TrendingUp,
-  TrendingDown,
   ArrowRight,
-  Clock,
-  Users,
-  DollarSign,
   Coins,
-  CreditCard,
-  Building,
   CheckCircle2,
   ArrowUpRight,
   ArrowDownRight,

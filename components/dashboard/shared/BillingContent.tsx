@@ -42,9 +42,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
-  DollarSign,
-  CreditCard,
-  Calendar,
   TrendingUp,
   ArrowUpRight,
   ArrowDownRight,

@@ -8,13 +8,9 @@ import PageHero from './PageHero'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Target,
   Users,
   Globe,
   Shield,
-  Zap,
-  Heart,
-  Award,
   TrendingUp,
   CheckCircle2,
   ArrowRight,
@@ -22,8 +18,6 @@ import {
   Twitter,
   Mail,
   Building2,
-  Lightbulb,
-  Handshake,
   Scale,
   Eye,
 } from 'lucide-react'

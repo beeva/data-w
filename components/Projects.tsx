@@ -17,7 +17,6 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
-  SheetFooter,
 } from '@/components/ui/sheet'
 import { useAuth } from '@/contexts/AuthContext'
 import { 
@@ -44,7 +43,6 @@ import {
   ChevronUp,
   Globe,
   Briefcase,
-  Star,
   CheckCircle2,
   AlertCircle,
   LogIn,
@@ -52,7 +50,6 @@ import {
   TrendingUp,
   Coins,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import PageHero from './PageHero'
 
 export default function Projects() {
