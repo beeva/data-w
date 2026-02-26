@@ -5,11 +5,13 @@ import Header from './Header'
 import Footer from './Footer'
 import PageHero from './PageHero'
 import DataItemCard, { DataItem } from './DataItemCard'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 
 export default function DataPool() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [visibleCount, setVisibleCount] = useState<number>(8)
+  const [accessDialogItem, setAccessDialogItem] = useState<DataItem | null>(null)
   const itemsPerPage = 8
 
   const categories = ['All', 'Healthcare', 'E-commerce', 'Finance', 'Logistics', 'Surveillance', 'Sports', 'Other']
@@ -115,7 +117,7 @@ export default function DataPool() {
   const handleRequestAccess = (item: DataItem) => {
     // Handle request access
     console.log('Requesting access to:', item)
-    alert(`Requesting access to ${item.title} from ${item.owner}`)
+    setAccessDialogItem(item)
   }
 
   return (
@@ -201,6 +203,23 @@ export default function DataPool() {
         </div>
       </main>
       <Footer />
+      <ConfirmationDialog
+        open={!!accessDialogItem}
+        onOpenChange={(open) => {
+          if (!open) setAccessDialogItem(null)
+        }}
+        title="Access Request Sent"
+        description={
+          accessDialogItem
+            ? `Requesting access to ${accessDialogItem.title} from ${accessDialogItem.owner || 'the data owner'}.`
+            : ''
+        }
+        confirmText="OK"
+        hideCancel
+        onConfirm={async () => {
+          setAccessDialogItem(null)
+        }}
+      />
     </div>
   )
 }

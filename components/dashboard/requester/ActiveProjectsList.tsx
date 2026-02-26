@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Calendar,
   DollarSign,
@@ -40,6 +41,7 @@ export default function ActiveProjectsList() {
   const [error, setError] = useState("");
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [pendingCancelProjectId, setPendingCancelProjectId] = useState<string | null>(null);
   const [projectStats, setProjectStats] = useState<Record<string, {
     totalTarget: number;
     totalSubmissions: number;
@@ -193,6 +195,37 @@ export default function ActiveProjectsList() {
     }
   };
 
+  const handleCancelProject = (projectId: string) => {
+    setPendingCancelProjectId(projectId);
+  };
+
+  const confirmCancelProject = async () => {
+    if (!user) return;
+    if (!pendingCancelProjectId) return;
+
+    try {
+      setError("");
+
+      const { data, error } = await updateProjectStatus(
+        pendingCancelProjectId,
+        user.id,
+        "cancelled" as ProjectStatus
+      );
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setProjects((prev) =>
+          prev.map((p) => (p.id === pendingCancelProjectId ? (data as Project) : p))
+        );
+      }
+    } catch (err: any) {
+      console.error("Error cancelling project:", err);
+      setError(err.message || "Failed to cancel project");
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "open":
@@ -318,6 +351,18 @@ export default function ActiveProjectsList() {
                 >
                   <Play className="w-3 h-3 mr-1" />
                   Resume
+                </Button>
+              )}
+              {!isCancelled && !isCompleted && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-6 text-[10px] px-2 border-red-500 text-red-600 hover:bg-red-50"
+                  onClick={() => handleCancelProject(project.id)}
+                  title="Cancel Project"
+                >
+                  <XCircle className="w-3 h-3 mr-1" />
+                  Cancel
                 </Button>
               )}
               {!isCancelled && (
@@ -577,6 +622,18 @@ export default function ActiveProjectsList() {
           }}
         />
       )}
+      <ConfirmationDialog
+        open={!!pendingCancelProjectId}
+        onOpenChange={(open) => {
+          if (!open) setPendingCancelProjectId(null);
+        }}
+        title="Cancel project?"
+        description="Collectors will no longer be able to submit proposals to this project."
+        confirmText="Cancel Project"
+        cancelText="Keep Project"
+        confirmTone="danger"
+        onConfirm={confirmCancelProject}
+      />
     </div>
   );
 }

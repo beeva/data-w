@@ -26,6 +26,31 @@ export async function createProposal(
   proposalData: CreateProposalInput
 ): Promise<{ data: Proposal | null; error: Error | null }> {
   try {
+    // Validate project availability before allowing proposal submission.
+    const { data: request, error: requestError } = await supabase
+      .from("requests")
+      .select("id, title, requester_id, status, deadline")
+      .eq("id", proposalData.request_id)
+      .single();
+
+    if (requestError || !request) {
+      return { data: null, error: new Error("Project not found") };
+    }
+
+    if (request.status !== "open") {
+      return {
+        data: null,
+        error: new Error("This project is not accepting proposals."),
+      };
+    }
+
+    if (request.deadline && new Date(request.deadline).getTime() < Date.now()) {
+      return {
+        data: null,
+        error: new Error("This project deadline has passed and is no longer accepting proposals."),
+      };
+    }
+
     // Check subscription proposal limit
     const { data: profile } = await supabase
       .from("profiles")
@@ -75,13 +100,6 @@ export async function createProposal(
 
     // Best-effort notifications (don't block proposal creation on failure)
     try {
-      // Fetch basic project info to enrich notifications
-      const { data: request } = await supabase
-        .from("requests")
-        .select("id, title, requester_id")
-        .eq("id", proposalData.request_id)
-        .single();
-
       const projectTitle = request?.title || "a project";
 
       // Notify collector (self) that proposal was submitted

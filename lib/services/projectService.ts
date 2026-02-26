@@ -5,6 +5,23 @@
 import { supabase } from "@/lib/supabase/client";
 import type { Project, CreateProjectInput, ProjectStatus } from "@/types/project";
 
+const AUTO_CANCEL_ELIGIBLE_STATUSES: ProjectStatus[] = ["open", "paused"];
+
+async function autoCancelExpiredProjectsForRequester(requesterId: string): Promise<void> {
+  const nowIso = new Date().toISOString();
+  const { error } = await supabase
+    .from("requests")
+    .update({ status: "cancelled" })
+    .eq("requester_id", requesterId)
+    .in("status", AUTO_CANCEL_ELIGIBLE_STATUSES)
+    .not("deadline", "is", null)
+    .lt("deadline", nowIso);
+
+  if (error) {
+    console.error("Failed to auto-cancel expired projects:", error.message);
+  }
+}
+
 /**
  * Fetch all projects created by a specific requester
  */
@@ -12,6 +29,9 @@ export async function getProjectsByRequester(
   requesterId: string
 ): Promise<{ data: Project[] | null; error: Error | null }> {
   try {
+    // Keep requester projects in sync with deadline auto-cancel rule.
+    await autoCancelExpiredProjectsForRequester(requesterId);
+
     const { data, error } = await supabase
         .from("requests")
         .select("*")
@@ -64,10 +84,13 @@ export async function getOpenProjects(): Promise<{
   error: Error | null;
 }> {
   try {
+    const nowIso = new Date().toISOString();
+
     const { data, error } = await supabase
       .from("requests")
       .select("*")
       .eq("status", "open")
+      .or(`deadline.is.null,deadline.gte.${nowIso}`)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -260,6 +283,40 @@ export async function updateProjectStatus(
   status: ProjectStatus
 ): Promise<{ data: Project | null; error: Error | null }> {
   try {
+    if (status === "open") {
+      const { data: currentProject, error: fetchError } = await supabase
+        .from("requests")
+        .select("deadline")
+        .eq("id", projectId)
+        .eq("requester_id", requesterId)
+        .single();
+
+      if (fetchError) {
+        return { data: null, error: new Error(fetchError.message) };
+      }
+
+      const deadline = currentProject?.deadline ? new Date(currentProject.deadline) : null;
+      if (deadline && deadline.getTime() < Date.now()) {
+        // Enforce deadline rule immediately when trying to resume an expired project.
+        const { data: cancelledProject, error: cancelError } = await supabase
+          .from("requests")
+          .update({ status: "cancelled" })
+          .eq("id", projectId)
+          .eq("requester_id", requesterId)
+          .select()
+          .single();
+
+        if (cancelError) {
+          return { data: null, error: new Error(cancelError.message) };
+        }
+
+        return {
+          data: cancelledProject as Project,
+          error: null,
+        };
+      }
+    }
+
     const { data, error } = await supabase
       .from("requests")
       .update({ status })

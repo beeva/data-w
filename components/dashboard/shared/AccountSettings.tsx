@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import ToastNotification from "@/components/ui/toast-notification";
 import {
   User,
@@ -62,6 +63,7 @@ export default function AccountSettings() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [showDeleteAvatarConfirm, setShowDeleteAvatarConfirm] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [passwordData, setPasswordData] = useState({
@@ -225,12 +227,12 @@ export default function AccountSettings() {
     }
   };
 
-  const handleDeleteAvatar = async () => {
+  const handleDeleteAvatar = () => {
+    setShowDeleteAvatarConfirm(true);
+  };
+
+  const confirmDeleteAvatar = async () => {
     if (!user || !profile?.avatar_url) return;
-    
-    if (!confirm("Are you sure you want to delete your avatar?")) {
-      return;
-    }
 
     setUploadingAvatar(true);
     setError("");
@@ -950,6 +952,16 @@ export default function AccountSettings() {
           </CardContent>
         </Card>
       </form>
+      <ConfirmationDialog
+        open={showDeleteAvatarConfirm}
+        onOpenChange={setShowDeleteAvatarConfirm}
+        title="Remove avatar?"
+        description="Your profile image will be removed and your initials will be shown instead."
+        confirmText="Remove"
+        cancelText="Keep Avatar"
+        confirmTone="danger"
+        onConfirm={confirmDeleteAvatar}
+      />
     </div>
     </>
   );

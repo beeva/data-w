@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import {
   Sheet,
   SheetContent,
@@ -63,6 +64,7 @@ export default function Projects() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [applying, setApplying] = useState(false)
+  const [showApplicationSuccessDialog, setShowApplicationSuccessDialog] = useState(false)
   
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -224,7 +226,7 @@ export default function Projects() {
     setApplying(false)
     setSheetOpen(false)
     // TODO: Implement actual project application logic
-    alert('Application submitted successfully!')
+    setShowApplicationSuccessDialog(true)
   }
 
   // Mock progress data for the selected project
@@ -789,6 +791,17 @@ export default function Projects() {
           )}
         </SheetContent>
       </Sheet>
+      <ConfirmationDialog
+        open={showApplicationSuccessDialog}
+        onOpenChange={setShowApplicationSuccessDialog}
+        title="Application submitted"
+        description="Your application was submitted successfully."
+        confirmText="OK"
+        hideCancel
+        onConfirm={async () => {
+          setShowApplicationSuccessDialog(false)
+        }}
+      />
     </div>
   )
 }

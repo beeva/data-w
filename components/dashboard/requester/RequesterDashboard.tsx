@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   FolderKanban,
   Clock,
@@ -55,6 +56,7 @@ export default function RequesterDashboard() {
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
   const [projectProgress, setProjectProgress] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
+  const [pendingCancelProjectId, setPendingCancelProjectId] = useState<string | null>(null);
 
   const userId = user?.id;
 
@@ -171,6 +173,34 @@ export default function RequesterDashboard() {
       }
     } catch (err) {
       console.error("Error pausing project:", err);
+    }
+  };
+
+  const handleCancelProject = (projectId: string) => {
+    setPendingCancelProjectId(projectId);
+  };
+
+  const confirmCancelProject = async () => {
+    if (!user) return;
+    if (!pendingCancelProjectId) return;
+
+    try {
+      const { data, error } = await updateProjectStatus(
+        pendingCancelProjectId,
+        user.id,
+        "cancelled" as ProjectStatus
+      );
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setProjects((prev) =>
+          prev.map((p) => (p.id === pendingCancelProjectId ? (data as Project) : p))
+        );
+      }
+    } catch (err) {
+      console.error("Error cancelling project:", err);
     }
   };
 
@@ -404,6 +434,15 @@ export default function RequesterDashboard() {
                                   >
                                     <Pause className="w-3 h-3 text-yellow-500" />
                                   </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 w-5 p-0"
+                                    onClick={(e) => { e.stopPropagation(); handleCancelProject(project.id); }}
+                                    title="Cancel Project"
+                                  >
+                                    <XCircle className="w-3 h-3 text-red-500" />
+                                  </Button>
                                 </div>
                               </div>
                               <Progress value={progress} className="h-1" />
@@ -455,6 +494,15 @@ export default function RequesterDashboard() {
                                 >
                                   <Play className="w-3 h-3 mr-0.5" />
                                   Resume
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 text-[9px] px-2 border-red-500 text-red-600 hover:bg-red-50"
+                                  onClick={(e) => { e.stopPropagation(); handleCancelProject(project.id); }}
+                                >
+                                  <XCircle className="w-3 h-3 mr-0.5" />
+                                  Cancel
                                 </Button>
                               </div>
                               <Progress value={progress} className="h-1" />
@@ -772,6 +820,18 @@ export default function RequesterDashboard() {
           </Card>
         </div>
       </div>
+      <ConfirmationDialog
+        open={!!pendingCancelProjectId}
+        onOpenChange={(open) => {
+          if (!open) setPendingCancelProjectId(null);
+        }}
+        title="Cancel project?"
+        description="Collectors will no longer be able to submit proposals to this project."
+        confirmText="Cancel Project"
+        cancelText="Keep Project"
+        confirmTone="danger"
+        onConfirm={confirmCancelProject}
+      />
     </div>
   );
 }
