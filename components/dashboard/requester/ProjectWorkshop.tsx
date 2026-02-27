@@ -752,6 +752,8 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
                                                         <TableHead className="text-[10px] h-7">Preview</TableHead>
                                                         <TableHead className="text-[10px] h-7">File Name</TableHead>
                                                         <TableHead className="text-[10px] h-7">Type</TableHead>
+                                                        <TableHead className="text-[10px] h-7">Visibility</TableHead>
+                                                        <TableHead className="text-[10px] h-7">Price</TableHead>
                                                         <TableHead className="text-[10px] h-7">Size</TableHead>
                                                         <TableHead className="text-[10px] h-7">Uploaded</TableHead>
                                                         <TableHead className="text-[10px] h-7 w-[60px]"></TableHead>
@@ -787,6 +789,29 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
                                                             <Badge variant="outline" className="text-[9px] px-1 py-0 capitalize">
                                                               {item.file_type}
                                                             </Badge>
+                                                          </TableCell>
+                                                          <TableCell>
+                                                            {item.visibility ? (
+                                                              <Badge
+                                                                variant="outline"
+                                                                className={
+                                                                  item.visibility === "public"
+                                                                    ? "text-[9px] px-1 py-0 border-green-500/40 text-green-600"
+                                                                    : "text-[9px] px-1 py-0 border-orange-500/40 text-orange-600"
+                                                                }
+                                                              >
+                                                                {item.visibility}
+                                                              </Badge>
+                                                            ) : (
+                                                              <span className="text-[10px] text-muted-foreground">Not set</span>
+                                                            )}
+                                                          </TableCell>
+                                                          <TableCell className="text-[11px]">
+                                                            {typeof item.price === "number" ? (
+                                                              <span className="font-medium">${item.price.toFixed(2)}</span>
+                                                            ) : (
+                                                              <span className="text-muted-foreground">-</span>
+                                                            )}
                                                           </TableCell>
                                                           <TableCell className="text-[11px] text-muted-foreground">
                                                             {formatFileSize(item.file_size)}
