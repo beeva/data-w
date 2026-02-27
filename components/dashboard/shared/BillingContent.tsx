@@ -486,7 +486,7 @@ export default function BillingContent() {
                 <Card
                   key={plan.id}
                   className={cn(
-                    "relative transition-all hover:shadow-md",
+                    "relative transition-all hover:shadow-md dark:bg-gray-800/50",
                     isCurrentPlan
                       ? cn("ring-2", TIER_BORDERS[plan.tier])
                       : "border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
