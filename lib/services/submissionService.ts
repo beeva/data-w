@@ -219,6 +219,30 @@ export async function createSubmission(
   metadata?: SubmissionMetadata | null
 ): Promise<{ data: Submission | null; error: Error | null }> {
   try {
+    const { data: request, error: requestError } = await supabase
+      .from("requests")
+      .select("status")
+      .eq("id", requestId)
+      .single();
+
+    if (requestError || !request) {
+      return { data: null, error: new Error("Project not found") };
+    }
+
+    if (request.status === "cancelled") {
+      return {
+        data: null,
+        error: new Error("This project was cancelled. Submissions are no longer allowed."),
+      };
+    }
+
+    if (request.status === "completed") {
+      return {
+        data: null,
+        error: new Error("This project is completed. Submissions are no longer allowed."),
+      };
+    }
+
     const { data, error } = await supabase
       .from("submissions")
       .insert({

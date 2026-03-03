@@ -311,6 +311,8 @@ export default function SubmitPage() {
     }
   };
 
+  const isSubmissionClosed =
+    project?.status === "completed" || project?.status === "cancelled";
   const requiresAccessSetup = project?.status === "completed";
   const allLoadedItems = Object.values(dataItemsMap).flat();
   const pendingConfigCount = requiresAccessSetup
@@ -477,16 +479,18 @@ export default function SubmitPage() {
           <CardHeader>
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <FileText className="w-5 h-5" />
-              {project.status === "completed"
+              {isSubmissionClosed
                 ? "Submission Closed"
                 : "Submission Instructions"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {project.status === "completed" ? (
+            {isSubmissionClosed ? (
               <div className="p-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-yellow-500/30 dark:bg-yellow-500/10">
                 <p className="text-sm text-amber-800 dark:text-yellow-200">
-                  This project has been marked as completed by the requester. New submissions are no longer allowed.
+                  {project.status === "cancelled"
+                    ? "This project has been cancelled by the requester. New submissions are no longer allowed."
+                    : "This project has been marked as completed by the requester. New submissions are no longer allowed."}
                 </p>
               </div>
             ) : (

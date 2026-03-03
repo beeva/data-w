@@ -439,13 +439,13 @@ export async function getAssignmentByToken(
  */
 export async function getAssignmentsByCollector(
   collectorId: string
-): Promise<{ data: (CollectorAssignment & { project?: { id: string; title: string } })[] | null; error: Error | null }> {
+): Promise<{ data: (CollectorAssignment & { project?: { id: string; title: string; status?: string } })[] | null; error: Error | null }> {
   try {
     const { data, error } = await supabase
       .from("collector_assignments")
       .select(`
         *,
-        requests(id, title)
+        requests(id, title, status)
       `)
       .eq("collector_id", collectorId)
       .eq("status", "active")
@@ -465,8 +465,14 @@ export async function getAssignmentsByCollector(
       data: (data || []).map((assignment: any) => ({
         ...assignment,
         submission_link: `${baseUrl}/submit/${assignment.submission_token}`,
-        project: assignment.requests ? { id: assignment.requests.id, title: assignment.requests.title } : undefined,
-      })) as (CollectorAssignment & { project?: { id: string; title: string } })[],
+        project: assignment.requests
+          ? {
+              id: assignment.requests.id,
+              title: assignment.requests.title,
+              status: assignment.requests.status,
+            }
+          : undefined,
+      })) as (CollectorAssignment & { project?: { id: string; title: string; status?: string } })[],
       error: null,
     };
   } catch (err) {

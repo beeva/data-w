@@ -29,7 +29,9 @@ export default function DashboardSidebar({
   const pathname = usePathname();
   const { user, profile, loading: authLoading } = useAuth();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
-  const [acceptedProjects, setAcceptedProjects] = useState<(CollectorAssignment & { project?: { id: string; title: string } })[]>([]);
+  const [acceptedProjects, setAcceptedProjects] = useState<
+    (CollectorAssignment & { project?: { id: string; title: string; status?: string } })[]
+  >([]);
   const [showAllProjects, setShowAllProjects] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
 
@@ -353,6 +355,7 @@ export default function DashboardSidebar({
               <div className="space-y-0.5">
                 {(showAllProjects ? acceptedProjects : acceptedProjects.slice(0, 3)).map((assignment) => {
                   const isActive = pathname === `/submit/${assignment.submission_token}`;
+                  const isProjectCompleted = assignment.project?.status === "completed";
                   return (
                     <Link
                       key={assignment.id}
@@ -367,7 +370,14 @@ export default function DashboardSidebar({
                       title={assignment.project?.title || 'Project'}
                     >
                       <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
-                      <span className="truncate flex-1">
+                      <span
+                        className={cn(
+                          "truncate flex-1",
+                          !isActive &&
+                            isProjectCompleted &&
+                            "text-emerald-700 dark:text-emerald-300 font-semibold"
+                        )}
+                      >
                         {assignment.project?.title || 'Untitled Project'}
                       </span>
                     </Link>

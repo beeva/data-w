@@ -14,8 +14,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900 p-2 md:py-4 md:pl-4">
-      <div className="w-full h-[calc(100vh-1rem)] md:h-[calc(100vh-2rem)] mx-auto rounded-xl overflow-hidden flex gap-0 md:gap-4">
+    <div className="min-h-[calc(100dvh-84px)] bg-[#F4F5FA] dark:bg-gray-900 p-2 md:py-4 md:pl-4">
+      <div className="w-full h-[calc(100dvh-84px-1rem)] md:h-[calc(100dvh-84px-2rem)] mx-auto rounded-xl overflow-hidden flex gap-0 md:gap-4">
         {/* Desktop Sidebar */}
         <div className="hidden md:block">
           <DashboardSidebar collapsed={sidebarCollapsed} onNavigate={() => {}} />
