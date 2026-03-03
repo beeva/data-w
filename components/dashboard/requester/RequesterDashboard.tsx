@@ -430,13 +430,11 @@ export default function RequesterDashboard() {
                           return (
                             <div 
                               key={project.id}
-                              className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                              className="p-2 rounded-lg bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                              onClick={() => router.push(`/dashboard/projects/${project.id}/workshop`)}
                             >
                               <div className="flex items-center justify-between mb-1.5">
-                                <div 
-                                  className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
-                                  onClick={() => router.push(`/dashboard/projects/${project.id}/workshop`)}
-                                >
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
                                   <span className="text-xs font-medium truncate">{project.title}</span>
                                   <Badge 
                                     variant="secondary" 
@@ -446,7 +444,7 @@ export default function RequesterDashboard() {
                                     <span className="ml-0.5 capitalize">{project.status.replace("_", " ")}</span>
                                   </Badge>
                                 </div>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                                   <span className="text-[10px] font-semibold text-cyan-600">{progress}%</span>
                                   <Button
                                     variant="ghost"
@@ -505,46 +503,46 @@ export default function RequesterDashboard() {
                           return (
                             <div 
                               key={project.id}
-                              className="p-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
+                              className="p-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors cursor-pointer"
+                              onClick={() => router.push(`/dashboard/projects/${project.id}/workshop`)}
                             >
                               <div className="flex items-center justify-between mb-1.5">
-                                <div 
-                                  className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
-                                  onClick={() => router.push(`/dashboard/projects/${project.id}/workshop`)}
-                                >
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
                                   <span className="text-xs font-medium truncate">{project.title}</span>
                                   <Badge variant="secondary" className="text-[8px] px-1 py-0 text-white bg-yellow-500">
                                     <Pause className="w-3 h-3" />
                                     <span className="ml-0.5">Paused</span>
                                   </Badge>
                                 </div>
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  className="h-6 text-[9px] px-2 bg-green-500 hover:bg-green-600"
-                                  onClick={(e) => { e.stopPropagation(); handleResumeProject(project.id); }}
-                                >
-                                  <Play className="w-3 h-3 mr-0.5" />
-                                  Resume
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 text-[9px] px-2 border-green-500 text-green-600 hover:bg-green-50"
-                                  onClick={(e) => { e.stopPropagation(); handleCompleteProject(project.id); }}
-                                >
-                                  <CheckCircle2 className="w-3 h-3 mr-0.5" />
-                                  Complete
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 text-[9px] px-2 border-red-500 text-red-600 hover:bg-red-50"
-                                  onClick={(e) => { e.stopPropagation(); handleCancelProject(project.id); }}
-                                >
-                                  <XCircle className="w-3 h-3 mr-0.5" />
-                                  Cancel
-                                </Button>
+                                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="h-6 text-[9px] px-2 bg-green-500 hover:bg-green-600"
+                                    onClick={(e) => { e.stopPropagation(); handleResumeProject(project.id); }}
+                                  >
+                                    <Play className="w-3 h-3 mr-0.5" />
+                                    Resume
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-[9px] px-2 border-green-500 text-green-600 hover:bg-green-50"
+                                    onClick={(e) => { e.stopPropagation(); handleCompleteProject(project.id); }}
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 mr-0.5" />
+                                    Complete
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 text-[9px] px-2 border-red-500 text-red-600 hover:bg-red-50"
+                                    onClick={(e) => { e.stopPropagation(); handleCancelProject(project.id); }}
+                                  >
+                                    <XCircle className="w-3 h-3 mr-0.5" />
+                                    Cancel
+                                  </Button>
+                                </div>
                               </div>
                               <Progress value={progress} className="h-1" />
                               <div className="flex items-center justify-between mt-1.5 text-[9px] text-muted-foreground">

@@ -339,11 +339,17 @@ export default function ActiveProjectsList() {
         key={project.id}
         className={cn(
           "border-none hover:shadow-md transition-shadow",
+          !isCancelled && "cursor-pointer",
           isPaused && "bg-yellow-50 dark:bg-yellow-900/10",
           isCompleted && "bg-gray-50 dark:bg-gray-800/30",
           isCancelled && "bg-red-50 dark:bg-red-900/10 opacity-70",
           !isPaused && !isCompleted && !isCancelled && "dark:bg-gray-800/50"
         )}
+        onClick={() => {
+          if (!isCancelled) {
+            router.push(`/dashboard/projects/${project.id}/workshop`);
+          }
+        }}
       >
         <CardContent className="py-2.5 px-3">
           {/* Header Row */}
@@ -356,7 +362,7 @@ export default function ActiveProjectsList() {
               </div>
               <p className="text-[10px] text-muted-foreground line-clamp-1">{project.description}</p>
             </div>
-            <div className="flex flex-wrap gap-1 flex-shrink-0">
+            <div className="flex flex-wrap gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
               {showPauseResume === "pause" && (
                 <Button
                   variant="outline"
