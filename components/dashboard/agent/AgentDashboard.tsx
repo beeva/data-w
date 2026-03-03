@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { getCategoryColor } from "@/lib/utils";
 import { supabase } from "@/lib/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -136,6 +136,8 @@ export default function AgentDashboard() {
   const [validatingId, setValidatingId] = useState<string | null>(null);
   const [aiResults, setAiResults] = useState<Record<string, AiValidationResult>>({});
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(5);
 
   const fetchData = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
@@ -157,6 +159,9 @@ export default function AgentDashboard() {
   }, [userId, statusFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, data?.submissions?.length, pageSize]);
 
   const toggleExpand = async (submissionId: string) => {
     if (expandedId === submissionId) {
@@ -272,6 +277,18 @@ export default function AgentDashboard() {
     return email?.slice(0, 2).toUpperCase() || "U";
   };
 
+  const pendingCount = data?.pendingCount ?? 0;
+  const validatedToday = data?.validatedToday ?? 0;
+  const totalValidations = data?.totalValidations ?? 0;
+  const accuracyScore = Number(data?.accuracyScore ?? 0);
+  const submissions = data?.submissions ?? [];
+  const totalPages = Math.max(1, Math.ceil(submissions.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedSubmissions = useMemo(() => {
+    const start = (safePage - 1) * pageSize;
+    return submissions.slice(start, start + pageSize);
+  }, [submissions, safePage, pageSize]);
+
   if (loading && !data) {
     return (
       <div className="flex items-center justify-center min-h-[300px]">
@@ -290,12 +307,6 @@ export default function AgentDashboard() {
       </div>
     );
   }
-
-  const pendingCount = data?.pendingCount ?? 0;
-  const validatedToday = data?.validatedToday ?? 0;
-  const totalValidations = data?.totalValidations ?? 0;
-  const accuracyScore = Number(data?.accuracyScore ?? 0);
-  const submissions = data?.submissions ?? [];
 
   return (
     <>
@@ -384,19 +395,36 @@ export default function AgentDashboard() {
                 <CardTitle className="text-lg font-semibold">All Submissions</CardTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {submissions.length} submission{submissions.length !== 1 ? "s" : ""}
+                  {submissions.length > 0 && (
+                    <> • Page {safePage} of {totalPages}</>
+                  )}
                 </p>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">All Status</SelectItem>
-                  <SelectItem value="pending" className="text-xs">Pending</SelectItem>
-                  <SelectItem value="validated" className="text-xs">Approved</SelectItem>
-                  <SelectItem value="rejected" className="text-xs">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-36 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" className="text-xs">All Status</SelectItem>
+                    <SelectItem value="pending" className="text-xs">Pending</SelectItem>
+                    <SelectItem value="validated" className="text-xs">Approved</SelectItem>
+                    <SelectItem value="rejected" className="text-xs">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                  <SelectTrigger className="w-32 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5" className="text-xs">5 / page</SelectItem>
+                    <SelectItem value="10" className="text-xs">10 / page</SelectItem>
+                    <SelectItem value="25" className="text-xs">25 / page</SelectItem>
+                    <SelectItem value="50" className="text-xs">50 / page</SelectItem>
+                    <SelectItem value="100" className="text-xs">100 / page</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -425,7 +453,7 @@ export default function AgentDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {submissions.map((sub) => {
+                    {paginatedSubmissions.map((sub) => {
                       const isExpanded = expandedId === sub.id;
                       const items = itemsMap[sub.id];
                       const isLoadingFiles = loadingItems === sub.id;
@@ -670,6 +698,34 @@ export default function AgentDashboard() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+            {submissions.length > pageSize && (
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">
+                  Showing {(safePage - 1) * pageSize + 1}-
+                  {Math.min(safePage * pageSize, submissions.length)} of {submissions.length}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px]"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-[11px]"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
