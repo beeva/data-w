@@ -4,7 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-export default function Footer() {
+type FooterProps = {
+  compact?: boolean;
+};
+
+export default function Footer({ compact = false }: FooterProps) {
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -33,6 +37,29 @@ export default function Footer() {
       [e.target.name]: e.target.value,
     });
   };
+
+  if (compact) {
+    return (
+      <footer className="bg-[#28303E] text-white">
+        <div className="container mx-auto px-4 sm:px-6 py-5 sm:py-6">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex justify-center">
+              <Image
+                src="/logo.png"
+                alt="DataW"
+                width={140}
+                height={100}
+                className="w-24 sm:w-28 h-auto"
+              />
+            </div>
+            <div className="text-white/50 text-xs sm:text-sm text-right">
+              © {new Date().getFullYear()} DataW. All rights reserved.
+            </div>
+          </div>
+        </div>
+      </footer>
+    );
+  }
 
   return (
     <footer className="relative bg-[#28303E] text-white">

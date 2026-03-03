@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Header from './Header'
-import Footer from './Footer'
 import { getOpenProjects } from '@/lib/services/projectService'
 import type { Project } from '@/types/project'
 import { Badge } from '@/components/ui/badge'
@@ -600,7 +599,6 @@ export default function Projects() {
           </div>
         </div>
       </main>
-      <Footer />
 
       {/* Project Detail Sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>

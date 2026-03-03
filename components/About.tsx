@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import Header from './Header'
-import Footer from './Footer'
 import PageHero from './PageHero'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -382,7 +381,6 @@ export default function About() {
 
         </div>
       </main>
-      <Footer />
     </div>
   )
 }

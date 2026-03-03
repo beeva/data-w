@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Header from './Header'
-import Footer from './Footer'
 import PageHero from './PageHero'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -606,7 +605,6 @@ export default function Crypto() {
 
         </div>
       </main>
-      <Footer />
     </div>
   )
 }

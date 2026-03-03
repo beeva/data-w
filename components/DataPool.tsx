@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Header from './Header'
-import Footer from './Footer'
 import PageHero from './PageHero'
 import DataItemCard, { DataItem } from './DataItemCard'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
@@ -202,7 +201,6 @@ export default function DataPool() {
           )}
         </div>
       </main>
-      <Footer />
       <ConfirmationDialog
         open={!!accessDialogItem}
         onOpenChange={(open) => {
