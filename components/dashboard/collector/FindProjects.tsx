@@ -44,8 +44,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import SubmitProposalDialog from "./SubmitProposalDialog";
-import ProjectDetailsDialog from "./ProjectDetailsDialog";
+import ProjectDetailsSheet from "./ProjectDetailsSheet";
 import { cn, getCategoryColor } from "@/lib/utils";
 import { getProposalsByCollector, getAssignmentCountsByProjects } from "@/lib/services/proposalService";
 import type { Proposal } from "@/types/proposal";
@@ -257,6 +256,13 @@ export default function FindProjects() {
       </div>
     );
   }
+
+  const selectedProposal = selectedProject
+    ? proposalStatuses[selectedProject.id] || null
+    : null;
+  const selectedSlotsFilled = selectedProject
+    ? (assignmentCounts[selectedProject.id] || 0) >= (selectedProject.max_collectors || 1)
+    : false;
 
   return (
     <div className="space-y-6 p-6 min-h-screen">
@@ -626,10 +632,7 @@ export default function FindProjects() {
                       )}
                     </div>
 
-                    <div
-                      className="flex flex-col gap-2 min-w-[140px]"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="flex flex-col gap-2 min-w-[140px]" onClick={(e) => e.stopPropagation()}>
                       {proposal ? (
                         <div className="text-center">
                           <div className="mb-2">
@@ -643,14 +646,7 @@ export default function FindProjects() {
                         <Badge variant="secondary" className="text-[10px] bg-gray-500/20 text-gray-400">
                           Slots Full
                         </Badge>
-                      ) : (
-                        <SubmitProposalDialog
-                          project={project}
-                          onSuccess={() => {
-                            fetchProjects();
-                          }}
-                        />
-                      )}
+                      ) : null}
                     </div>
                   </div>
                 </CardContent>
@@ -659,8 +655,13 @@ export default function FindProjects() {
           })}
         </div>
       )}
-      <ProjectDetailsDialog
+      <ProjectDetailsSheet
         project={selectedProject}
+        proposal={selectedProposal}
+        slotsFilled={selectedSlotsFilled}
+        onProposalSuccess={() => {
+          fetchProjects();
+        }}
         open={!!selectedProject}
         onOpenChange={(open) => {
           if (!open) setSelectedProject(null);

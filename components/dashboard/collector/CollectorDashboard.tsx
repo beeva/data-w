@@ -36,8 +36,7 @@ import {
   Briefcase,
   ExternalLink,
 } from "lucide-react";
-import SubmitProposalDialog from "./SubmitProposalDialog";
-import ProjectDetailsDialog from "./ProjectDetailsDialog";
+import ProjectDetailsSheet from "./ProjectDetailsSheet";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
 
 /** Haversine distance in km between two lat/lng points */
@@ -186,6 +185,13 @@ export default function CollectorDashboard() {
       </div>
     );
   }
+
+  const selectedProposal = selectedProject
+    ? proposalStatuses[selectedProject.id] || null
+    : null;
+  const selectedSlotsFilled = selectedProject
+    ? (assignmentCounts[selectedProject.id] || 0) >= (selectedProject.max_collectors || 1)
+    : false;
 
   return (
     <div className="space-y-4 p-4">
@@ -453,22 +459,7 @@ export default function CollectorDashboard() {
                             <Badge variant="secondary" className="text-[10px] bg-gray-500/20 text-gray-400">
                               Slots Full
                             </Badge>
-                          ) : (
-                            <SubmitProposalDialog
-                              project={project}
-                              onSuccess={() => {
-                                if (user) {
-                                  getProposalsByCollector(user.id).then((res) => {
-                                    if (res.data) {
-                                      const map: Record<string, Proposal> = {};
-                                      res.data.forEach((p) => { map[p.request_id] = p; });
-                                      setProposalStatuses(map);
-                                    }
-                                  });
-                                }
-                              }}
-                            />
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -490,8 +481,23 @@ export default function CollectorDashboard() {
           </CardContent>
         </Card>
       </div>
-      <ProjectDetailsDialog
+      <ProjectDetailsSheet
         project={selectedProject}
+        proposal={selectedProposal}
+        slotsFilled={selectedSlotsFilled}
+        onProposalSuccess={() => {
+          if (user) {
+            getProposalsByCollector(user.id).then((res) => {
+              if (res.data) {
+                const map: Record<string, Proposal> = {};
+                res.data.forEach((p) => {
+                  map[p.request_id] = p;
+                });
+                setProposalStatuses(map);
+              }
+            });
+          }
+        }}
         open={!!selectedProject}
         onOpenChange={(open) => {
           if (!open) setSelectedProject(null);
