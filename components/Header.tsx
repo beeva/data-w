@@ -40,18 +40,18 @@ export default function Header() {
     >
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-5">
         <div className="flex items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex-shrink-0">
-            <Image
-              src="/logo.png"
-              alt="Logo"
-              width={140}
-              height={100}
-              className="w-24 sm:w-32 md:w-36 h-auto"
-            />
-          </Link>
+          <div className="flex items-center gap-6 xl:gap-8">
+            {/* Logo */}
+            <Link href="/" className="flex-shrink-0">
+              <Image
+                src="/logo.png"
+                alt="Logo"
+                width={140}
+                height={100}
+                className="w-24 sm:w-32 md:w-36 h-auto"
+              />
+            </Link>
 
-          <div className="flex items-center gap-4 sm:gap-8">
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8">
               <Link
@@ -87,7 +87,9 @@ export default function Header() {
                 Crypto
               </Link>
             </nav>
+          </div>
 
+          <div className="flex items-center gap-4 sm:gap-8">
             {/* Desktop Auth Buttons / User Menu */}
             <div className="hidden md:flex items-center gap-3 sm:gap-4">
               {loading ? (
