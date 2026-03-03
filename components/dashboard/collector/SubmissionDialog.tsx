@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   createSubmission,
@@ -57,6 +57,17 @@ interface FileWithPreview {
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_FILES = 20;
+const DEFAULT_ACCEPT_TYPES =
+  "image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.json,.xml,.txt";
+
+function getFileExtension(fileName: string): string {
+  const parts = fileName.toLowerCase().split(".");
+  return parts.length > 1 ? parts.pop() || "" : "";
+}
+
+function includesAny(value: string, keywords: string[]): boolean {
+  return keywords.some((kw) => value.includes(kw));
+}
 
 function getFileIcon(mimeType: string) {
   if (mimeType.startsWith("image/"))
@@ -98,6 +109,105 @@ export default function SubmissionDialog({
   const [submitted, setSubmitted] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  const requiredDataTypes = useMemo(
+    () => (project.requirements?.data_types || []).map((d) => d.toLowerCase()),
+    [project.requirements?.data_types]
+  );
+  const requiredFormats = useMemo(
+    () => (project.requirements?.formats || []).map((f) => f.toLowerCase()),
+    [project.requirements?.formats]
+  );
+
+  const allowsOtherType = requiredDataTypes.some((d) => d.includes("other"));
+  const allowsOtherFormat = requiredFormats.some((f) => f.includes("other"));
+
+  const acceptTypes = useMemo(() => {
+    if (allowsOtherType || allowsOtherFormat) return DEFAULT_ACCEPT_TYPES;
+
+    const accepts = new Set<string>();
+    requiredFormats.forEach((format) => {
+      if (format.includes("jpeg") || format.includes("jpg")) accepts.add(".jpg,.jpeg");
+      if (format.includes("png")) accepts.add(".png");
+      if (format.includes("mp4")) accepts.add(".mp4");
+      if (format.includes("pdf")) accepts.add(".pdf");
+      if (format.includes("csv")) accepts.add(".csv");
+      if (format.includes("json")) accepts.add(".json");
+      if (format.includes("xml")) accepts.add(".xml");
+    });
+
+    requiredDataTypes.forEach((type) => {
+      if (includesAny(type, ["image", "photo"])) accepts.add("image/*");
+      if (type.includes("video")) accepts.add("video/*");
+      if (type.includes("audio")) accepts.add("audio/*");
+      if (includesAny(type, ["text", "document"])) accepts.add(".txt,.pdf,.doc,.docx");
+      if (type.includes("spreadsheet")) accepts.add(".csv,.xls,.xlsx");
+      if (includesAny(type, ["gps", "sensor"])) accepts.add(".csv,.json,.xml,.txt");
+    });
+
+    const value = Array.from(accepts).join(",");
+    return value || DEFAULT_ACCEPT_TYPES;
+  }, [requiredDataTypes, requiredFormats, allowsOtherType, allowsOtherFormat]);
+
+  const matchesRequiredDataType = useCallback(
+    (file: File) => {
+      if (requiredDataTypes.length === 0 || allowsOtherType) return true;
+
+      const mime = file.type.toLowerCase();
+      const ext = getFileExtension(file.name);
+
+      return requiredDataTypes.some((type) => {
+        if (includesAny(type, ["image", "photo"])) {
+          return mime.startsWith("image/") || includesAny(ext, ["jpg", "jpeg", "png", "webp", "gif"]);
+        }
+        if (type.includes("video")) {
+          return mime.startsWith("video/") || includesAny(ext, ["mp4", "mov", "avi", "mkv", "webm"]);
+        }
+        if (type.includes("audio")) {
+          return mime.startsWith("audio/") || includesAny(ext, ["mp3", "wav", "aac", "ogg", "m4a"]);
+        }
+        if (includesAny(type, ["text", "document"])) {
+          return (
+            mime.startsWith("text/") ||
+            includesAny(mime, ["pdf", "word", "document"]) ||
+            includesAny(ext, ["txt", "pdf", "doc", "docx", "rtf"])
+          );
+        }
+        if (type.includes("spreadsheet")) {
+          return (
+            includesAny(mime, ["spreadsheet", "excel", "csv"]) ||
+            includesAny(ext, ["csv", "xls", "xlsx"])
+          );
+        }
+        if (includesAny(type, ["gps", "sensor"])) {
+          return includesAny(ext, ["csv", "json", "xml", "txt"]);
+        }
+        return false;
+      });
+    },
+    [requiredDataTypes, allowsOtherType]
+  );
+
+  const matchesRequiredFormat = useCallback(
+    (file: File) => {
+      if (requiredFormats.length === 0 || allowsOtherFormat) return true;
+
+      const mime = file.type.toLowerCase();
+      const ext = getFileExtension(file.name);
+
+      return requiredFormats.some((format) => {
+        if (includesAny(format, ["jpeg", "jpg"])) return includesAny(ext, ["jpg", "jpeg"]) || mime === "image/jpeg";
+        if (format.includes("png")) return ext === "png" || mime === "image/png";
+        if (format.includes("mp4")) return ext === "mp4" || mime === "video/mp4";
+        if (format.includes("pdf")) return ext === "pdf" || mime === "application/pdf";
+        if (format.includes("csv")) return ext === "csv" || mime.includes("csv");
+        if (format.includes("json")) return ext === "json" || mime.includes("json");
+        if (format.includes("xml")) return ext === "xml" || mime.includes("xml");
+        return false;
+      });
+    },
+    [requiredFormats, allowsOtherFormat]
+  );
+
   const resetForm = useCallback(() => {
     files.forEach((f) => {
       if (f.preview) URL.revokeObjectURL(f.preview);
@@ -127,6 +237,10 @@ export default function SubmissionDialog({
           errors.push(`"${file.name}" exceeds 50MB limit.`);
           continue;
         }
+        if (!matchesRequiredDataType(file) || !matchesRequiredFormat(file)) {
+          errors.push(`"${file.name}" does not match this project's required data type/format.`);
+          continue;
+        }
         const preview = file.type.startsWith("image/")
           ? URL.createObjectURL(file)
           : undefined;
@@ -146,7 +260,7 @@ export default function SubmissionDialog({
         setFiles((prev) => [...prev, ...validFiles]);
       }
     },
-    [files.length]
+    [files.length, matchesRequiredDataType, matchesRequiredFormat]
   );
 
   const removeFile = useCallback((fileId: string) => {
@@ -351,6 +465,25 @@ export default function SubmissionDialog({
               )}
 
               {/* Drag & Drop Zone */}
+              <div className="text-xs text-muted-foreground rounded-lg border border-border bg-muted/30 p-2.5">
+                <p>
+                  Required types:{" "}
+                  <span className="font-medium text-foreground">
+                    {project.requirements.data_types.length > 0
+                      ? project.requirements.data_types.join(", ")
+                      : "Any"}
+                  </span>
+                </p>
+                <p className="mt-1">
+                  Required formats:{" "}
+                  <span className="font-medium text-foreground">
+                    {project.requirements.formats.length > 0
+                      ? project.requirements.formats.join(", ")
+                      : "Any"}
+                  </span>
+                </p>
+              </div>
+
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -375,7 +508,7 @@ export default function SubmissionDialog({
                   multiple
                   onChange={handleFileSelect}
                   className="hidden"
-                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.json,.txt"
+                  accept={acceptTypes}
                 />
                 <div className="space-y-2">
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mx-auto">
