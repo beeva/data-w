@@ -40,19 +40,26 @@ export default function Footer({ compact = false }: FooterProps) {
 
   if (compact) {
     return (
-      <footer className="bg-[#28303E] text-white">
-        <div className="container mx-auto px-4 sm:px-6 py-5 sm:py-6">
-          <div className="flex items-center justify-between gap-4">
+      <footer className="h-16 bg-muted/80 dark:bg-muted border-t border-border text-foreground">
+        <div className="container mx-auto h-full px-4 sm:px-6">
+          <div className="flex h-full items-center justify-between gap-4">
             <div className="flex justify-center">
+              <Image
+                src="/logo-dark.png"
+                alt="DataW"
+                width={140}
+                height={100}
+                className="w-20 sm:w-24 h-auto dark:hidden"
+              />
               <Image
                 src="/logo.png"
                 alt="DataW"
                 width={140}
                 height={100}
-                className="w-24 sm:w-28 h-auto"
+                className="hidden w-20 sm:w-24 h-auto dark:block"
               />
             </div>
-            <div className="text-white/50 text-xs sm:text-sm text-right">
+            <div className="text-muted-foreground text-xs text-right">
               © {new Date().getFullYear()} DataW. All rights reserved.
             </div>
           </div>

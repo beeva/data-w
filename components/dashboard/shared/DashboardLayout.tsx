@@ -14,8 +14,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-[calc(100dvh-84px)] bg-[#F4F5FA] dark:bg-gray-900 p-2 md:py-4 md:pl-4">
-      <div className="w-full h-[calc(100dvh-84px-1rem)] md:h-[calc(100dvh-84px-2rem)] mx-auto rounded-xl overflow-hidden flex gap-0 md:gap-4">
+    <div className="min-h-[calc(100dvh-64px)] bg-[#F4F5FA] dark:bg-gray-900 p-2 md:py-4 md:pl-4">
+      <div className="w-full h-[calc(100dvh-64px-1rem)] md:h-[calc(100dvh-64px-2rem)] mx-auto rounded-xl overflow-hidden flex gap-0 md:gap-4">
         {/* Desktop Sidebar */}
         <div className="hidden md:block">
           <DashboardSidebar collapsed={sidebarCollapsed} onNavigate={() => {}} />
@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </Sheet>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col gap-2 md:gap-4 overflow-y-auto rounded-2xl dashboard-scrollbar pr-2 md:pr-4">
+        <div className="flex-1 min-h-0 flex flex-col gap-2 md:gap-4 overflow-y-auto rounded-2xl dashboard-scrollbar pr-2 md:pr-4">
           {/* Header */}
           <div className="sticky top-0 z-10 flex-shrink-0 bg-[#F4F5FA] dark:bg-[#111827] rounded-b-2xl shadow-sm">
             <DashboardHeader
