@@ -37,6 +37,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import SubmitProposalDialog from "./SubmitProposalDialog";
+import ProjectDetailsDialog from "./ProjectDetailsDialog";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
 
 /** Haversine distance in km between two lat/lng points */
@@ -74,6 +75,7 @@ export default function CollectorDashboard() {
   const [activeAssignments, setActiveAssignments] = useState(0);
   const [loading, setLoading] = useState(true);
   const [maxDistance, setMaxDistance] = useState<number>(5); // default radius shown on map
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   const collectorLat = profile?.location?.lat;
   const collectorLng = profile?.location?.lng;
@@ -379,7 +381,8 @@ export default function CollectorDashboard() {
                   return (
                     <div
                       key={project.id}
-                      className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                      className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedProject(project)}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -440,7 +443,7 @@ export default function CollectorDashboard() {
                             )}
                           </div>
                         </div>
-                        <div className="shrink-0">
+                        <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
                           {proposal ? (
                             <p className="text-[10px] text-muted-foreground text-right">
                               Submitted<br />
@@ -487,6 +490,13 @@ export default function CollectorDashboard() {
           </CardContent>
         </Card>
       </div>
+      <ProjectDetailsDialog
+        project={selectedProject}
+        open={!!selectedProject}
+        onOpenChange={(open) => {
+          if (!open) setSelectedProject(null);
+        }}
+      />
     </div>
   );
 }

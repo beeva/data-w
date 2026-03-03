@@ -45,6 +45,7 @@ import {
   XCircle,
 } from "lucide-react";
 import SubmitProposalDialog from "./SubmitProposalDialog";
+import ProjectDetailsDialog from "./ProjectDetailsDialog";
 import { cn, getCategoryColor } from "@/lib/utils";
 import { getProposalsByCollector, getAssignmentCountsByProjects } from "@/lib/services/proposalService";
 import type { Proposal } from "@/types/proposal";
@@ -65,6 +66,7 @@ export default function FindProjects() {
   const [budgetRange, setBudgetRange] = useState<{ min: number; max: number }>({ min: 0, max: 100000 });
   const [sortBy, setSortBy] = useState<'newest' | 'budget_high' | 'budget_low' | 'deadline'>('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   
   // Expand/collapse filter sections
   const [expandedSections, setExpandedSections] = useState({
@@ -568,7 +570,8 @@ export default function FindProjects() {
             return (
               <Card
                 key={project.id}
-                className="dark:bg-gray-800/50 border border-border hover:border-cyan-400/50 transition-all"
+                className="dark:bg-gray-800/50 border border-border hover:border-cyan-400/50 transition-all cursor-pointer"
+                onClick={() => setSelectedProject(project)}
               >
                 <CardContent className="pt-6">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -623,7 +626,10 @@ export default function FindProjects() {
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-2 min-w-[140px]">
+                    <div
+                      className="flex flex-col gap-2 min-w-[140px]"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {proposal ? (
                         <div className="text-center">
                           <div className="mb-2">
@@ -653,6 +659,13 @@ export default function FindProjects() {
           })}
         </div>
       )}
+      <ProjectDetailsDialog
+        project={selectedProject}
+        open={!!selectedProject}
+        onOpenChange={(open) => {
+          if (!open) setSelectedProject(null);
+        }}
+      />
     </div>
   );
 }
