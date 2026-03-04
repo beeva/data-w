@@ -67,6 +67,9 @@ export default function ProjectDetailsSheet({
   const [collectorFeedbackByProject, setCollectorFeedbackByProject] = useState<
     Record<string, CollectorFeedback>
   >({});
+  const [currentRequesterTime, setCurrentRequesterTime] = useState(() =>
+    new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  );
 
   useEffect(() => {
     if (!project?.requester_id || !open) return;
@@ -107,6 +110,16 @@ export default function ProjectDetailsSheet({
     };
   }, [open, project?.id, project?.requester_id, user?.id]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentRequesterTime(
+        new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+      );
+    }, 60_000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   if (!project) return null;
 
   const hasMapCoordinates =
@@ -117,6 +130,12 @@ export default function ProjectDetailsSheet({
     Number.isFinite(project.location.radius_km)
       ? Math.max(project.location.radius_km, 0)
       : 0;
+  const completedProjectsCount =
+    requesterProjects.filter((p) => p.status === "completed").length +
+    (project.status === "completed" ? 1 : 0);
+  const cancelledProjectsCount =
+    requesterProjects.filter((p) => p.status === "cancelled").length +
+    (project.status === "cancelled" ? 1 : 0);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -404,27 +423,42 @@ export default function ProjectDetailsSheet({
                   />
                 </Button>
               )}
-              <p className="pt-2 text-center text-lg font-bold text-foreground">About the requester</p>
-              <p className="text-center text-sm text-muted-foreground">
-                {requesterProfile?.location?.country || requesterProfile?.location?.city
-                  ? `${requesterProfile?.location?.country ?? ""}${
-                      requesterProfile?.location?.country && requesterProfile?.location?.city ? ", " : ""
-                    }${requesterProfile?.location?.city ?? ""}`
-                  : "Location not available"}
-              </p>
-              <p className="text-center text-sm text-muted-foreground">
-                {loadingRequesterProjects
-                  ? "Projects posted: ..."
-                  : `Projects posted: ${requesterProjects.length + 1}`}
-              </p>
-              <p className="text-center text-sm text-muted-foreground">
-                {loadingRequesterProjects
-                  ? "Total spent: ..."
-                  : `Total spent: $${(
-                      requesterProjects.reduce((sum, historyProject) => sum + historyProject.budget, 0) +
-                      project.budget
-                    ).toFixed(2)}`}
-              </p>
+              <p className="pt-2 text-sm font-semibold text-foreground">About the requester</p>
+              <div className="px-0.5 py-1">
+                <p className="text-sm font-semibold text-foreground">
+                  {requesterProfile?.location?.country || "Unknown country"}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {(requesterProfile?.location?.city || "Unknown city") + " " + currentRequesterTime}
+                </p>
+              </div>
+              <div className="px-0.5 py-1">
+                <p className="text-sm font-semibold text-foreground">
+                  {loadingRequesterProjects
+                    ? "Projects posted: ..."
+                    : `Projects posted: ${requesterProjects.length + 1}`}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {loadingRequesterProjects
+                    ? "Completed projects: ..."
+                    : `Completed projects: ${completedProjectsCount}`}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {loadingRequesterProjects
+                    ? "Cancelled projects: ..."
+                    : `Cancelled projects: ${cancelledProjectsCount}`}
+                </p>
+              </div>
+              <div className="px-0.5 py-1">
+                <p className="text-sm font-semibold text-foreground">
+                  {loadingRequesterProjects
+                    ? "Total spent: ..."
+                    : `Total spent: $${(
+                        requesterProjects.reduce((sum, historyProject) => sum + historyProject.budget, 0) +
+                        project.budget
+                      ).toFixed(2)}`}
+                </p>
+              </div>
             </div>
           </aside>
         </div>
