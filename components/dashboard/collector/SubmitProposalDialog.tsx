@@ -30,11 +30,13 @@ import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 interface SubmitProposalDialogProps {
   project: Project;
   onSuccess?: () => void;
+  triggerClassName?: string;
 }
 
 export default function SubmitProposalDialog({
   project,
   onSuccess,
+  triggerClassName = "",
 }: SubmitProposalDialogProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -185,7 +187,7 @@ export default function SubmitProposalDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+        <Button className={`bg-primary text-primary-foreground hover:bg-primary/90 ${triggerClassName}`}>
           Submit Proposal
           <Send className="w-4 h-4 ml-2" />
         </Button>

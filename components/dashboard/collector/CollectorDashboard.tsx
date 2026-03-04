@@ -379,7 +379,7 @@ export default function CollectorDashboard() {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              Saved Jobs
+              Saved Projects
             </button>
           </div>
         </CardContent>
@@ -471,7 +471,7 @@ export default function CollectorDashboard() {
                 <Briefcase className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-50" />
                 <p className="text-sm text-muted-foreground">
                   {activeTab === "saved"
-                    ? "No saved jobs yet. Save jobs to track them here."
+                    ? "No saved projects yet. Save projects to track them here."
                     : activeTab === "recent"
                     ? "No recent projects available right now."
                     : maxDistance > 0
@@ -567,7 +567,7 @@ export default function CollectorDashboard() {
                             type="button"
                             onClick={() => toggleSaveProject(project.id)}
                             className="mb-2 ml-auto flex items-center justify-end text-muted-foreground hover:text-foreground"
-                            title={isSaved ? "Remove from saved jobs" : "Save job"}
+                            title={isSaved ? "Remove from saved projects" : "Save project"}
                           >
                             {isSaved ? (
                               <BookmarkCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
@@ -610,6 +610,10 @@ export default function CollectorDashboard() {
         project={selectedProject}
         proposal={selectedProposal}
         slotsFilled={selectedSlotsFilled}
+        isSavedProject={selectedProject ? savedProjectIds.includes(selectedProject.id) : false}
+        onToggleSaveProject={
+          selectedProject ? () => toggleSaveProject(selectedProject.id) : undefined
+        }
         onProposalSuccess={() => {
           if (user) {
             getProposalsByCollector(user.id).then((res) => {

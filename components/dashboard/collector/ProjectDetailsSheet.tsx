@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Project } from "@/types/project";
 import type { Proposal } from "@/types/proposal";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import SubmitProposalDialog from "./SubmitProposalDialog";
 import {
@@ -17,13 +18,15 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Calendar, DollarSign, MapPin, Users } from "lucide-react";
+import { Calendar, DollarSign, Heart, MapPin, Users } from "lucide-react";
 
 interface ProjectDetailsSheetProps {
   project: Project | null;
   proposal?: Proposal | null;
   slotsFilled?: boolean;
   onProposalSuccess?: () => void;
+  isSavedProject?: boolean;
+  onToggleSaveProject?: () => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -42,6 +45,8 @@ export default function ProjectDetailsSheet({
   proposal,
   slotsFilled = false,
   onProposalSuccess,
+  isSavedProject = false,
+  onToggleSaveProject,
   open,
   onOpenChange,
 }: ProjectDetailsSheetProps) {
@@ -289,7 +294,26 @@ export default function ProjectDetailsSheet({
                   Slots Full
                 </Badge>
               ) : (
-                <SubmitProposalDialog project={project} onSuccess={onProposalSuccess} />
+                <SubmitProposalDialog
+                  project={project}
+                  onSuccess={onProposalSuccess}
+                  triggerClassName="w-full justify-center"
+                />
+              )}
+              {onToggleSaveProject && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-center gap-2"
+                  onClick={onToggleSaveProject}
+                >
+                  {isSavedProject ? "Saved Project" : "Save Project"}
+                  <Heart
+                    className={`w-4 h-4 ${
+                      isSavedProject ? "fill-red-500 text-red-500" : "text-muted-foreground"
+                    }`}
+                  />
+                </Button>
               )}
             </div>
           </aside>

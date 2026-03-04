@@ -66,6 +66,7 @@ export default function FindProjects() {
   const [sortBy, setSortBy] = useState<'newest' | 'budget_high' | 'budget_low' | 'deadline'>('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [savedProjectIds, setSavedProjectIds] = useState<string[]>([]);
   
   // Expand/collapse filter sections
   const [expandedSections, setExpandedSections] = useState({
@@ -75,6 +76,37 @@ export default function FindProjects() {
   });
 
   const userId = user?.id;
+
+  useEffect(() => {
+    if (!userId) return;
+    const saved = localStorage.getItem(`collector-saved-projects-${userId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setSavedProjectIds(parsed.filter((id): id is string => typeof id === "string"));
+        }
+      } catch {
+        // Ignore malformed saved data
+      }
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    localStorage.setItem(
+      `collector-saved-projects-${userId}`,
+      JSON.stringify(savedProjectIds)
+    );
+  }, [savedProjectIds, userId]);
+
+  const toggleSaveProject = (projectId: string) => {
+    setSavedProjectIds((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId]
+    );
+  };
 
   const fetchProjects = async (showSpinner = false) => {
     try {
@@ -659,6 +691,10 @@ export default function FindProjects() {
         project={selectedProject}
         proposal={selectedProposal}
         slotsFilled={selectedSlotsFilled}
+        isSavedProject={selectedProject ? savedProjectIds.includes(selectedProject.id) : false}
+        onToggleSaveProject={
+          selectedProject ? () => toggleSaveProject(selectedProject.id) : undefined
+        }
         onProposalSuccess={() => {
           fetchProjects();
         }}
