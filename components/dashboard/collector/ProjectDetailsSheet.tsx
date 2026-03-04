@@ -53,18 +53,25 @@ export default function ProjectDetailsSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0">
+      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto p-0">
         <SheetHeader className="border-b border-border">
           <SheetTitle className="text-xl">{project.title}</SheetTitle>
           <SheetDescription>Project details for collectors.</SheetDescription>
         </SheetHeader>
 
         <div className="space-y-4 p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge>{project.category}</Badge>
-            <Badge variant="outline" className="capitalize">
-              {project.status}
-            </Badge>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge>{project.category}</Badge>
+              <Badge variant="outline" className="capitalize">
+                {project.status}
+              </Badge>
+            </div>
+            {!proposal && !slotsFilled && (
+              <div className="ml-auto">
+                <SubmitProposalDialog project={project} onSuccess={onProposalSuccess} />
+              </div>
+            )}
           </div>
 
           <div>
@@ -208,9 +215,7 @@ export default function ProjectDetailsSheet({
               <Badge variant="secondary" className="text-[11px] bg-gray-500/20 text-gray-400">
                 Slots Full
               </Badge>
-            ) : (
-              <SubmitProposalDialog project={project} onSuccess={onProposalSuccess} />
-            )}
+            ) : null}
           </div>
         </div>
       </SheetContent>
