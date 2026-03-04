@@ -141,6 +141,46 @@ const PLAN_PROJECT_LIMITS: Record<string, number> = {
   enterprise: -1,
 };
 
+export interface RequesterHistoryProject {
+  id: string;
+  title: string;
+  category: string;
+  budget: number;
+  status: ProjectStatus;
+  created_at: string;
+  deadline: string | null;
+}
+
+/**
+ * Fetch requester's past projects for collector-facing history section
+ */
+export async function getRequesterProjectHistory(
+  requesterId: string,
+  excludeProjectId?: string
+): Promise<{ data: RequesterHistoryProject[] | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("requests")
+      .select("id,title,category,budget,status,created_at,deadline")
+      .eq("requester_id", requesterId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    const projects = ((data as RequesterHistoryProject[]) ?? []).filter(
+      (project) => project.id !== excludeProjectId
+    );
+    return { data: projects, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error("Failed to fetch requester project history"),
+    };
+  }
+}
+
 /**
  * Create a new project/request
  */

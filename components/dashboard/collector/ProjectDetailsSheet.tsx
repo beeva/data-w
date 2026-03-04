@@ -1,10 +1,15 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { Project } from "@/types/project";
 import type { Proposal } from "@/types/proposal";
 import { Badge } from "@/components/ui/badge";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import SubmitProposalDialog from "./SubmitProposalDialog";
+import {
+  getRequesterProjectHistory,
+  type RequesterHistoryProject,
+} from "@/lib/services/projectService";
 import {
   Sheet,
   SheetContent,
@@ -40,6 +45,29 @@ export default function ProjectDetailsSheet({
   open,
   onOpenChange,
 }: ProjectDetailsSheetProps) {
+  const [requesterProjects, setRequesterProjects] = useState<RequesterHistoryProject[]>([]);
+  const [loadingRequesterProjects, setLoadingRequesterProjects] = useState(false);
+
+  useEffect(() => {
+    if (!project?.requester_id || !open) return;
+
+    let mounted = true;
+    const loadRequesterProjectHistory = async () => {
+      setLoadingRequesterProjects(true);
+      const { data } = await getRequesterProjectHistory(project.requester_id, project.id);
+      if (mounted) {
+        setRequesterProjects(data ?? []);
+        setLoadingRequesterProjects(false);
+      }
+    };
+
+    loadRequesterProjectHistory();
+
+    return () => {
+      mounted = false;
+    };
+  }, [open, project?.id, project?.requester_id]);
+
   if (!project) return null;
 
   const hasMapCoordinates =
@@ -186,6 +214,55 @@ export default function ProjectDetailsSheet({
               <p>Created: {formatDate(project.created_at)}</p>
               <p>Last updated: {formatDate(project.updated_at)}</p>
             </div>
+          </div>
+
+          <div className="rounded-md border border-border p-3">
+            <h4 className="text-xs font-semibold text-muted-foreground mb-2">Requester History</h4>
+            {loadingRequesterProjects ? (
+              <p className="text-sm text-muted-foreground">Loading requester history...</p>
+            ) : requesterProjects.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No previous projects found for this requester.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {requesterProjects.map((historyProject) => (
+                  <div
+                    key={historyProject.id}
+                    className="rounded-md border border-border p-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {historyProject.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {historyProject.category} • Created {formatDate(historyProject.created_at)}
+                        {historyProject.deadline ? ` • Deadline ${formatDate(historyProject.deadline)}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge
+                        variant="outline"
+                        className={`capitalize ${
+                          historyProject.status === "completed"
+                            ? "border-emerald-500/40 text-emerald-600"
+                            : historyProject.status === "cancelled"
+                            ? "border-red-500/40 text-red-600"
+                            : historyProject.status === "paused"
+                            ? "border-amber-500/40 text-amber-600"
+                            : "border-blue-500/40 text-blue-600"
+                        }`}
+                      >
+                        {historyProject.status}
+                      </Badge>
+                      <span className="text-sm font-semibold text-foreground">
+                        ${historyProject.budget.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="border-t border-border pt-4">
