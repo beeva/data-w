@@ -3,10 +3,15 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getProjectsByRequester, updateProjectStatus } from "@/lib/services/projectService";
+import {
+  completeProjectWithFeedback,
+  getProjectsByRequester,
+  updateProjectStatus,
+} from "@/lib/services/projectService";
 import { getSubmissionsByProject } from "@/lib/services/submissionService";
 import type { Project, ProjectStatus } from "@/types/project";
 import EditProjectDialog from "./EditProjectDialog";
+import CompleteProjectDialog from "./CompleteProjectDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +47,7 @@ export default function ActiveProjectsList() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [pendingCancelProjectId, setPendingCancelProjectId] = useState<string | null>(null);
+  const [pendingCompleteProject, setPendingCompleteProject] = useState<Project | null>(null);
   const [projectStats, setProjectStats] = useState<Record<string, {
     totalTarget: number;
     totalSubmissions: number;
@@ -195,16 +201,22 @@ export default function ActiveProjectsList() {
     }
   };
 
-  const handleCompleteProject = async (projectId: string) => {
+  const handleCompleteProject = (project: Project) => {
+    setPendingCompleteProject(project);
+  };
+
+  const confirmCompleteProject = async (rating: number, feedback: string) => {
     if (!user) return;
+    if (!pendingCompleteProject) return;
 
     try {
       setError("");
 
-      const { data, error } = await updateProjectStatus(
-        projectId,
+      const { data, error } = await completeProjectWithFeedback(
+        pendingCompleteProject.id,
         user.id,
-        "completed" as ProjectStatus
+        rating,
+        feedback
       );
       if (error) {
         throw error;
@@ -212,12 +224,16 @@ export default function ActiveProjectsList() {
 
       if (data) {
         setProjects((prev) =>
-          prev.map((p) => (p.id === projectId ? (data as Project) : p))
+          prev.map((p) =>
+            p.id === pendingCompleteProject.id ? (data as Project) : p
+          )
         );
       }
+      setPendingCompleteProject(null);
     } catch (err: any) {
       console.error("Error completing project:", err);
       setError(err.message || "Failed to complete project");
+      throw err;
     }
   };
 
@@ -390,7 +406,7 @@ export default function ActiveProjectsList() {
                   variant="outline"
                   size="sm"
                   className="h-6 text-[10px] px-2 border-green-500 text-green-600 hover:bg-green-50"
-                  onClick={() => handleCompleteProject(project.id)}
+                  onClick={() => handleCompleteProject(project)}
                   title="Complete Project"
                 >
                   <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -666,6 +682,14 @@ export default function ActiveProjectsList() {
           }}
         />
       )}
+      <CompleteProjectDialog
+        open={!!pendingCompleteProject}
+        onOpenChange={(open) => {
+          if (!open) setPendingCompleteProject(null);
+        }}
+        projectTitle={pendingCompleteProject?.title || ""}
+        onSubmit={confirmCompleteProject}
+      />
       <ConfirmationDialog
         open={!!pendingCancelProjectId}
         onOpenChange={(open) => {

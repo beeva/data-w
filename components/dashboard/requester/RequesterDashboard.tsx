@@ -3,7 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getProjectsByRequester, updateProjectStatus } from "@/lib/services/projectService";
+import {
+  completeProjectWithFeedback,
+  getProjectsByRequester,
+  updateProjectStatus,
+} from "@/lib/services/projectService";
 import { getNotifications } from "@/lib/services/notificationService";
 import { getSubmissionsByProject } from "@/lib/services/submissionService";
 import type { Project, ProjectStatus } from "@/types/project";
@@ -33,6 +37,7 @@ import {
   Play,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import CompleteProjectDialog from "./CompleteProjectDialog";
 
 function formatTimeAgo(dateString: string): string {
   const now = new Date();
@@ -57,6 +62,7 @@ export default function RequesterDashboard() {
   const [projectProgress, setProjectProgress] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [pendingCancelProjectId, setPendingCancelProjectId] = useState<string | null>(null);
+  const [pendingCompleteProject, setPendingCompleteProject] = useState<Project | null>(null);
 
   const userId = user?.id;
 
@@ -176,14 +182,20 @@ export default function RequesterDashboard() {
     }
   };
 
-  const handleCompleteProject = async (projectId: string) => {
+  const handleCompleteProject = (project: Project) => {
+    setPendingCompleteProject(project);
+  };
+
+  const confirmCompleteProject = async (rating: number, feedback: string) => {
     if (!user) return;
+    if (!pendingCompleteProject) return;
 
     try {
-      const { data, error } = await updateProjectStatus(
-        projectId,
+      const { data, error } = await completeProjectWithFeedback(
+        pendingCompleteProject.id,
         user.id,
-        "completed" as ProjectStatus
+        rating,
+        feedback
       );
       if (error) {
         throw error;
@@ -191,11 +203,15 @@ export default function RequesterDashboard() {
 
       if (data) {
         setProjects((prev) =>
-          prev.map((p) => (p.id === projectId ? (data as Project) : p))
+          prev.map((p) =>
+            p.id === pendingCompleteProject.id ? (data as Project) : p
+          )
         );
       }
+      setPendingCompleteProject(null);
     } catch (err) {
       console.error("Error completing project:", err);
+      throw err;
     }
   };
 
@@ -459,7 +475,7 @@ export default function RequesterDashboard() {
                                     variant="ghost"
                                     size="sm"
                                     className="h-5 w-5 p-0"
-                                    onClick={(e) => { e.stopPropagation(); handleCompleteProject(project.id); }}
+                                    onClick={(e) => { e.stopPropagation(); handleCompleteProject(project); }}
                                     title="Complete Project"
                                   >
                                     <CheckCircle2 className="w-3 h-3 text-green-500" />
@@ -528,7 +544,7 @@ export default function RequesterDashboard() {
                                     variant="outline"
                                     size="sm"
                                     className="h-6 text-[9px] px-2 border-green-500 text-green-600 hover:bg-green-50"
-                                    onClick={(e) => { e.stopPropagation(); handleCompleteProject(project.id); }}
+                                    onClick={(e) => { e.stopPropagation(); handleCompleteProject(project); }}
                                   >
                                     <CheckCircle2 className="w-3 h-3 mr-0.5" />
                                     Complete
@@ -870,6 +886,14 @@ export default function RequesterDashboard() {
         cancelText="Keep Project"
         confirmTone="danger"
         onConfirm={confirmCancelProject}
+      />
+      <CompleteProjectDialog
+        open={!!pendingCompleteProject}
+        onOpenChange={(open) => {
+          if (!open) setPendingCompleteProject(null);
+        }}
+        projectTitle={pendingCompleteProject?.title || ""}
+        onSubmit={confirmCompleteProject}
       />
     </div>
   );

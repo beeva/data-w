@@ -4,7 +4,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getAssignmentByToken } from "@/lib/services/proposalService";
-import { getProjectById } from "@/lib/services/projectService";
+import {
+  getCollectorFeedbackForProject,
+  getProjectById,
+  getRequesterFeedbackForProject,
+  submitCollectorFeedbackForProject,
+  type CollectorFeedback,
+  type ProjectFeedback,
+} from "@/lib/services/projectService";
 import {
   getSubmissionsByProject,
   getDataItemsBySubmission,
@@ -42,6 +49,7 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  Star,
   Upload,
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
@@ -122,6 +130,11 @@ export default function SubmitPage() {
   const [loadingItems, setLoadingItems] = useState<string | null>(null);
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [toast, setToast] = useState<SubmissionToast | null>(null);
+  const [requesterFeedback, setRequesterFeedback] = useState<ProjectFeedback | null>(null);
+  const [collectorFeedback, setCollectorFeedback] = useState<CollectorFeedback | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const userId = user?.id;
   useEffect(() => {
@@ -196,6 +209,22 @@ export default function SubmitPage() {
   }, [project, userId, fetchSubmissions]);
 
   useEffect(() => {
+    if (project?.status !== "completed" || !project?.id || !userId) return;
+
+    const loadFeedbacks = async () => {
+      const [requesterFeedbackRes, collectorFeedbackRes] = await Promise.all([
+        getRequesterFeedbackForProject(project.id),
+        getCollectorFeedbackForProject(project.id, userId),
+      ]);
+
+      setRequesterFeedback(requesterFeedbackRes.data ?? null);
+      setCollectorFeedback(collectorFeedbackRes.data ?? null);
+    };
+
+    loadFeedbacks();
+  }, [project?.id, project?.status, userId]);
+
+  useEffect(() => {
     if (project?.status !== "completed") return;
     if (submissions.length === 0) return;
 
@@ -261,6 +290,15 @@ export default function SubmitPage() {
   };
 
   const handleSaveItemAccess = async (submissionId: string, item: DataItem) => {
+    if (requiresCollectorFeedback) {
+      setToast({
+        message:
+          "Please submit your feedback to requester before updating access settings.",
+        type: "error",
+      });
+      return;
+    }
+
     const draft = getItemDraft(item);
     const priceValue = Number(draft.price);
 
@@ -311,6 +349,48 @@ export default function SubmitPage() {
     }
   };
 
+  const handleSubmitCollectorFeedback = async () => {
+    if (!project || !userId || !requesterFeedback) return;
+
+    if (feedbackRating < 1 || feedbackRating > 5) {
+      setToast({ message: "Please select a star rating.", type: "error" });
+      return;
+    }
+
+    if (!feedbackText.trim()) {
+      setToast({ message: "Please write your feedback.", type: "error" });
+      return;
+    }
+
+    try {
+      setSubmittingFeedback(true);
+      const { data, error: feedbackError } = await submitCollectorFeedbackForProject(
+        project.id,
+        project.requester_id,
+        userId,
+        feedbackRating,
+        feedbackText
+      );
+
+      if (feedbackError || !data) {
+        throw new Error(feedbackError?.message || "Failed to submit feedback");
+      }
+
+      setCollectorFeedback(data);
+      setToast({
+        message: "Thanks! Your feedback has been sent to the requester.",
+        type: "success",
+      });
+    } catch (err: any) {
+      setToast({
+        message: err.message || "Failed to submit feedback.",
+        type: "error",
+      });
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
   const isSubmissionClosed =
     project?.status === "completed" || project?.status === "cancelled";
   const requiresAccessSetup = project?.status === "completed";
@@ -318,6 +398,8 @@ export default function SubmitPage() {
   const pendingConfigCount = requiresAccessSetup
     ? allLoadedItems.filter((item) => !isAccessConfigured(item)).length
     : 0;
+  const requiresCollectorFeedback =
+    requiresAccessSetup && !!requesterFeedback && !collectorFeedback;
 
   const toggleSubmissionFiles = async (submissionId: string) => {
     if (expandedSubmission === submissionId) {
@@ -524,6 +606,107 @@ export default function SubmitPage() {
           </CardContent>
         </Card>
 
+        {requiresAccessSetup && requesterFeedback && (
+          <Card className="dark:bg-gray-800/50 border-none">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold">
+                Feedback Exchange
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-xs font-semibold mb-2">Requester feedback to you</p>
+                <div className="flex items-center gap-1 mb-2">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <Star
+                      key={idx}
+                      className={`w-4 h-4 ${
+                        idx < requesterFeedback.rating
+                          ? "fill-yellow-400 text-yellow-500"
+                          : "text-muted-foreground"
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground">{requesterFeedback.feedback}</p>
+              </div>
+
+              {collectorFeedback ? (
+                <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-3">
+                  <p className="text-xs font-semibold text-green-500 mb-1">
+                    Your feedback to requester (submitted)
+                  </p>
+                  <div className="flex items-center gap-1 mb-2">
+                    {Array.from({ length: 5 }).map((_, idx) => (
+                      <Star
+                        key={idx}
+                        className={`w-4 h-4 ${
+                          idx < collectorFeedback.rating
+                            ? "fill-yellow-400 text-yellow-500"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground">{collectorFeedback.feedback}</p>
+                </div>
+              ) : (
+                <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 dark:border-yellow-500/30 dark:bg-yellow-500/10 p-3">
+                  <p className="text-sm text-amber-800 dark:text-yellow-200">
+                    Requester has submitted feedback. Please leave your feedback to requester.
+                  </p>
+                  <div>
+                    <p className="text-xs font-semibold mb-2">Your star rating</p>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }).map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setFeedbackRating(idx + 1)}
+                          className="rounded p-1 hover:bg-muted"
+                        >
+                          <Star
+                            className={`w-5 h-5 ${
+                              idx < feedbackRating
+                                ? "fill-yellow-400 text-yellow-500"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold mb-2">Your feedback</p>
+                    <textarea
+                      className="w-full min-h-[96px] rounded border border-border bg-background px-3 py-2 text-sm"
+                      placeholder="Write your feedback to requester..."
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      disabled={submittingFeedback}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleSubmitCollectorFeedback}
+                    disabled={submittingFeedback}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    {submittingFeedback ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Feedback"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Submitted Data Table */}
         <Card className="dark:bg-gray-800/50 border-none">
           <CardHeader>
@@ -554,6 +737,9 @@ export default function SubmitPage() {
                 <p className="text-xs text-amber-800 dark:text-yellow-200">
                   This project is completed. You must set each file as public or private and add a price.
                   {pendingConfigCount > 0 ? ` Pending files: ${pendingConfigCount}.` : " All files are configured."}
+                  {requiresCollectorFeedback
+                    ? " You must submit feedback to requester first."
+                    : ""}
                 </p>
               </div>
             )}
@@ -685,6 +871,7 @@ export default function SubmitPage() {
                                                     onChange={(e) =>
                                                       updateItemDraft(item.id, "visibility", e.target.value)
                                                     }
+                                                    disabled={requiresCollectorFeedback}
                                                   >
                                                     <option value="public">Public</option>
                                                     <option value="private">Private</option>
@@ -701,6 +888,7 @@ export default function SubmitPage() {
                                                     }
                                                     placeholder="0.00"
                                                     className="h-7 w-24 rounded border border-border bg-background px-2 text-xs"
+                                                    disabled={requiresCollectorFeedback}
                                                   />
                                                 </TableCell>
                                                 <TableCell onClick={(e) => e.stopPropagation()}>
@@ -711,7 +899,7 @@ export default function SubmitPage() {
                                                     onClick={() =>
                                                       handleSaveItemAccess(submission.id, item)
                                                     }
-                                                    disabled={savingItemId === item.id}
+                                                    disabled={savingItemId === item.id || requiresCollectorFeedback}
                                                   >
                                                     {savingItemId === item.id ? (
                                                       <Loader2 className="w-3 h-3 animate-spin" />

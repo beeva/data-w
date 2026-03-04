@@ -151,6 +151,27 @@ export interface RequesterHistoryProject {
   deadline: string | null;
 }
 
+export interface ProjectFeedback {
+  id: string;
+  request_id: string;
+  requester_id: string;
+  rating: number;
+  feedback: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollectorFeedback {
+  id: string;
+  request_id: string;
+  requester_id: string;
+  collector_id: string;
+  rating: number;
+  feedback: string;
+  created_at: string;
+  updated_at: string;
+}
+
 /**
  * Fetch requester's past projects for collector-facing history section
  */
@@ -374,6 +395,157 @@ export async function updateProjectStatus(
     return {
       data: null,
       error: err instanceof Error ? err : new Error("Failed to update project status"),
+    };
+  }
+}
+
+/**
+ * Complete a project with requester feedback (rating + text) in one atomic DB call.
+ */
+export async function completeProjectWithFeedback(
+  projectId: string,
+  requesterId: string,
+  rating: number,
+  feedback: string
+): Promise<{ data: Project | null; error: Error | null }> {
+  try {
+    const normalizedRating = Math.max(1, Math.min(5, Math.round(rating)));
+    const normalizedFeedback = feedback.trim();
+
+    if (!normalizedFeedback) {
+      return { data: null, error: new Error("Feedback is required.") };
+    }
+
+    const { data, error } = await supabase.rpc("complete_project_with_feedback", {
+      p_project_id: projectId,
+      p_requester_id: requesterId,
+      p_rating: normalizedRating,
+      p_feedback: normalizedFeedback,
+    });
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    return { data: data as Project, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to complete project with feedback"),
+    };
+  }
+}
+
+/**
+ * Fetch requester feedback for a completed project.
+ */
+export async function getRequesterFeedbackForProject(
+  projectId: string
+): Promise<{ data: ProjectFeedback | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("project_feedback")
+      .select("*")
+      .eq("request_id", projectId)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    return { data: (data as ProjectFeedback) ?? null, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to fetch requester feedback"),
+    };
+  }
+}
+
+/**
+ * Fetch collector-to-requester feedback for a project.
+ */
+export async function getCollectorFeedbackForProject(
+  projectId: string,
+  collectorId: string
+): Promise<{ data: CollectorFeedback | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("project_feedback_replies")
+      .select("*")
+      .eq("request_id", projectId)
+      .eq("collector_id", collectorId)
+      .maybeSingle();
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    return { data: (data as CollectorFeedback) ?? null, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to fetch collector feedback"),
+    };
+  }
+}
+
+/**
+ * Upsert collector feedback for requester on project completion.
+ */
+export async function submitCollectorFeedbackForProject(
+  projectId: string,
+  requesterId: string,
+  collectorId: string,
+  rating: number,
+  feedback: string
+): Promise<{ data: CollectorFeedback | null; error: Error | null }> {
+  try {
+    const normalizedRating = Math.max(1, Math.min(5, Math.round(rating)));
+    const normalizedFeedback = feedback.trim();
+
+    if (!normalizedFeedback) {
+      return { data: null, error: new Error("Feedback is required.") };
+    }
+
+    const { data, error } = await supabase
+      .from("project_feedback_replies")
+      .upsert(
+        {
+          request_id: projectId,
+          requester_id: requesterId,
+          collector_id: collectorId,
+          rating: normalizedRating,
+          feedback: normalizedFeedback,
+        },
+        { onConflict: "request_id,collector_id" }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    return { data: data as CollectorFeedback, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to submit collector feedback"),
     };
   }
 }
