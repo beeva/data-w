@@ -205,7 +205,7 @@ export default function CollectorDashboard() {
     [nearbyProjects]
   );
 
-  const savedJobs = useMemo(() => {
+  const savedProjects = useMemo(() => {
     const savedSet = new Set(savedProjectIds);
     return projects
       .filter((project) => savedSet.has(project.id))
@@ -221,7 +221,7 @@ export default function CollectorDashboard() {
       ? nearbyProjects
       : activeTab === "recent"
       ? mostRecentProjects
-      : savedJobs;
+      : savedProjects;
 
   const toggleSaveProject = (projectId: string) => {
     setSavedProjectIds((prev) =>
@@ -379,7 +379,7 @@ export default function CollectorDashboard() {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              Saved Projects ({savedJobs.length})
+              Saved Projects ({savedProjects.length})
             </button>
           </div>
         </CardContent>
