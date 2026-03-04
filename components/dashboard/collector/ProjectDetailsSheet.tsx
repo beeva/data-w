@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import type { Project } from "@/types/project";
 import type { Proposal } from "@/types/proposal";
+import type { UserProfile } from "@/types/user";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import SubmitProposalDialog from "./SubmitProposalDialog";
+import { getProfileById } from "@/lib/services/profileService";
 import {
   getRequesterProjectHistory,
   type RequesterHistoryProject,
@@ -52,21 +54,26 @@ export default function ProjectDetailsSheet({
 }: ProjectDetailsSheetProps) {
   const [requesterProjects, setRequesterProjects] = useState<RequesterHistoryProject[]>([]);
   const [loadingRequesterProjects, setLoadingRequesterProjects] = useState(false);
+  const [requesterProfile, setRequesterProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     if (!project?.requester_id || !open) return;
 
     let mounted = true;
-    const loadRequesterProjectHistory = async () => {
+    const loadRequesterData = async () => {
       setLoadingRequesterProjects(true);
-      const { data } = await getRequesterProjectHistory(project.requester_id, project.id);
+      const [historyRes, profileRes] = await Promise.all([
+        getRequesterProjectHistory(project.requester_id, project.id),
+        getProfileById(project.requester_id),
+      ]);
       if (mounted) {
-        setRequesterProjects(data ?? []);
+        setRequesterProjects(historyRes.data ?? []);
+        setRequesterProfile(profileRes.data ?? null);
         setLoadingRequesterProjects(false);
       }
     };
 
-    loadRequesterProjectHistory();
+    loadRequesterData();
 
     return () => {
       mounted = false;
@@ -314,7 +321,27 @@ export default function ProjectDetailsSheet({
                   />
                 </Button>
               )}
-              <p className="pt-2 text-center text-lg font-bold text-foreground">About the client</p>
+              <p className="pt-2 text-center text-lg font-bold text-foreground">About the requester</p>
+              <p className="text-center text-sm text-muted-foreground">
+                {requesterProfile?.location?.country || requesterProfile?.location?.city
+                  ? `${requesterProfile?.location?.country ?? ""}${
+                      requesterProfile?.location?.country && requesterProfile?.location?.city ? ", " : ""
+                    }${requesterProfile?.location?.city ?? ""}`
+                  : "Location not available"}
+              </p>
+              <p className="text-center text-sm text-muted-foreground">
+                {loadingRequesterProjects
+                  ? "Projects posted: ..."
+                  : `Projects posted: ${requesterProjects.length + 1}`}
+              </p>
+              <p className="text-center text-sm text-muted-foreground">
+                {loadingRequesterProjects
+                  ? "Total spent: ..."
+                  : `Total spent: $${(
+                      requesterProjects.reduce((sum, historyProject) => sum + historyProject.budget, 0) +
+                      project.budget
+                    ).toFixed(2)}`}
+              </p>
             </div>
           </aside>
         </div>
