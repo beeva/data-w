@@ -35,6 +35,8 @@ import {
   Navigation,
   Briefcase,
   ExternalLink,
+  Bookmark,
+  BookmarkCheck,
 } from "lucide-react";
 import ProjectDetailsSheet from "./ProjectDetailsSheet";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
@@ -75,12 +77,37 @@ export default function CollectorDashboard() {
   const [loading, setLoading] = useState(true);
   const [maxDistance, setMaxDistance] = useState<number>(5); // default radius shown on map
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [activeTab, setActiveTab] = useState<"best" | "recent" | "saved">("best");
+  const [savedProjectIds, setSavedProjectIds] = useState<string[]>([]);
 
   const collectorLat = profile?.location?.lat;
   const collectorLng = profile?.location?.lng;
   const hasLocation = typeof collectorLat === "number" && typeof collectorLng === "number";
 
   const userId = user?.id;
+  useEffect(() => {
+    if (!userId) return;
+    const saved = localStorage.getItem(`collector-saved-projects-${userId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setSavedProjectIds(parsed.filter((id): id is string => typeof id === "string"));
+        }
+      } catch {
+        // Ignore malformed saved data
+      }
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    localStorage.setItem(
+      `collector-saved-projects-${userId}`,
+      JSON.stringify(savedProjectIds)
+    );
+  }, [savedProjectIds, userId]);
+
   useEffect(() => {
     if (!userId) {
       setLoading(false);
@@ -170,6 +197,40 @@ export default function CollectorDashboard() {
     });
   }, [projects, proposalStatuses, hasLocation, collectorLat, collectorLng, maxDistance]);
 
+  const mostRecentProjects = useMemo(
+    () =>
+      [...nearbyProjects].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ),
+    [nearbyProjects]
+  );
+
+  const savedJobs = useMemo(() => {
+    const savedSet = new Set(savedProjectIds);
+    return projects
+      .filter((project) => savedSet.has(project.id))
+      .filter((project) => {
+        const proposal = proposalStatuses[project.id];
+        return !(proposal && proposal.status === "accepted");
+      })
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [projects, proposalStatuses, savedProjectIds]);
+
+  const tabProjects =
+    activeTab === "best"
+      ? nearbyProjects
+      : activeTab === "recent"
+      ? mostRecentProjects
+      : savedJobs;
+
+  const toggleSaveProject = (projectId: string) => {
+    setSavedProjectIds((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId]
+    );
+  };
+
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "No deadline";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -192,6 +253,7 @@ export default function CollectorDashboard() {
   const selectedSlotsFilled = selectedProject
     ? (assignmentCounts[selectedProject.id] || 0) >= (selectedProject.max_collectors || 1)
     : false;
+  const showBestMatchesExtras = activeTab === "best";
 
   return (
     <div className="space-y-4 p-4">
@@ -284,65 +346,111 @@ export default function CollectorDashboard() {
       )}
 
       <Card className="dark:bg-gray-800/50 border-none">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                {hasLocation ? (
-                  <>
-                    <MapPin className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-                    Projects Near You
-                  </>
-                ) : (
-                  <>
-                    <Briefcase className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-                    Available Projects
-                  </>
-                )}
-              </CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {hasLocation
-                  ? maxDistance > 0
-                    ? `${nearbyProjects.length} project${nearbyProjects.length !== 1 ? "s" : ""} within ${maxDistance} km`
-                    : `${nearbyProjects.length} open projects sorted by distance`
-                  : `${projects.length} open projects available`}
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {hasLocation && (
-                <Select
-                  value={String(maxDistance)}
-                  onValueChange={(val) => setMaxDistance(Number(val))}
-                >
-                  <SelectTrigger className="h-7 w-[140px] text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {distanceOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs h-7"
-                onClick={() => router.push("/dashboard/projects/find")}
-              >
-                View All
-                <ExternalLink className="w-3 h-3 ml-1" />
-              </Button>
-            </div>
+        <CardContent className="py-3">
+          <div className="flex items-center gap-6 text-sm">
+            <button
+              type="button"
+              onClick={() => setActiveTab("best")}
+              className={`pb-2 border-b-2 transition-colors ${
+                activeTab === "best"
+                  ? "border-foreground text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Best Matches
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("recent")}
+              className={`pb-2 border-b-2 transition-colors ${
+                activeTab === "recent"
+                  ? "border-foreground text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Most Recent
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("saved")}
+              className={`pb-2 border-b-2 transition-colors ${
+                activeTab === "saved"
+                  ? "border-foreground text-foreground font-medium"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Saved Jobs
+            </button>
           </div>
-        </CardHeader>
+        </CardContent>
       </Card>
 
+      {showBestMatchesExtras && (
+        <Card className="dark:bg-gray-800/50 border-none">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  {hasLocation ? (
+                    <>
+                      <MapPin className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                      Projects Near You
+                    </>
+                  ) : (
+                    <>
+                      <Briefcase className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                      Available Projects
+                    </>
+                  )}
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {hasLocation
+                    ? maxDistance > 0
+                      ? `${nearbyProjects.length} project${nearbyProjects.length !== 1 ? "s" : ""} within ${maxDistance} km`
+                      : `${nearbyProjects.length} open projects sorted by distance`
+                    : `${nearbyProjects.length} open projects available`}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {hasLocation && (
+                  <Select
+                    value={String(maxDistance)}
+                    onValueChange={(val) => setMaxDistance(Number(val))}
+                  >
+                    <SelectTrigger className="h-7 w-[140px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {distanceOptions.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => router.push("/dashboard/projects/find")}
+                >
+                  View All
+                  <ExternalLink className="w-3 h-3 ml-1" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+      )}
+
       {/* Map + Nearby Projects */}
-      <div className={`grid grid-cols-1 ${hasLocation ? "xl:grid-cols-2" : ""} gap-4 items-start`}>
-        {hasLocation && (
+      <div
+        className={`grid grid-cols-1 ${
+          showBestMatchesExtras && hasLocation ? "xl:grid-cols-2" : ""
+        } gap-4 items-start`}
+      >
+        {showBestMatchesExtras && hasLocation && (
           <Card className="dark:bg-gray-800/50 border-none">
             <CardContent>
               <div className="overflow-hidden rounded border border-gray-200 dark:border-gray-700">
@@ -358,15 +466,19 @@ export default function CollectorDashboard() {
 
         <Card className="dark:bg-gray-800/50 border-none">
           <CardContent>
-            {nearbyProjects.length === 0 ? (
+            {tabProjects.length === 0 ? (
               <div className="text-center py-8">
                 <Briefcase className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-50" />
                 <p className="text-sm text-muted-foreground">
-                  {maxDistance > 0
+                  {activeTab === "saved"
+                    ? "No saved jobs yet. Save jobs to track them here."
+                    : activeTab === "recent"
+                    ? "No recent projects available right now."
+                    : maxDistance > 0
                     ? `No projects found within ${maxDistance} km. Try increasing the distance.`
                     : "No open projects available right now."}
                 </p>
-                {maxDistance > 0 && (
+                {activeTab === "best" && maxDistance > 0 && (
                   <Button
                     variant="link"
                     className="text-xs mt-1 text-cyan-600 dark:text-cyan-400"
@@ -378,11 +490,12 @@ export default function CollectorDashboard() {
               </div>
             ) : (
               <div className="space-y-3">
-                {nearbyProjects.slice(0, 6).map((project) => {
+                {tabProjects.slice(0, 6).map((project) => {
                   const rawKm = getRawDistanceKm(project);
                   const distance = rawKm !== null ? formatDistance(rawKm) : null;
                   const proposal = proposalStatuses[project.id];
                   const slotsFilled = (assignmentCounts[project.id] || 0) >= (project.max_collectors || 1);
+                  const isSaved = savedProjectIds.includes(project.id);
 
                   return (
                     <div
@@ -450,6 +563,18 @@ export default function CollectorDashboard() {
                           </div>
                         </div>
                         <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => toggleSaveProject(project.id)}
+                            className="mb-2 ml-auto flex items-center justify-end text-muted-foreground hover:text-foreground"
+                            title={isSaved ? "Remove from saved jobs" : "Save job"}
+                          >
+                            {isSaved ? (
+                              <BookmarkCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                            ) : (
+                              <Bookmark className="w-4 h-4" />
+                            )}
+                          </button>
                           {proposal ? (
                             <p className="text-[10px] text-muted-foreground text-right">
                               Submitted<br />
@@ -465,14 +590,14 @@ export default function CollectorDashboard() {
                     </div>
                   );
                 })}
-                {nearbyProjects.length > 6 && (
+                {tabProjects.length > 6 && (
                   <div className="text-center pt-2">
                     <Button
                       variant="link"
                       className="text-xs text-cyan-600 dark:text-cyan-400"
                       onClick={() => router.push("/dashboard/projects/find")}
                     >
-                      View all {nearbyProjects.length} projects →
+                      View all {tabProjects.length} projects →
                     </Button>
                   </div>
                 )}
