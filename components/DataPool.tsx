@@ -1,96 +1,47 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Header from './Header'
 import PageHero from './PageHero'
 import DataItemCard, { DataItem } from './DataItemCard'
 import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
+import { Loader2 } from 'lucide-react'
+import { getDataPoolItems } from '@/lib/services/dataPoolService'
 
 export default function DataPool() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [searchQuery, setSearchQuery] = useState<string>('')
+  const [dataItems, setDataItems] = useState<DataItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [visibleCount, setVisibleCount] = useState<number>(8)
   const [accessDialogItem, setAccessDialogItem] = useState<DataItem | null>(null)
   const itemsPerPage = 8
 
-  const categories = ['All', 'Healthcare', 'E-commerce', 'Finance', 'Logistics', 'Surveillance', 'Sports', 'Other']
+  const categories = useMemo(
+    () => ['All', ...Array.from(new Set(dataItems.map((item) => item.category))).sort()],
+    [dataItems]
+  )
 
-  const dataItems: DataItem[] = [
-    {
-      id: '1',
-      title: 'Patient Imaging Dataset',
-      category: 'Healthcare',
-      thumbnail: '/api/placeholder/300/200',
-      isPublic: false,
-      price: 5000,
-      owner: 'Medical Research Institute',
-      description: 'De-identified patient imaging and diagnostic labels for AI model training'
-    },
-    {
-      id: '2',
-      title: 'E-commerce Transaction History',
-      category: 'E-commerce',
-      thumbnail: '/api/placeholder/300/200',
-      isPublic: true,
-      description: 'Large batches of labeled customer transaction histories and browsing events'
-    },
-    {
-      id: '3',
-      title: 'Casino Floor Surveillance',
-      category: 'Surveillance',
-      thumbnail: '/api/placeholder/300/200',
-      isPublic: false,
-      price: 12000,
-      owner: 'Casino Operations Inc',
-      description: 'High-resolution surveillance footage with annotated event logs'
-    },
-    {
-      id: '4',
-      title: 'Sports Betting Data',
-      category: 'Sports',
-      thumbnail: '/api/placeholder/300/200',
-      isPublic: false,
-      price: 8000,
-      owner: 'Sports Analytics Co',
-      description: 'Historical betting slips, odds movements, and game outcomes'
-    },
-    {
-      id: '5',
-      title: 'Vehicle Telemetry Data',
-      category: 'Logistics',
-      thumbnail: '/api/placeholder/300/200',
-      isPublic: true,
-      description: 'De-identified vehicle telemetry, route traces, and delivery timestamps'
-    },
-    {
-      id: '6',
-      title: 'Financial Transaction Records',
-      category: 'Finance',
-      thumbnail: '/api/placeholder/300/200',
-      isPublic: false,
-      price: 15000,
-      owner: 'Financial Services Group',
-      description: 'Anonymized financial transaction data for fraud detection models'
-    },
-    {
-      id: '7',
-      title: 'Product Catalog Metadata',
-      category: 'E-commerce',
-      thumbnail: '/api/placeholder/300/200',
-      isPublic: true,
-      description: 'Comprehensive product catalog with metadata for recommendation systems'
-    },
-    {
-      id: '8',
-      title: 'Customer Behavior Analytics',
-      category: 'E-commerce',
-      thumbnail: '/api/placeholder/300/200',
-      isPublic: false,
-      price: 6000,
-      owner: 'Retail Analytics Platform',
-      description: 'Customer browsing patterns and purchase behavior data'
+  useEffect(() => {
+    const fetchDataPoolItems = async () => {
+      setLoading(true)
+      setError('')
+
+      const { data, error: fetchError } = await getDataPoolItems()
+
+      if (fetchError) {
+        setError(fetchError.message || 'Failed to load DataPool items.')
+        setDataItems([])
+      } else {
+        setDataItems(data || [])
+      }
+
+      setLoading(false)
     }
-  ]
+
+    fetchDataPoolItems()
+  }, [])
 
   const filteredItems = dataItems.filter(item => {
     const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory
@@ -169,15 +120,21 @@ export default function DataPool() {
           </div>
 
           {/* Data Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {visibleItems.map((item) => (
-              <DataItemCard
-                key={item.id}
-                item={item}
-                onRequestAccess={handleRequestAccess}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-6 h-6 animate-spin text-white/70" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {visibleItems.map((item) => (
+                <DataItemCard
+                  key={item.id}
+                  item={item}
+                  onRequestAccess={handleRequestAccess}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Load More Button */}
           {hasMore && (
@@ -192,7 +149,12 @@ export default function DataPool() {
           )}
 
           {/* No Results Message */}
-          {filteredItems.length === 0 && (
+          {!loading && error && (
+            <div className="text-center py-6">
+              <p className="text-red-300 text-base">{error}</p>
+            </div>
+          )}
+          {!loading && !error && filteredItems.length === 0 && (
             <div className="text-center py-12">
               <p className="text-white/60 text-lg">
                 No data found matching your search criteria.
