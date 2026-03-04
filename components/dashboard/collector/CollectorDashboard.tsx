@@ -197,13 +197,17 @@ export default function CollectorDashboard() {
     });
   }, [projects, proposalStatuses, hasLocation, collectorLat, collectorLng, maxDistance]);
 
-  const mostRecentProjects = useMemo(
-    () =>
-      [...nearbyProjects].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ),
-    [nearbyProjects]
-  );
+  const mostRecentProjects = useMemo(() => {
+    const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+
+    return projects
+      .filter((project) => {
+        const proposal = proposalStatuses[project.id];
+        return !(proposal && proposal.status === "accepted");
+      })
+      .filter((project) => new Date(project.created_at).getTime() >= twoWeeksAgo)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [projects, proposalStatuses]);
 
   const savedProjects = useMemo(() => {
     const savedSet = new Set(savedProjectIds);
