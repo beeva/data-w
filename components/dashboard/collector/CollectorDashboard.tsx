@@ -379,7 +379,7 @@ export default function CollectorDashboard() {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              Saved Projects
+              Saved Projects ({savedJobs.length})
             </button>
           </div>
         </CardContent>

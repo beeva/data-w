@@ -265,9 +265,8 @@ export default function ProjectDetailsSheet({
             </div>
           </div>
 
-          <aside className="lg:sticky lg:top-4 self-start">
-            <div className="rounded-md border border-border p-3 space-y-2">
-              <h4 className="text-sm font-semibold">Application</h4>
+          <aside className="lg:sticky lg:top-4 self-start lg:border-l lg:border-border lg:pl-4">
+            <div className="space-y-2">
               {proposal ? (
                 <div className="space-y-2">
                   <Badge
@@ -315,6 +314,7 @@ export default function ProjectDetailsSheet({
                   />
                 </Button>
               )}
+              <p className="pt-2 text-center text-lg font-bold text-foreground">About the client</p>
             </div>
           </aside>
         </div>
