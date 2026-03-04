@@ -4,13 +4,18 @@ import { useEffect, useState } from "react";
 import type { Project } from "@/types/project";
 import type { Proposal } from "@/types/proposal";
 import type { UserProfile } from "@/types/user";
+import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import SubmitProposalDialog from "./SubmitProposalDialog";
 import { getProfileById } from "@/lib/services/profileService";
 import {
+  getCollectorFeedbackByProjects,
+  getRequesterFeedbackByProjects,
   getRequesterProjectHistory,
+  type CollectorFeedback,
+  type ProjectFeedback,
   type RequesterHistoryProject,
 } from "@/lib/services/projectService";
 import {
@@ -20,7 +25,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Calendar, DollarSign, Heart, MapPin, Users } from "lucide-react";
+import { Calendar, DollarSign, Heart, MapPin, Star, Users } from "lucide-react";
 
 interface ProjectDetailsSheetProps {
   project: Project | null;
@@ -52,9 +57,16 @@ export default function ProjectDetailsSheet({
   open,
   onOpenChange,
 }: ProjectDetailsSheetProps) {
+  const { user } = useAuth();
   const [requesterProjects, setRequesterProjects] = useState<RequesterHistoryProject[]>([]);
   const [loadingRequesterProjects, setLoadingRequesterProjects] = useState(false);
   const [requesterProfile, setRequesterProfile] = useState<UserProfile | null>(null);
+  const [requesterFeedbackByProject, setRequesterFeedbackByProject] = useState<
+    Record<string, ProjectFeedback>
+  >({});
+  const [collectorFeedbackByProject, setCollectorFeedbackByProject] = useState<
+    Record<string, CollectorFeedback>
+  >({});
 
   useEffect(() => {
     if (!project?.requester_id || !open) return;
@@ -67,8 +79,23 @@ export default function ProjectDetailsSheet({
         getProfileById(project.requester_id),
       ]);
       if (mounted) {
-        setRequesterProjects(historyRes.data ?? []);
+        const historyProjects = historyRes.data ?? [];
+        setRequesterProjects(historyProjects);
         setRequesterProfile(profileRes.data ?? null);
+        if (historyProjects.length > 0 && user?.id) {
+          const historyProjectIds = historyProjects.map((p) => p.id);
+          const [requesterFeedbackRes, collectorFeedbackRes] = await Promise.all([
+            getRequesterFeedbackByProjects(historyProjectIds),
+            getCollectorFeedbackByProjects(historyProjectIds, user.id),
+          ]);
+          if (mounted) {
+            setRequesterFeedbackByProject(requesterFeedbackRes.data || {});
+            setCollectorFeedbackByProject(collectorFeedbackRes.data || {});
+          }
+        } else {
+          setRequesterFeedbackByProject({});
+          setCollectorFeedbackByProject({});
+        }
         setLoadingRequesterProjects(false);
       }
     };
@@ -78,7 +105,7 @@ export default function ProjectDetailsSheet({
     return () => {
       mounted = false;
     };
-  }, [open, project?.id, project?.requester_id]);
+  }, [open, project?.id, project?.requester_id, user?.id]);
 
   if (!project) return null;
 
@@ -235,35 +262,91 @@ export default function ProjectDetailsSheet({
                   {requesterProjects.map((historyProject) => (
                     <div
                       key={historyProject.id}
-                      className="rounded-md border border-border p-2.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                      className="rounded-md border border-border p-2.5 space-y-2"
                     >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {historyProject.title}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {historyProject.category} • Created {formatDate(historyProject.created_at)}
-                          {historyProject.deadline ? ` • Deadline ${formatDate(historyProject.deadline)}` : ""}
-                        </p>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {historyProject.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {historyProject.category} • Created {formatDate(historyProject.created_at)}
+                            {historyProject.deadline ? ` • Deadline ${formatDate(historyProject.deadline)}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge
+                            variant="outline"
+                            className={`capitalize ${
+                              historyProject.status === "completed"
+                                ? "border-emerald-500/40 text-emerald-600"
+                                : historyProject.status === "cancelled"
+                                ? "border-red-500/40 text-red-600"
+                                : historyProject.status === "paused"
+                                ? "border-amber-500/40 text-amber-600"
+                                : "border-blue-500/40 text-blue-600"
+                            }`}
+                          >
+                            {historyProject.status}
+                          </Badge>
+                          <span className="text-sm font-semibold text-foreground">
+                            ${historyProject.budget.toFixed(2)}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge
-                          variant="outline"
-                          className={`capitalize ${
-                            historyProject.status === "completed"
-                              ? "border-emerald-500/40 text-emerald-600"
-                              : historyProject.status === "cancelled"
-                              ? "border-red-500/40 text-red-600"
-                              : historyProject.status === "paused"
-                              ? "border-amber-500/40 text-amber-600"
-                              : "border-blue-500/40 text-blue-600"
-                          }`}
-                        >
-                          {historyProject.status}
-                        </Badge>
-                        <span className="text-sm font-semibold text-foreground">
-                          ${historyProject.budget.toFixed(2)}
-                        </span>
+
+                      <div className="rounded border border-border px-2 py-1.5">
+                        <p className="text-[11px] font-semibold text-foreground mb-1">
+                          Collector&apos;s feedback
+                        </p>
+                        {collectorFeedbackByProject[historyProject.id] ? (
+                          <>
+                            <div className="flex items-center gap-1 mb-1">
+                              {Array.from({ length: 5 }).map((_, idx) => (
+                                <Star
+                                  key={`collector-star-${historyProject.id}-${idx}`}
+                                  className={`w-3.5 h-3.5 ${
+                                    idx < collectorFeedbackByProject[historyProject.id].rating
+                                      ? "fill-yellow-400 text-yellow-500"
+                                      : "text-muted-foreground"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                              {collectorFeedbackByProject[historyProject.id].feedback}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No collector feedback.</p>
+                        )}
+                      </div>
+
+                      <div className="rounded border border-border px-2 py-1.5">
+                        <p className="text-[11px] font-semibold text-foreground mb-1">
+                          Requester&apos;s feedback
+                        </p>
+                        {requesterFeedbackByProject[historyProject.id] ? (
+                          <>
+                            <div className="flex items-center gap-1 mb-1">
+                              {Array.from({ length: 5 }).map((_, idx) => (
+                                <Star
+                                  key={`requester-star-${historyProject.id}-${idx}`}
+                                  className={`w-3.5 h-3.5 ${
+                                    idx < requesterFeedbackByProject[historyProject.id].rating
+                                      ? "fill-yellow-400 text-yellow-500"
+                                      : "text-muted-foreground"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                            <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                              {requesterFeedbackByProject[historyProject.id].feedback}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">No requester feedback.</p>
+                        )}
                       </div>
                     </div>
                   ))}

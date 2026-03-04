@@ -471,6 +471,44 @@ export async function getRequesterFeedbackForProject(
 }
 
 /**
+ * Fetch requester feedback for multiple projects at once.
+ */
+export async function getRequesterFeedbackByProjects(
+  projectIds: string[]
+): Promise<{ data: Record<string, ProjectFeedback>; error: Error | null }> {
+  try {
+    if (projectIds.length === 0) return { data: {}, error: null };
+
+    const { data, error } = await supabase
+      .from("project_feedback")
+      .select("*")
+      .in("request_id", projectIds)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      return { data: {}, error: new Error(error.message) };
+    }
+
+    const feedbackMap: Record<string, ProjectFeedback> = {};
+    ((data as ProjectFeedback[]) ?? []).forEach((item) => {
+      if (!feedbackMap[item.request_id]) {
+        feedbackMap[item.request_id] = item;
+      }
+    });
+
+    return { data: feedbackMap, error: null };
+  } catch (err) {
+    return {
+      data: {},
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to fetch requester feedback by projects"),
+    };
+  }
+}
+
+/**
  * Fetch collector-to-requester feedback for a project.
  */
 export async function getCollectorFeedbackForProject(
@@ -497,6 +535,46 @@ export async function getCollectorFeedbackForProject(
         err instanceof Error
           ? err
           : new Error("Failed to fetch collector feedback"),
+    };
+  }
+}
+
+/**
+ * Fetch collector feedback for multiple projects at once for one collector.
+ */
+export async function getCollectorFeedbackByProjects(
+  projectIds: string[],
+  collectorId: string
+): Promise<{ data: Record<string, CollectorFeedback>; error: Error | null }> {
+  try {
+    if (projectIds.length === 0) return { data: {}, error: null };
+
+    const { data, error } = await supabase
+      .from("project_feedback_replies")
+      .select("*")
+      .eq("collector_id", collectorId)
+      .in("request_id", projectIds)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      return { data: {}, error: new Error(error.message) };
+    }
+
+    const feedbackMap: Record<string, CollectorFeedback> = {};
+    ((data as CollectorFeedback[]) ?? []).forEach((item) => {
+      if (!feedbackMap[item.request_id]) {
+        feedbackMap[item.request_id] = item;
+      }
+    });
+
+    return { data: feedbackMap, error: null };
+  } catch (err) {
+    return {
+      data: {},
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to fetch collector feedback by projects"),
     };
   }
 }
