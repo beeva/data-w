@@ -4,3 +4,4 @@
 
 export * from "./projectService";
 export * from "./profileService";
+export * from "./chatService";

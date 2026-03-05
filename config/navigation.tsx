@@ -7,6 +7,7 @@ import {
   Home,
   Users,
   Ticket,
+  MessageSquare,
 } from "lucide-react";
 import { LucideIcon } from "lucide-react";
 
@@ -67,6 +68,12 @@ export const upperNavItems: NavItem[] = [
     href: "/dashboard/projects/find",
     icon: FolderKanban,
     roles: ['collector'],
+  },
+  {
+    name: "Messages",
+    href: "/dashboard/messages",
+    icon: MessageSquare,
+    roles: ["requester", "collector"],
   },
   {
     name: "Users",
