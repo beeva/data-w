@@ -11,15 +11,16 @@ export interface ProjectMessage {
 }
 
 export interface ChatConversation {
+  assignmentId: string;
+  requestId: string;
   collectorId: string;
   requesterId: string;
-  defaultRequestId: string;
   projectTitle: string;
-  projectCount: number;
   counterpartId: string;
   counterpartName: string;
   counterpartAvatar: string | null;
-  latestAssignedAt: string;
+  assignedAt: string;
+  status: string;
   lastMessage?: ProjectMessage;
 }
 
@@ -158,95 +159,64 @@ export async function getUserConversations(
       )
     );
 
-    type GroupAccumulator = {
-      collectorId: string;
-      requesterId: string;
-      counterpartId: string;
-      counterpartName: string;
-      counterpartAvatar: string | null;
-      latestAssignedAt: string;
-      defaultRequestId: string;
-      projectTitles: Set<string>;
-      lastMessage?: ProjectMessage;
-    };
+    const latestByConversation = new Map<string, ProjectMessage>();
+    messages.forEach((message) => {
+      const key = `${message.request_id}:${message.collector_id}`;
+      if (!latestByConversation.has(key)) {
+        latestByConversation.set(key, message);
+      }
+    });
 
-    const validProjectCollectorPairs = new Set(
-      assignments.map((assignment) => `${assignment.request_id}:${assignment.collector_id}`)
-    );
-
-    const groups = new Map<string, GroupAccumulator>();
-
+    const uniqueByRequestCollector = new Map<string, AssignmentRow>();
     assignments.forEach((assignment) => {
+      const key = `${assignment.request_id}:${assignment.collector_id}`;
+      const existing = uniqueByRequestCollector.get(key);
+      if (!existing) {
+        uniqueByRequestCollector.set(key, assignment);
+        return;
+      }
+      if (
+        new Date(assignment.assigned_at).getTime() >
+        new Date(existing.assigned_at).getTime()
+      ) {
+        uniqueByRequestCollector.set(key, assignment);
+      }
+    });
+
+    const conversations: ChatConversation[] = Array.from(
+      uniqueByRequestCollector.values()
+    )
+      .map((assignment) => {
       const request = requestsById.get(assignment.request_id);
       if (!request) return;
 
       const collectorId = assignment.collector_id;
       const requesterId = request.requester_id;
-      const groupKey = `${requesterId}:${collectorId}`;
+      const conversationKey = `${assignment.request_id}:${collectorId}`;
       const counterpartId = role === "collector" ? requesterId : collectorId;
       const counterpartProfile = profilesById.get(counterpartId);
       const counterpartName =
         counterpartProfile?.full_name?.trim() ||
         counterpartProfile?.email ||
         "Unknown user";
-      const projectTitle = request.title || "Untitled project";
-
-      const existing = groups.get(groupKey);
-      if (!existing) {
-        groups.set(groupKey, {
-          collectorId,
-          requesterId,
-          counterpartId,
-          counterpartName,
-          counterpartAvatar: counterpartProfile?.avatar_url || null,
-          latestAssignedAt: assignment.assigned_at,
-          defaultRequestId: assignment.request_id,
-          projectTitles: new Set([projectTitle]),
-        });
-        return;
-      }
-
-      existing.projectTitles.add(projectTitle);
-      if (
-        new Date(assignment.assigned_at).getTime() >
-        new Date(existing.latestAssignedAt).getTime()
-      ) {
-        existing.latestAssignedAt = assignment.assigned_at;
-        existing.defaultRequestId = assignment.request_id;
-      }
-    });
-
-    messages.forEach((message) => {
-      if (
-        !validProjectCollectorPairs.has(`${message.request_id}:${message.collector_id}`)
-      ) {
-        return;
-      }
-      const groupKey = `${message.requester_id}:${message.collector_id}`;
-      const existing = groups.get(groupKey);
-      if (!existing) return;
-      if (!existing.lastMessage) {
-        existing.lastMessage = message;
-        existing.defaultRequestId = message.request_id;
-      }
-    });
-
-    const conversations: ChatConversation[] = Array.from(groups.values())
-      .map((group) => ({
-        collectorId: group.collectorId,
-        requesterId: group.requesterId,
-        defaultRequestId: group.defaultRequestId,
-        projectTitle: Array.from(group.projectTitles)[0] || "Untitled project",
-        projectCount: group.projectTitles.size,
-        counterpartId: group.counterpartId,
-        counterpartName: group.counterpartName,
-        counterpartAvatar: group.counterpartAvatar,
-        latestAssignedAt: group.latestAssignedAt,
-        lastMessage: group.lastMessage,
-      }))
+      return {
+        assignmentId: assignment.id,
+        requestId: assignment.request_id,
+        collectorId,
+        requesterId,
+        projectTitle: request.title || "Untitled project",
+        counterpartId,
+        counterpartName,
+        counterpartAvatar: counterpartProfile?.avatar_url || null,
+        assignedAt: assignment.assigned_at,
+        status: assignment.status,
+        lastMessage: latestByConversation.get(conversationKey),
+      };
+    })
+      .filter((row): row is ChatConversation => !!row)
       .sort((a, b) => {
-        const aTime = a.lastMessage?.created_at || a.latestAssignedAt;
-        const bTime = b.lastMessage?.created_at || b.latestAssignedAt;
+        const aTime = a.lastMessage?.created_at || a.assignedAt;
+        const bTime = b.lastMessage?.created_at || b.assignedAt;
         return new Date(bTime).getTime() - new Date(aTime).getTime();
       });
 
@@ -260,14 +230,14 @@ export async function getUserConversations(
 }
 
 export async function getConversationMessages(
-  requesterId: string,
+  requestId: string,
   collectorId: string
 ): Promise<{ data: ProjectMessage[] | null; error: Error | null }> {
   try {
     const { data, error } = await supabase
       .from("project_messages")
       .select("id, request_id, requester_id, collector_id, sender_id, message, created_at")
-      .eq("requester_id", requesterId)
+      .eq("request_id", requestId)
       .eq("collector_id", collectorId)
       .order("created_at", { ascending: true });
 
