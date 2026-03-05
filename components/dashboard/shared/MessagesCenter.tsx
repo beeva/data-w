@@ -29,10 +29,8 @@ import {
   Smile,
 } from "lucide-react";
 
-function conversationKey(
-  conversation: Pick<ChatConversation, "requesterId" | "collectorId">
-) {
-  return `${conversation.requesterId}:${conversation.collectorId}`;
+function conversationKey(conversation: Pick<ChatConversation, "requestId" | "collectorId">) {
+  return `${conversation.requestId}:${conversation.collectorId}`;
 }
 
 function timeLabel(dateText?: string) {
@@ -132,7 +130,7 @@ export default function MessagesCenter() {
     const loadMessages = async () => {
       setLoadingMessages(true);
       const { data, error: fetchError } = await getConversationMessages(
-        selectedConversation.requesterId,
+        selectedConversation.requestId,
         selectedConversation.collectorId
       );
       if (fetchError) {
@@ -186,7 +184,7 @@ export default function MessagesCenter() {
           const involvesCurrentUser =
             incoming.requester_id === user.id || incoming.collector_id === user.id;
           if (!involvesCurrentUser) return;
-          const key = `${incoming.requester_id}:${incoming.collector_id}`;
+          const key = `${incoming.request_id}:${incoming.collector_id}`;
 
           setConversations((prev) => {
             const idx = prev.findIndex((item) => conversationKey(item) === key);
@@ -197,8 +195,8 @@ export default function MessagesCenter() {
             const updated = [...prev];
             updated[idx] = { ...updated[idx], lastMessage: incoming };
             updated.sort((a, b) => {
-              const aTime = a.lastMessage?.created_at || a.latestAssignedAt;
-              const bTime = b.lastMessage?.created_at || b.latestAssignedAt;
+              const aTime = a.lastMessage?.created_at || a.assignedAt;
+              const bTime = b.lastMessage?.created_at || b.assignedAt;
               return new Date(bTime).getTime() - new Date(aTime).getTime();
             });
             return updated;
@@ -277,7 +275,7 @@ export default function MessagesCenter() {
     setSending(true);
     setError("");
     const { data, error: sendError } = await sendConversationMessage({
-      requestId: selectedConversation.defaultRequestId,
+      requestId: selectedConversation.requestId,
       collectorId: selectedConversation.collectorId,
       requesterId: selectedConversation.requesterId,
       senderId: user.id,
@@ -298,8 +296,8 @@ export default function MessagesCenter() {
       const updated = [...prev];
       updated[idx] = { ...updated[idx], lastMessage: data };
       updated.sort((a, b) => {
-        const aTime = a.lastMessage?.created_at || a.latestAssignedAt;
-        const bTime = b.lastMessage?.created_at || b.latestAssignedAt;
+        const aTime = a.lastMessage?.created_at || a.assignedAt;
+        const bTime = b.lastMessage?.created_at || b.assignedAt;
         return new Date(bTime).getTime() - new Date(aTime).getTime();
       });
       return updated;
@@ -400,8 +398,8 @@ export default function MessagesCenter() {
                               {conversation.counterpartName}
                             </p>
                             <span className="shrink-0 text-[10px] text-muted-foreground">
-                            {timeLabel(
-                                conversation.lastMessage?.created_at || conversation.latestAssignedAt
+                              {timeLabel(
+                                conversation.lastMessage?.created_at || conversation.assignedAt
                               )}
                             </span>
                           </div>
@@ -409,9 +407,7 @@ export default function MessagesCenter() {
                             {conversation.lastMessage?.message || conversation.projectTitle}
                           </p>
                           <p className="truncate text-[10px] text-muted-foreground/80">
-                            {conversation.projectCount > 1
-                              ? `${conversation.projectCount} projects`
-                              : conversation.projectTitle}
+                            {conversation.projectTitle}
                           </p>
                         </div>
                         {unread > 0 ? (
