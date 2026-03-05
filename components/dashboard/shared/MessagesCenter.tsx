@@ -29,8 +29,10 @@ import {
   Smile,
 } from "lucide-react";
 
-function conversationKey(conversation: Pick<ChatConversation, "requestId" | "collectorId">) {
-  return `${conversation.requestId}:${conversation.collectorId}`;
+function conversationKey(
+  conversation: Pick<ChatConversation, "requesterId" | "collectorId">
+) {
+  return `${conversation.requesterId}:${conversation.collectorId}`;
 }
 
 function timeLabel(dateText?: string) {
@@ -130,7 +132,7 @@ export default function MessagesCenter() {
     const loadMessages = async () => {
       setLoadingMessages(true);
       const { data, error: fetchError } = await getConversationMessages(
-        selectedConversation.requestId,
+        selectedConversation.requesterId,
         selectedConversation.collectorId
       );
       if (fetchError) {
@@ -195,8 +197,8 @@ export default function MessagesCenter() {
             const updated = [...prev];
             updated[idx] = { ...updated[idx], lastMessage: incoming };
             updated.sort((a, b) => {
-              const aTime = a.lastMessage?.created_at || a.assignedAt;
-              const bTime = b.lastMessage?.created_at || b.assignedAt;
+              const aTime = a.lastMessage?.created_at || a.latestAssignedAt;
+              const bTime = b.lastMessage?.created_at || b.latestAssignedAt;
               return new Date(bTime).getTime() - new Date(aTime).getTime();
             });
             return updated;
@@ -236,7 +238,7 @@ export default function MessagesCenter() {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status: "SUBSCRIBED" | "TIMED_OUT" | "CLOSED" | "CHANNEL_ERROR") => {
         if (status === "CHANNEL_ERROR") {
           setError("Realtime connection issue. Messages may require refresh.");
         }
@@ -275,7 +277,7 @@ export default function MessagesCenter() {
     setSending(true);
     setError("");
     const { data, error: sendError } = await sendConversationMessage({
-      requestId: selectedConversation.requestId,
+      requestId: selectedConversation.defaultRequestId,
       collectorId: selectedConversation.collectorId,
       requesterId: selectedConversation.requesterId,
       senderId: user.id,
@@ -296,8 +298,8 @@ export default function MessagesCenter() {
       const updated = [...prev];
       updated[idx] = { ...updated[idx], lastMessage: data };
       updated.sort((a, b) => {
-        const aTime = a.lastMessage?.created_at || a.assignedAt;
-        const bTime = b.lastMessage?.created_at || b.assignedAt;
+        const aTime = a.lastMessage?.created_at || a.latestAssignedAt;
+        const bTime = b.lastMessage?.created_at || b.latestAssignedAt;
         return new Date(bTime).getTime() - new Date(aTime).getTime();
       });
       return updated;
@@ -399,7 +401,7 @@ export default function MessagesCenter() {
                             </p>
                             <span className="shrink-0 text-[10px] text-muted-foreground">
                               {timeLabel(
-                                conversation.lastMessage?.created_at || conversation.assignedAt
+                                conversation.lastMessage?.created_at || conversation.latestAssignedAt
                               )}
                             </span>
                           </div>
@@ -407,7 +409,9 @@ export default function MessagesCenter() {
                             {conversation.lastMessage?.message || conversation.projectTitle}
                           </p>
                           <p className="truncate text-[10px] text-muted-foreground/80">
-                            {conversation.projectTitle}
+                            {conversation.projectCount > 1
+                              ? `${conversation.projectCount} projects`
+                              : conversation.projectTitle}
                           </p>
                         </div>
                         {unread > 0 ? (
