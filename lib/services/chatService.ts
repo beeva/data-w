@@ -186,34 +186,36 @@ export async function getUserConversations(
     const conversations: ChatConversation[] = Array.from(
       uniqueByRequestCollector.values()
     )
-      .map((assignment) => {
-      const request = requestsById.get(assignment.request_id);
-      if (!request) return;
+      .reduce<ChatConversation[]>((acc, assignment) => {
+        const request = requestsById.get(assignment.request_id);
+        if (!request) return acc;
 
-      const collectorId = assignment.collector_id;
-      const requesterId = request.requester_id;
-      const conversationKey = `${assignment.request_id}:${collectorId}`;
-      const counterpartId = role === "collector" ? requesterId : collectorId;
-      const counterpartProfile = profilesById.get(counterpartId);
-      const counterpartName =
-        counterpartProfile?.full_name?.trim() ||
-        counterpartProfile?.email ||
-        "Unknown user";
-      return {
-        assignmentId: assignment.id,
-        requestId: assignment.request_id,
-        collectorId,
-        requesterId,
-        projectTitle: request.title || "Untitled project",
-        counterpartId,
-        counterpartName,
-        counterpartAvatar: counterpartProfile?.avatar_url || null,
-        assignedAt: assignment.assigned_at,
-        status: assignment.status,
-        lastMessage: latestByConversation.get(conversationKey),
-      };
-    })
-      .filter((row): row is ChatConversation => !!row)
+        const collectorId = assignment.collector_id;
+        const requesterId = request.requester_id;
+        const conversationKey = `${assignment.request_id}:${collectorId}`;
+        const counterpartId = role === "collector" ? requesterId : collectorId;
+        const counterpartProfile = profilesById.get(counterpartId);
+        const counterpartName =
+          counterpartProfile?.full_name?.trim() ||
+          counterpartProfile?.email ||
+          "Unknown user";
+
+        acc.push({
+          assignmentId: assignment.id,
+          requestId: assignment.request_id,
+          collectorId,
+          requesterId,
+          projectTitle: request.title || "Untitled project",
+          counterpartId,
+          counterpartName,
+          counterpartAvatar: counterpartProfile?.avatar_url || null,
+          assignedAt: assignment.assigned_at,
+          status: assignment.status,
+          lastMessage: latestByConversation.get(conversationKey),
+        });
+
+        return acc;
+      }, [])
       .sort((a, b) => {
         const aTime = a.lastMessage?.created_at || a.assignedAt;
         const bTime = b.lastMessage?.created_at || b.assignedAt;
