@@ -1,8 +1,17 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Poppins } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "next-themes";
+import { StoreProvider } from "@/lib/store/StoreProvider";
 import GlobalCompactFooter from "@/components/GlobalCompactFooter";
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-poppins",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "DataW - Data Gathering Platform",
@@ -19,12 +28,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-sans min-h-screen flex flex-col">
+      <body
+        className={`${poppins.variable} font-sans min-h-screen flex flex-col`}
+      >
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <AuthProvider>
-            <main className="flex-1">{children}</main>
-            <GlobalCompactFooter />
-          </AuthProvider>
+          <StoreProvider>
+            <AuthProvider>
+              <main className="flex-1">{children}</main>
+            </AuthProvider>
+          </StoreProvider>
         </ThemeProvider>
       </body>
     </html>

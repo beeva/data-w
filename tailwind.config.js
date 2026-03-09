@@ -10,10 +10,7 @@ module.exports = {
   	extend: {
   		fontFamily: {
   			sans: [
-  				'-apple-system',
-  				'BlinkMacSystemFont',
-  				'"SF Pro Display"',
-  				'"SF Pro Text"',
+  				'var(--font-poppins)',
   				'system-ui',
   				'"Segoe UI"',
   				'Roboto',

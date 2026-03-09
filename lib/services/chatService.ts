@@ -19,6 +19,8 @@ export interface ChatConversation {
   counterpartId: string;
   counterpartName: string;
   counterpartAvatar: string | null;
+  counterpartEmail: string | null;
+  counterpartAddress: string | null;
   assignedAt: string;
   status: string;
   lastMessage?: ProjectMessage;
@@ -42,11 +44,18 @@ type RequestIdRow = {
   id: string;
 };
 
+type ProfileLocation = {
+  address?: string;
+  city?: string;
+  country?: string;
+} | null;
+
 type ProfileRow = {
   id: string;
   full_name: string | null;
   avatar_url: string | null;
   email: string | null;
+  location?: ProfileLocation;
 };
 
 export async function getUserConversations(
@@ -105,7 +114,7 @@ export async function getUserConversations(
         supabase.from("requests").select("id, requester_id, title").in("id", requestIds),
         supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, email")
+          .select("id, full_name, avatar_url, email, location")
           .in("id", collectorIds),
       ]);
 
@@ -125,7 +134,7 @@ export async function getUserConversations(
 
     const { data: requesterProfilesData, error: requestersError } = await supabase
       .from("profiles")
-      .select("id, full_name, avatar_url, email")
+      .select("id, full_name, avatar_url, email, location")
       .in("id", requesterIds);
 
     if (requestersError) {
@@ -200,6 +209,12 @@ export async function getUserConversations(
           counterpartProfile?.email ||
           "Unknown user";
 
+        const loc = counterpartProfile?.location;
+        const counterpartAddress =
+          loc && typeof loc === "object"
+            ? [loc.city, loc.country].filter(Boolean).join(", ") || null
+            : null;
+
         acc.push({
           assignmentId: assignment.id,
           requestId: assignment.request_id,
@@ -209,6 +224,8 @@ export async function getUserConversations(
           counterpartId,
           counterpartName,
           counterpartAvatar: counterpartProfile?.avatar_url || null,
+          counterpartEmail: counterpartProfile?.email || null,
+          counterpartAddress: counterpartAddress || null,
           assignedAt: assignment.assigned_at,
           status: assignment.status,
           lastMessage: latestByConversation.get(conversationKey),
@@ -252,6 +269,42 @@ export async function getConversationMessages(
     return {
       data: null,
       error: err instanceof Error ? err : new Error("Failed to fetch messages"),
+    };
+  }
+}
+
+const CHAT_ATTACHMENTS_BUCKET = "chat-attachments";
+
+export async function uploadChatAttachment(
+  requestId: string,
+  collectorId: string,
+  file: File
+): Promise<{ url: string | null; error: Error | null }> {
+  try {
+    const timestamp = Date.now();
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filePath = `${requestId}/${collectorId}/${timestamp}_${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(CHAT_ATTACHMENTS_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      return { url: null, error: new Error(uploadError.message) };
+    }
+
+    const { data: urlData } = supabase.storage
+      .from(CHAT_ATTACHMENTS_BUCKET)
+      .getPublicUrl(filePath);
+
+    return { url: urlData.publicUrl, error: null };
+  } catch (err) {
+    return {
+      url: null,
+      error: err instanceof Error ? err : new Error("Failed to upload file"),
     };
   }
 }

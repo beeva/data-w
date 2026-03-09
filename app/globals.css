@@ -158,6 +158,15 @@
   scrollbar-color: #475569 #1e293b;
 }
 
+/* Hide scrollbar but keep scroll behavior (e.g. SignUp, Login) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -165,4 +174,208 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@keyframes gelatine {
+  0%,
+  100% {
+    transform: scale(1, 1);
+  }
+  25% {
+    transform: scale(0.9, 1.1);
+  }
+  50% {
+    transform: scale(1.1, 0.9);
+  }
+  75% {
+    transform: scale(0.95, 1.05);
+  }
+}
+
+.btn-gelatine {
+  cursor: pointer;
+  transition-timing-function: cubic-bezier(0.6, 4, 0.3, 0.8);
+}
+
+/* Only trigger on hover so animation re-runs after click (focus would block re-trigger) */
+.btn-gelatine:hover {
+  animation: gelatine 0.5s 1;
+}
+
+/* Login page: always keep input background white when autofill/history is used */
+.login-page input:-webkit-autofill,
+.login-page input:-webkit-autofill:hover,
+.login-page input:-webkit-autofill:focus,
+.login-page input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Signup page: same as login — keep input background white on autofill */
+.signup-page input:-webkit-autofill,
+.signup-page input:-webkit-autofill:hover,
+.signup-page input:-webkit-autofill:focus,
+.signup-page input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Role hero cards (Mythrill-style 3D hover) */
+:root {
+  --role-card-height: 200px;
+  --role-card-width: calc(var(--role-card-height) / 1.5);
+}
+
+.role-hero-card {
+  width: var(--role-card-width);
+  height: var(--role-card-height);
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 0 20px 16px;
+  perspective: 2500px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  overflow: visible;
+  transition: transform 0.3s ease;
+}
+
+.role-hero-wrapper {
+  transition: all 0.5s;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  left: 0;
+  top: 0;
+  z-index: -1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.role-hero-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.role-hero-wrapper::before,
+.role-hero-wrapper::after {
+  content: "";
+  opacity: 0;
+  width: 100%;
+  height: 80px;
+  transition: all 0.5s;
+  position: absolute;
+  left: 0;
+  z-index: 1;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.role-hero-wrapper::before {
+  top: 0;
+  height: 100%;
+  background-image: linear-gradient(
+    to top,
+    transparent 46%,
+    rgba(12, 13, 19, 0.5) 68%,
+    rgba(12, 13, 19) 97%
+  );
+}
+
+.role-hero-wrapper::after {
+  bottom: 0;
+  opacity: 1;
+  background-image: linear-gradient(
+    to bottom,
+    transparent 46%,
+    rgba(12, 13, 19, 0.5) 68%,
+    rgba(12, 13, 19) 97%
+  );
+}
+
+.role-hero-card:hover .role-hero-wrapper,
+.role-hero-card.selected .role-hero-wrapper {
+  transform: perspective(900px) translateY(-5%) rotateX(25deg) translateZ(0);
+  box-shadow: 2px 35px 32px -8px rgba(0, 0, 0, 0.75);
+  -webkit-box-shadow: 2px 35px 32px -8px rgba(0, 0, 0, 0.75);
+}
+
+.role-hero-card:hover .role-hero-wrapper::before,
+.role-hero-card:hover .role-hero-wrapper::after,
+.role-hero-card.selected .role-hero-wrapper::before,
+.role-hero-card.selected .role-hero-wrapper::after {
+  opacity: 1;
+}
+
+.role-hero-card:hover .role-hero-wrapper::after,
+.role-hero-card.selected .role-hero-wrapper::after {
+  height: 120px;
+}
+
+.role-hero-title {
+  width: 100%;
+  transition: transform 0.5s;
+  font-weight: 600;
+  font-size: 1rem;
+  color: white;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+
+.role-hero-card:hover .role-hero-title,
+.role-hero-card.selected .role-hero-title {
+  transform: translate3d(0%, -20px, 100px);
+}
+
+.role-hero-character {
+  width: 192px;
+  height: 192px;
+  opacity: 0;
+  transition: all 0.5s;
+  position: absolute;
+  z-index: 0;
+  left: -20%;
+  transform: translateX(-20%);
+  bottom: -70px;
+  color: white;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+}
+
+.role-hero-card:hover .role-hero-character,
+.role-hero-card.selected .role-hero-character {
+  opacity: 1;
+  transform: translate3d(0%, -30%, 100px);
+}
+
+/* Selected card: obvious ring, scale, and glow */
+.role-hero-card.selected {
+  transform: scale(1.08);
+  z-index: 1;
+}
+
+.role-hero-card.selected .role-hero-wrapper {
+  box-shadow:
+    0 0 0 4px rgb(15, 23, 42),
+    0 0 0 8px rgba(15, 23, 42, 0.25),
+    2px 35px 32px -8px rgba(0, 0, 0, 0.75);
+  -webkit-box-shadow:
+    0 0 0 4px rgb(15, 23, 42),
+    0 0 0 8px rgba(15, 23, 42, 0.25),
+    2px 35px 32px -8px rgba(0, 0, 0, 0.75);
+}
+
+.role-hero-card.selected:focus-visible {
+  outline: none;
 }

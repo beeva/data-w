@@ -5,8 +5,14 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronRight, ChevronUp, CheckCircle2 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  ArrowRight,
+  ChevronDown,
+  ChevronRight,
+  Folder,
+  Plus,
+  Zap,
+} from "lucide-react";
 import Image from "next/image";
 import {
   upperNavItems,
@@ -15,7 +21,9 @@ import {
   type SubMenuItem,
 } from "@/config/navigation";
 import { getAssignmentsByCollector } from "@/lib/services/proposalService";
+import { getProjectsByRequester } from "@/lib/services/projectService";
 import type { CollectorAssignment } from "@/types/proposal";
+import type { Project } from "@/types/project";
 
 interface DashboardSidebarProps {
   collapsed?: boolean;
@@ -30,91 +38,67 @@ export default function DashboardSidebar({
   const { user, profile, loading: authLoading } = useAuth();
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
   const [acceptedProjects, setAcceptedProjects] = useState<
-    (CollectorAssignment & { project?: { id: string; title: string; status?: string } })[]
+    (CollectorAssignment & {
+      project?: { id: string; title: string; status?: string };
+    })[]
   >([]);
-  const [showAllProjects, setShowAllProjects] = useState(false);
+  const [requesterProjects, setRequesterProjects] = useState<Project[]>([]);
+  const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [loadingProjects, setLoadingProjects] = useState(false);
 
-  // Helper function to filter submenu items based on role
   const filterSubmenuByRole = (submenu: SubMenuItem[]) => {
     return submenu.filter((subItem) => {
-      // If no roles specified, show for all users
-      if (!subItem.roles || subItem.roles.length === 0) {
-        return true;
-      }
-      // While auth is loading, show all items temporarily
-      if (authLoading) {
-        return true;
-      }
-      // If no profile after loading, hide role-restricted items
-      if (!profile) {
-        return false;
-      }
-      // Show if user's role is in the allowed roles
+      if (!subItem.roles || subItem.roles.length === 0) return true;
+      if (authLoading) return true;
+      if (!profile) return false;
       return subItem.roles.includes(profile.role);
     });
   };
 
-  // Helper function to filter nav items based on role
   const shouldShowNavItem = (item: NavItem) => {
-    // If no roles specified, show for all users
-    if (!item.roles || item.roles.length === 0) {
-      return true;
-    }
-    // While auth is loading, show all items temporarily
-    if (authLoading) {
-      return true;
-    }
-    // If no profile after loading, hide role-restricted items
-    if (!profile) {
-      return false;
-    }
-    // Show if user's role is in the allowed roles
+    if (!item.roles || item.roles.length === 0) return true;
+    if (authLoading) return true;
+    if (!profile) return false;
     return item.roles.includes(profile.role);
   };
 
-  // Fetch accepted projects for collectors
-  // Use primitive deps (user.id, profile.role) to avoid re-fetching on auth token refresh
   const userId = user?.id;
   const userRole = profile?.role;
 
   useEffect(() => {
-    if (userRole === 'collector' && userId) {
-      // Only show loading spinner on the very first fetch
-      if (acceptedProjects.length === 0) {
-        setLoadingProjects(true);
-      }
+    if (!userId || !userRole) return;
+
+    if (userRole === "collector") {
+      if (acceptedProjects.length === 0) setLoadingProjects(true);
       getAssignmentsByCollector(userId)
         .then(({ data, error }) => {
-          if (!error && data) {
-            setAcceptedProjects(data);
-          }
+          if (!error && data) setAcceptedProjects(data);
         })
-        .catch((err) => {
-          console.error('Error fetching accepted projects:', err);
+        .catch((err) => console.error("Error fetching accepted projects:", err))
+        .finally(() => setLoadingProjects(false));
+    } else if (userRole === "requester" || userRole === "admin") {
+      if (requesterProjects.length === 0) setLoadingProjects(true);
+      getProjectsByRequester(userId)
+        .then(({ data, error }) => {
+          if (!error && data) setRequesterProjects(data);
         })
-        .finally(() => {
-          setLoadingProjects(false);
-        });
+        .catch((err) => console.error("Error fetching projects:", err))
+        .finally(() => setLoadingProjects(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, userRole]);
 
-  // Auto-expand menu if submenu item is active
   useEffect(() => {
     upperNavItems.forEach((item) => {
       if (item.submenu) {
         const filteredSubmenu = filterSubmenuByRole(item.submenu);
-
         const hasActiveSubmenu = filteredSubmenu.some(
           (sub) =>
-            pathname === sub.href || pathname?.startsWith(sub.href + "/")
+            pathname === sub.href || pathname?.startsWith(sub.href + "/"),
         );
         if (hasActiveSubmenu) {
           setExpandedMenus((prev) => {
-            if (!prev.includes(item.name)) {
-              return [...prev, item.name];
-            }
+            if (!prev.includes(item.name)) return [...prev, item.name];
             return prev;
           });
         }
@@ -127,22 +111,23 @@ export default function DashboardSidebar({
     setExpandedMenus((prev) =>
       prev.includes(menuName)
         ? prev.filter((name) => name !== menuName)
-        : [...prev, menuName]
+        : [...prev, menuName],
     );
   };
 
   return (
     <aside
       className={cn(
-        "bg-white dark:bg-gray-800 flex flex-col h-full overflow-hidden rounded-2xl shadow-sm transition-all duration-300",
-        collapsed ? "w-16" : "w-52"
+        "flex flex-col h-full overflow-hidden rounded-2xl transition-all duration-300",
+        "bg-white dark:bg-gray-800/50 shadow-sm",
+        collapsed ? "w-16" : "w-64",
       )}
     >
-      {/* Brand Name at Top */}
+      {/* Brand */}
       <div
         className={cn(
-          "px-4 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center",
-          collapsed && "pl-3 pr-2 justify-center"
+          "flex items-center px-4 py-5 flex-shrink-0",
+          collapsed && "justify-center px-3",
         )}
       >
         {collapsed ? (
@@ -182,95 +167,241 @@ export default function DashboardSidebar({
         )}
       </div>
 
-      {/* Navigation Section */}
-      <nav className="flex-1 overflow-y-auto p-4 px-3 flex flex-col">
+      {/* Divider */}
+      <div className="mx-3 h-px bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto px-4 py-4 flex flex-col dashboard-scrollbar">
+        {!collapsed && (
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-2 mb-2">
+            Main
+          </p>
+        )}
+
         {/* Upper Navigation Items */}
-        <div className="space-y-0.5 mb-6">
+        <div className="space-y-0.5">
           {upperNavItems.filter(shouldShowNavItem).map((item) => {
             const Icon = item.icon;
             const hasSubmenu = item.submenu && item.submenu.length > 0;
+
+            // Projects tree view
+            if (
+              (item.name === "Projects" || item.name === "Find Projects") &&
+              !collapsed
+            ) {
+              const isCollector = item.name === "Find Projects";
+              const allProjectsHref = isCollector
+                ? "/dashboard/projects/find"
+                : "/dashboard/projects/active";
+              const projects = isCollector
+                ? acceptedProjects
+                : requesterProjects;
+
+              return (
+                <div key={item.name}>
+                  <div
+                    className={cn(
+                      "group/hdr flex items-center gap-2 px-2 py-2 rounded-xl transition-all cursor-pointer",
+                      "hover:bg-gray-100/80 dark:hover:bg-gray-800/60",
+                      pathname === allProjectsHref &&
+                        "bg-cyan-500/[0.08] dark:bg-cyan-500/10",
+                    )}
+                  >
+                    <button
+                      onClick={() => setProjectsExpanded(!projectsExpanded)}
+                      className={cn(
+                        "relative flex-shrink-0 w-[22px] h-[22px] rounded-md flex items-center justify-center transition-all focus:outline-none",
+                        "bg-cyan-500 group-hover/hdr:bg-gray-200 dark:group-hover/hdr:bg-gray-700",
+                        "text-white group-hover/hdr:text-gray-500 dark:group-hover/hdr:text-gray-400",
+                      )}
+                    >
+                      <span className="text-xs font-bold leading-none group-hover/hdr:opacity-0 pointer-events-none select-none">
+                        P
+                      </span>
+                      <span className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/hdr:opacity-100 transition-opacity">
+                        {projectsExpanded ? (
+                          <ChevronDown className="w-3 h-3" />
+                        ) : (
+                          <ChevronRight className="w-3 h-3" />
+                        )}
+                      </span>
+                    </button>
+
+                    <Link
+                      href={allProjectsHref}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex-1 text-sm font-medium transition-colors",
+                        pathname === allProjectsHref
+                          ? "text-cyan-600 dark:text-cyan-400"
+                          : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100",
+                      )}
+                    >
+                      Projects
+                    </Link>
+                  </div>
+
+                  {projectsExpanded && (
+                    <div className="mt-1 ml-[18px] pl-2.5 border-l-2 border-gray-100 dark:border-gray-700 space-y-0.5">
+                      {loadingProjects ? (
+                        <>
+                          {[...Array(3)].map((_, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2 px-2 py-1.5"
+                            >
+                              <div className="w-3.5 h-3.5 flex-shrink-0 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
+                              <div
+                                className="h-3 rounded bg-gray-200 dark:bg-gray-700 animate-pulse"
+                                style={{ width: `${[55, 70, 45][i]}%` }}
+                              />
+                            </div>
+                          ))}
+                        </>
+                      ) : projects.length === 0 ? (
+                        <p className="py-2 px-2 text-xs text-gray-400 dark:text-gray-500 italic">
+                          {isCollector
+                            ? "No active projects"
+                            : "No projects yet"}
+                        </p>
+                      ) : (
+                        <>
+                          {(isCollector
+                            ? (projects as typeof acceptedProjects)
+                            : (projects as typeof requesterProjects)
+                          ).map((item) => {
+                            const isAssignment = "submission_token" in item;
+                            const href = isAssignment
+                              ? `/submit/${(item as (typeof acceptedProjects)[0]).submission_token}`
+                              : `/dashboard/projects/${(item as (typeof requesterProjects)[0]).id}/workshop`;
+                            const label = isAssignment
+                              ? (item as (typeof acceptedProjects)[0]).project
+                                  ?.title || "Untitled Project"
+                              : (item as (typeof requesterProjects)[0]).title;
+                            const isActive =
+                              pathname === href || pathname?.startsWith(href);
+                            return (
+                              <Link
+                                key={
+                                  isAssignment
+                                    ? (item as (typeof acceptedProjects)[0]).id
+                                    : (item as (typeof requesterProjects)[0]).id
+                                }
+                                href={href}
+                                onClick={onNavigate}
+                                title={label}
+                                className={cn(
+                                  "group flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all text-sm",
+                                  isActive
+                                    ? "bg-cyan-500/[0.08] dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-medium"
+                                    : "text-gray-500 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-gray-800/60 hover:text-gray-800 dark:hover:text-gray-200",
+                                )}
+                              >
+                                <Folder
+                                  className={cn(
+                                    "w-4 h-4 flex-shrink-0 transition-colors",
+                                    isActive
+                                      ? "text-cyan-500"
+                                      : "text-gray-400 dark:text-gray-500 group-hover:text-gray-500",
+                                  )}
+                                />
+                                <span className="truncate">{label}</span>
+                              </Link>
+                            );
+                          })}
+
+                          {!isCollector && (
+                            <Link
+                              href="/dashboard/projects/new"
+                              onClick={onNavigate}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-800/60 transition-all"
+                            >
+                              <Plus className="w-4 h-4 flex-shrink-0" />
+                              <span>New Project</span>
+                            </Link>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             const isExpanded = expandedMenus.includes(item.name);
-            
-            // Check if any submenu item is active
             const isSubmenuActive =
               hasSubmenu &&
               item.submenu?.some(
                 (sub) =>
-                  pathname === sub.href || pathname?.startsWith(sub.href + "/")
+                  pathname === sub.href || pathname?.startsWith(sub.href + "/"),
               );
-            
-            // For items with submenu: only active if submenu item is active
-            // For items without submenu: check exact match or starts with (but not if it's a submenu path)
+
             let isActive = false;
             if (hasSubmenu) {
-              // If item has submenu, only mark as active if a submenu item is active
               isActive = isSubmenuActive || false;
             } else {
-              // For items without submenu, check exact match
-              // Also check if pathname starts with href, but exclude paths that belong to other menu items
               if (pathname === item.href) {
                 isActive = true;
               } else if (pathname?.startsWith(item.href + "/")) {
-                // Check if this path doesn't belong to any other menu item's submenu
-                const belongsToOtherSubmenu = upperNavItems.some((otherItem) => {
-                  if (otherItem === item || !otherItem.submenu) return false;
-                  return otherItem.submenu.some(
-                    (sub) =>
-                      pathname === sub.href || pathname?.startsWith(sub.href + "/")
-                  );
-                });
+                const belongsToOtherSubmenu = upperNavItems.some(
+                  (otherItem) => {
+                    if (otherItem === item || !otherItem.submenu) return false;
+                    return otherItem.submenu.some(
+                      (sub) =>
+                        pathname === sub.href ||
+                        pathname?.startsWith(sub.href + "/"),
+                    );
+                  },
+                );
                 isActive = !belongsToOtherSubmenu;
               }
             }
 
             if (hasSubmenu && !collapsed) {
-              // Filter submenu items based on user role using the helper
-              const filteredSubmenu = item.submenu ? filterSubmenuByRole(item.submenu) : [];
-
-              // Don't render the menu if all submenu items are filtered out
-              if (!filteredSubmenu || filteredSubmenu.length === 0) {
-                return null;
-              }
+              const filteredSubmenu = item.submenu
+                ? filterSubmenuByRole(item.submenu)
+                : [];
+              if (!filteredSubmenu || filteredSubmenu.length === 0) return null;
 
               return (
                 <div key={item.name} className="space-y-0.5">
                   <button
                     onClick={() => toggleMenu(item.name)}
                     className={cn(
-                      "w-full flex items-center justify-between gap-2 px-2 py-2 rounded-md transition-colors",
+                      "w-full flex items-center justify-between gap-2 px-2 py-2 rounded-xl transition-all",
                       isActive || isSubmenuActive
-                        ? "bg-cyan-50 dark:bg-cyan-900/20 text-gray-900 dark:text-gray-100"
-                        : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
+                        ? "bg-cyan-500/[0.08] dark:bg-cyan-500/10"
+                        : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60",
                     )}
                   >
-                    <div className="flex items-center gap-2 flex-1">
+                    <div className="flex items-center gap-2.5 flex-1">
                       <Icon
                         className={cn(
                           "w-4 h-4 flex-shrink-0",
                           isActive || isSubmenuActive
-                            ? "text-cyan-600 dark:text-cyan-400"
-                            : "text-gray-400 dark:text-gray-500"
+                            ? "text-cyan-500"
+                            : "text-gray-400 dark:text-gray-500",
                         )}
                       />
                       <span
                         className={cn(
-                          "text-xs font-medium",
+                          "text-sm font-medium",
                           isActive || isSubmenuActive
-                            ? "text-gray-900 dark:text-gray-100"
-                            : "text-gray-600 dark:text-gray-400"
+                            ? "text-cyan-600 dark:text-cyan-400"
+                            : "text-gray-600 dark:text-gray-400",
                         )}
                       >
                         {item.name}
                       </span>
                     </div>
                     {isExpanded ? (
-                      <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
+                      <ChevronDown className="w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500" />
                     ) : (
-                      <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+                      <ChevronRight className="w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500" />
                     )}
                   </button>
                   {isExpanded && (
-                    <div className="ml-6 space-y-0.5">
+                    <div className="ml-6 pl-2 border-l-2 border-gray-100 dark:border-gray-800 space-y-0.5">
                       {filteredSubmenu.map((subItem) => {
                         const isSubActive =
                           pathname === subItem.href ||
@@ -281,13 +412,13 @@ export default function DashboardSidebar({
                             href={subItem.href}
                             onClick={onNavigate}
                             className={cn(
-                              "flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors text-xs",
+                              "flex items-center px-2 py-1.5 rounded-lg transition-all text-sm",
                               isSubActive
-                                ? "bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 font-medium"
-                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
+                                ? "bg-cyan-500/[0.08] dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-medium"
+                                : "text-gray-500 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-gray-800/60 hover:text-gray-900 dark:hover:text-gray-100",
                             )}
                           >
-                            <span>{subItem.name}</span>
+                            {subItem.name}
                           </Link>
                         );
                       })}
@@ -303,28 +434,28 @@ export default function DashboardSidebar({
                 href={item.href}
                 onClick={onNavigate}
                 className={cn(
-                  "flex items-center gap-2 px-2 py-2 rounded-md transition-colors",
+                  "flex items-center gap-2.5 px-2 py-2 rounded-xl transition-all",
                   collapsed ? "justify-center" : "",
                   isActive
-                    ? "bg-cyan-50 dark:bg-cyan-900/20 text-gray-900 dark:text-gray-100"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
+                    ? "bg-cyan-500/[0.08] dark:bg-cyan-500/10"
+                    : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60",
                 )}
               >
                 <Icon
                   className={cn(
-                    "w-4 h-4 flex-shrink-0",
+                    "w-4 h-4 flex-shrink-0 mx-[2px]",
                     isActive
-                      ? "text-cyan-600 dark:text-cyan-400"
-                      : "text-gray-400 dark:text-gray-500"
+                      ? "text-cyan-500"
+                      : "text-gray-400 dark:text-gray-500",
                   )}
                 />
                 {!collapsed && (
                   <span
                     className={cn(
-                      "text-xs font-medium",
+                      "text-sm font-medium",
                       isActive
-                        ? "text-gray-900 dark:text-gray-100"
-                        : "text-gray-600 dark:text-gray-400"
+                        ? "text-cyan-600 dark:text-cyan-400"
+                        : "text-gray-600 dark:text-gray-400",
                     )}
                   >
                     {item.name}
@@ -335,79 +466,17 @@ export default function DashboardSidebar({
           })}
         </div>
 
-        {/* Accepted Projects Section (Collectors only) - More Visible */}
-        {profile?.role === 'collector' && !collapsed && (
-          <div className="mb-6 mt-6 border-t-2 border-cyan-500/30 dark:border-cyan-400/30 pt-4 bg-cyan-50/30 dark:bg-cyan-900/10 rounded-lg px-2 py-3">
-            <div className="px-2 mb-3">
-              <h3 className="text-xs font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">
-                Running Projects
-              </h3>
-            </div>
-            {loadingProjects ? (
-              <div className="px-2 py-2 text-xs text-gray-500 dark:text-gray-400">
-                Loading...
-              </div>
-            ) : acceptedProjects.length === 0 ? (
-              <div className="px-2 py-2 text-xs text-gray-500 dark:text-gray-400">
-                No active projects
-              </div>
-            ) : (
-              <div className="space-y-0.5">
-                {(showAllProjects ? acceptedProjects : acceptedProjects.slice(0, 3)).map((assignment) => {
-                  const isActive = pathname === `/submit/${assignment.submission_token}`;
-                  const isProjectCompleted = assignment.project?.status === "completed";
-                  return (
-                    <Link
-                      key={assignment.id}
-                      href={`/submit/${assignment.submission_token}`}
-                      onClick={onNavigate}
-                      className={cn(
-                        "flex items-center gap-2 px-2 py-2 rounded-md transition-colors text-xs font-medium",
-                        isActive
-                          ? "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-600"
-                          : "text-gray-700 dark:text-gray-300 hover:bg-cyan-50 dark:hover:bg-cyan-900/20 hover:text-cyan-600 dark:hover:text-cyan-400"
-                      )}
-                      title={assignment.project?.title || 'Project'}
-                    >
-                      <CheckCircle2 className="w-3 h-3 flex-shrink-0" />
-                      <span
-                        className={cn(
-                          "truncate flex-1",
-                          !isActive &&
-                            isProjectCompleted &&
-                            "text-emerald-700 dark:text-emerald-300 font-semibold"
-                        )}
-                      >
-                        {assignment.project?.title || 'Untitled Project'}
-                      </span>
-                    </Link>
-                  );
-                })}
-                {acceptedProjects.length > 3 && (
-                  <button
-                    onClick={() => setShowAllProjects(!showAllProjects)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
-                  >
-                    {showAllProjects ? (
-                      <>
-                        <ChevronUp className="w-3 h-3" />
-                        <span>Show Less</span>
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-3 h-3" />
-                        <span>Show All ({acceptedProjects.length})</span>
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Large Vertical Space */}
+        {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Separator */}
+        <div className="h-px bg-gray-100 dark:bg-gray-700 my-4" />
+
+        {!collapsed && (
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 px-2 mb-2">
+            Account
+          </p>
+        )}
 
         {/* Lower Navigation Items */}
         <div className="space-y-0.5">
@@ -421,28 +490,28 @@ export default function DashboardSidebar({
                 href={item.href}
                 onClick={onNavigate}
                 className={cn(
-                  "flex items-center gap-2 px-2 py-2 rounded-md transition-colors",
+                  "flex items-center gap-2.5 px-2 py-2 rounded-xl transition-all",
                   collapsed ? "justify-center" : "",
                   isActive
-                    ? "bg-cyan-50 dark:bg-cyan-900/20 text-gray-900 dark:text-gray-100"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100"
+                    ? "bg-cyan-500/[0.08] dark:bg-cyan-500/10"
+                    : "hover:bg-gray-100/80 dark:hover:bg-gray-800/60",
                 )}
               >
                 <Icon
                   className={cn(
-                    "w-4 h-4 flex-shrink-0",
+                    "w-4 h-4 flex-shrink-0 mx-[2px]",
                     isActive
-                      ? "text-cyan-600 dark:text-cyan-400"
-                      : "text-gray-400 dark:text-gray-500"
+                      ? "text-cyan-500"
+                      : "text-gray-400 dark:text-gray-500",
                   )}
                 />
                 {!collapsed && (
                   <span
                     className={cn(
-                      "text-xs font-medium",
+                      "text-sm font-medium",
                       isActive
-                        ? "text-gray-900 dark:text-gray-100"
-                        : "text-gray-600 dark:text-gray-400"
+                        ? "text-cyan-600 dark:text-cyan-400"
+                        : "text-gray-600 dark:text-gray-400",
                     )}
                   >
                     {item.name}
@@ -454,36 +523,46 @@ export default function DashboardSidebar({
         </div>
       </nav>
 
-      {/* User Profile at Bottom */}
-      <div
-        className={cn(
-          "px-3 py-3 border-t border-gray-100 dark:border-gray-700 flex-shrink-0",
-          collapsed && "px-2"
-        )}
-      >
-        <div
-          className={cn(
-            "flex items-center",
-            collapsed ? "justify-center" : "gap-2"
-          )}
-        >
-          <Avatar className="w-8 h-8">
-            <AvatarImage src={profile?.avatar_url || ""} alt={profile?.full_name || "User"} />
-            <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-600 text-white text-xs font-semibold">
-              {profile?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U"}
-            </AvatarFallback>
-          </Avatar>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 truncate">
-                {profile?.full_name || user?.email?.split("@")[0] || "User"}
+      {/* Upgrade to Pro */}
+      <div className={cn("px-4 pb-4 flex-shrink-0", collapsed && "px-2")}>
+        {collapsed ? (
+          <Link
+            href="/dashboard/billing"
+            onClick={onNavigate}
+            className="flex justify-center"
+            title="Upgrade to Pro"
+          >
+            <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-sm hover:shadow-md hover:scale-105 transition-all duration-200">
+              <Zap className="w-4 h-4" />
+            </span>
+          </Link>
+        ) : (
+          <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-cyan-500 to-blue-600 p-4">
+            {/* Decorative circles */}
+            <div className="absolute -top-5 -right-5 w-20 h-20 bg-white/10 rounded-full pointer-events-none" />
+            <div className="absolute -bottom-4 -left-4 w-14 h-14 bg-white/10 rounded-full pointer-events-none" />
+
+            <div className="relative">
+              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center mb-3">
+                <Zap className="w-3.5 h-3.5 text-white" />
+              </div>
+              <p className="text-sm font-bold text-white mb-1">
+                Upgrade to Pro
               </p>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
-                {user?.email || ""}
+              <p className="text-[11px] text-white/70 mb-3.5 leading-relaxed">
+                Unlock advanced features and higher limits.
               </p>
+              <Link
+                href="/dashboard/billing"
+                onClick={onNavigate}
+                className="flex items-center justify-center gap-1.5 w-full text-xs font-semibold py-2 rounded-lg bg-white text-cyan-600 hover:bg-white/90 transition-all shadow-sm"
+              >
+                Upgrade Now
+                <ArrowRight className="w-3 h-3" />
+              </Link>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </aside>
   );

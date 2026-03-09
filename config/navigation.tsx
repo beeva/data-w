@@ -58,6 +58,7 @@ export const upperNavItems: NavItem[] = [
     name: "Projects",
     href: "/dashboard/projects",
     icon: FolderKanban,
+    roles: ['requester', 'admin'],
     submenu: [
       { name: "Projects", href: "/dashboard/projects/active", roles: ['requester', 'admin'] },
       { name: "Create New Project", href: "/dashboard/projects/new", roles: ['requester', 'admin'] },
