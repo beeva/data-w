@@ -325,7 +325,7 @@ export default function CollectorHeader() {
                   Saved Jobs
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => router.push("/dashboard/home")}
+                  onClick={() => router.push("/dashboard/proposals")}
                   className="gap-2.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
                 >
                   <FileText className="w-3.5 h-3.5 text-cyan-500" />

@@ -111,11 +111,11 @@ export default function SubmissionDialog({
 
   const requiredDataTypes = useMemo(
     () => (project.requirements?.data_types || []).map((d) => d.toLowerCase()),
-    [project.requirements?.data_types]
+    [project.requirements?.data_types],
   );
   const requiredFormats = useMemo(
     () => (project.requirements?.formats || []).map((f) => f.toLowerCase()),
-    [project.requirements?.formats]
+    [project.requirements?.formats],
   );
 
   const allowsOtherType = requiredDataTypes.some((d) => d.includes("other"));
@@ -125,24 +125,51 @@ export default function SubmissionDialog({
     if (allowsOtherType || allowsOtherFormat) return DEFAULT_ACCEPT_TYPES;
 
     const accepts = new Set<string>();
-    requiredFormats.forEach((format) => {
-      if (format.includes("jpeg") || format.includes("jpg")) accepts.add(".jpg,.jpeg");
-      if (format.includes("png")) accepts.add(".png");
-      if (format.includes("mp4")) accepts.add(".mp4");
-      if (format.includes("pdf")) accepts.add(".pdf");
-      if (format.includes("csv")) accepts.add(".csv");
-      if (format.includes("json")) accepts.add(".json");
-      if (format.includes("xml")) accepts.add(".xml");
-    });
 
-    requiredDataTypes.forEach((type) => {
-      if (includesAny(type, ["image", "photo"])) accepts.add("image/*");
-      if (type.includes("video")) accepts.add("video/*");
-      if (type.includes("audio")) accepts.add("audio/*");
-      if (includesAny(type, ["text", "document"])) accepts.add(".txt,.pdf,.doc,.docx");
-      if (type.includes("spreadsheet")) accepts.add(".csv,.xls,.xlsx");
-      if (includesAny(type, ["gps", "sensor"])) accepts.add(".csv,.json,.xml,.txt");
-    });
+    if (requiredFormats.length > 0) {
+      // Specific formats defined — use only those exact extensions
+      requiredFormats.forEach((format) => {
+        if (format.includes("jpeg") || format.includes("jpg")) {
+          accepts.add(".jpg");
+          accepts.add(".jpeg");
+        }
+        if (format.includes("png")) accepts.add(".png");
+        if (format.includes("gif")) accepts.add(".gif");
+        if (format.includes("webp")) accepts.add(".webp");
+        if (format.includes("mp4")) accepts.add(".mp4");
+        if (format.includes("mov")) accepts.add(".mov");
+        if (format.includes("avi")) accepts.add(".avi");
+        if (format.includes("mkv")) accepts.add(".mkv");
+        if (format.includes("webm")) accepts.add(".webm");
+        if (format.includes("mp3")) accepts.add(".mp3");
+        if (format.includes("wav")) accepts.add(".wav");
+        if (format.includes("aac")) accepts.add(".aac");
+        if (format.includes("m4a")) accepts.add(".m4a");
+        if (format.includes("pdf")) accepts.add(".pdf");
+        if (format.includes("csv")) accepts.add(".csv");
+        if (format.includes("json")) accepts.add(".json");
+        if (format.includes("xml")) accepts.add(".xml");
+        if (format.includes("txt")) accepts.add(".txt");
+        if (format.includes("doc") && !format.includes("docx"))
+          accepts.add(".doc");
+        if (format.includes("docx")) accepts.add(".docx");
+        if (format.includes("xls") && !format.includes("xlsx"))
+          accepts.add(".xls");
+        if (format.includes("xlsx")) accepts.add(".xlsx");
+      });
+    } else {
+      // No specific formats — fall back to broad MIME types by data type
+      requiredDataTypes.forEach((type) => {
+        if (includesAny(type, ["image", "photo"])) accepts.add("image/*");
+        if (type.includes("video")) accepts.add("video/*");
+        if (type.includes("audio")) accepts.add("audio/*");
+        if (includesAny(type, ["text", "document"]))
+          accepts.add(".txt,.pdf,.doc,.docx");
+        if (type.includes("spreadsheet")) accepts.add(".csv,.xls,.xlsx");
+        if (includesAny(type, ["gps", "sensor"]))
+          accepts.add(".csv,.json,.xml,.txt");
+      });
+    }
 
     const value = Array.from(accepts).join(",");
     return value || DEFAULT_ACCEPT_TYPES;
@@ -157,13 +184,22 @@ export default function SubmissionDialog({
 
       return requiredDataTypes.some((type) => {
         if (includesAny(type, ["image", "photo"])) {
-          return mime.startsWith("image/") || includesAny(ext, ["jpg", "jpeg", "png", "webp", "gif"]);
+          return (
+            mime.startsWith("image/") ||
+            includesAny(ext, ["jpg", "jpeg", "png", "webp", "gif"])
+          );
         }
         if (type.includes("video")) {
-          return mime.startsWith("video/") || includesAny(ext, ["mp4", "mov", "avi", "mkv", "webm"]);
+          return (
+            mime.startsWith("video/") ||
+            includesAny(ext, ["mp4", "mov", "avi", "mkv", "webm"])
+          );
         }
         if (type.includes("audio")) {
-          return mime.startsWith("audio/") || includesAny(ext, ["mp3", "wav", "aac", "ogg", "m4a"]);
+          return (
+            mime.startsWith("audio/") ||
+            includesAny(ext, ["mp3", "wav", "aac", "ogg", "m4a"])
+          );
         }
         if (includesAny(type, ["text", "document"])) {
           return (
@@ -184,7 +220,7 @@ export default function SubmissionDialog({
         return false;
       });
     },
-    [requiredDataTypes, allowsOtherType]
+    [requiredDataTypes, allowsOtherType],
   );
 
   const matchesRequiredFormat = useCallback(
@@ -195,17 +231,24 @@ export default function SubmissionDialog({
       const ext = getFileExtension(file.name);
 
       return requiredFormats.some((format) => {
-        if (includesAny(format, ["jpeg", "jpg"])) return includesAny(ext, ["jpg", "jpeg"]) || mime === "image/jpeg";
-        if (format.includes("png")) return ext === "png" || mime === "image/png";
-        if (format.includes("mp4")) return ext === "mp4" || mime === "video/mp4";
-        if (format.includes("pdf")) return ext === "pdf" || mime === "application/pdf";
-        if (format.includes("csv")) return ext === "csv" || mime.includes("csv");
-        if (format.includes("json")) return ext === "json" || mime.includes("json");
-        if (format.includes("xml")) return ext === "xml" || mime.includes("xml");
+        if (includesAny(format, ["jpeg", "jpg"]))
+          return includesAny(ext, ["jpg", "jpeg"]) || mime === "image/jpeg";
+        if (format.includes("png"))
+          return ext === "png" || mime === "image/png";
+        if (format.includes("mp4"))
+          return ext === "mp4" || mime === "video/mp4";
+        if (format.includes("pdf"))
+          return ext === "pdf" || mime === "application/pdf";
+        if (format.includes("csv"))
+          return ext === "csv" || mime.includes("csv");
+        if (format.includes("json"))
+          return ext === "json" || mime.includes("json");
+        if (format.includes("xml"))
+          return ext === "xml" || mime.includes("xml");
         return false;
       });
     },
-    [requiredFormats, allowsOtherFormat]
+    [requiredFormats, allowsOtherFormat],
   );
 
   const resetForm = useCallback(() => {
@@ -238,7 +281,9 @@ export default function SubmissionDialog({
           continue;
         }
         if (!matchesRequiredDataType(file) || !matchesRequiredFormat(file)) {
-          errors.push(`"${file.name}" does not match this project's required data type/format.`);
+          errors.push(
+            `"${file.name}" does not match this project's required data type/format.`,
+          );
           continue;
         }
         const preview = file.type.startsWith("image/")
@@ -260,7 +305,7 @@ export default function SubmissionDialog({
         setFiles((prev) => [...prev, ...validFiles]);
       }
     },
-    [files.length, matchesRequiredDataType, matchesRequiredFormat]
+    [files.length, matchesRequiredDataType, matchesRequiredFormat],
   );
 
   const removeFile = useCallback((fileId: string) => {
@@ -289,7 +334,7 @@ export default function SubmissionDialog({
         addFiles(e.dataTransfer.files);
       }
     },
-    [addFiles]
+    [addFiles],
   );
 
   const handleFileSelect = useCallback(
@@ -299,7 +344,7 @@ export default function SubmissionDialog({
         e.target.value = "";
       }
     },
-    [addFiles]
+    [addFiles],
   );
 
   const handleSubmit = async () => {
@@ -329,7 +374,7 @@ export default function SubmissionDialog({
 
       if (submissionError || !submission) {
         throw new Error(
-          submissionError?.message || "Failed to create submission"
+          submissionError?.message || "Failed to create submission",
         );
       }
 
@@ -338,18 +383,18 @@ export default function SubmissionDialog({
 
       for (const fileItem of files) {
         setUploadStatus(
-          `Uploading ${fileItem.file.name}... (${uploadedCount + 1}/${totalFiles})`
+          `Uploading ${fileItem.file.name}... (${uploadedCount + 1}/${totalFiles})`,
         );
 
         const { url, error: uploadError } = await uploadSubmissionFile(
           user.id,
           submission.id,
-          fileItem.file
+          fileItem.file,
         );
 
         if (uploadError || !url) {
           throw new Error(
-            uploadError?.message || `Failed to upload ${fileItem.file.name}`
+            uploadError?.message || `Failed to upload ${fileItem.file.name}`,
           );
         }
 
@@ -361,13 +406,13 @@ export default function SubmissionDialog({
           fileItem.file.name,
           fileType,
           fileItem.file.size,
-          fileItem.file.type
+          fileItem.file.type,
         );
 
         if (dataItemError) {
           throw new Error(
             dataItemError.message ||
-              `Failed to save record for ${fileItem.file.name}`
+              `Failed to save record for ${fileItem.file.name}`,
           );
         }
 
@@ -391,11 +436,17 @@ export default function SubmissionDialog({
         },
       });
 
-      onToast?.({ message: `Successfully submitted ${files.length} file${files.length > 1 ? "s" : ""}!`, type: "success" });
+      onToast?.({
+        message: `Successfully submitted ${files.length} file${files.length > 1 ? "s" : ""}!`,
+        type: "success",
+      });
       onSuccess?.();
     } catch (err: any) {
       setError(err.message || "An error occurred during submission.");
-      onToast?.({ message: err.message || "Submission failed. Please try again.", type: "error" });
+      onToast?.({
+        message: err.message || "Submission failed. Please try again.",
+        type: "error",
+      });
       setSubmitting(false);
     }
   };
@@ -421,86 +472,75 @@ export default function SubmissionDialog({
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-0 gap-0 w-full">
         {submitted ? (
-          <div className="py-8">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-8 h-8 text-green-400" />
-              </div>
-              <h3 className="text-xl font-semibold">Submission Successful!</h3>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+          <div className="flex flex-col items-center justify-center py-16 px-8 text-center gap-6">
+            <div className="w-20 h-20 rounded-full bg-green-500/15 border border-green-500/20 flex items-center justify-center">
+              <CheckCircle2 className="w-10 h-10 text-green-400" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-xl font-semibold tracking-tight">
+                Submission Successful!
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
                 Your data has been submitted for review. You will be notified
                 once the requester validates your submission.
               </p>
-              <Button
-                onClick={() => {
-                  resetForm();
-                  setOpen(false);
-                }}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Close
-              </Button>
             </div>
+            <Button
+              onClick={() => {
+                resetForm();
+                setOpen(false);
+              }}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 px-8"
+            >
+              Done
+            </Button>
           </div>
         ) : (
           <>
-            <DialogHeader>
-              <DialogTitle>Submit Data for {project.title}</DialogTitle>
-              <DialogDescription>
-                Upload your collected data files and add any notes about your
-                submission.
-              </DialogDescription>
-            </DialogHeader>
+            {/* Header */}
+            <div className="flex items-start gap-3 px-6 pt-6 pb-4 border-b border-border">
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                <Upload className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-base font-semibold leading-tight">
+                  Submit Data
+                </DialogTitle>
+                <DialogDescription className="text-sm text-muted-foreground mt-0.5 truncate">
+                  {project.title}
+                </DialogDescription>
+              </div>
+            </div>
 
-            <div className="space-y-5 mt-2">
+            <div className="px-6 py-5 space-y-5 w-full overflow-hidden">
+              {/* Error */}
               {error && (
-                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2">
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2 w-full overflow-hidden">
                   <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-                  <p className="text-sm text-red-600 dark:text-red-400">
+                  <p className="text-sm text-red-600 dark:text-red-400 break-words min-w-0">
                     {error}
                   </p>
                 </div>
               )}
 
-              {/* Drag & Drop Zone */}
-              <div className="text-xs text-muted-foreground rounded-lg border border-border bg-muted/30 p-2.5">
-                <p>
-                  Required types:{" "}
-                  <span className="font-medium text-foreground">
-                    {project.requirements.data_types.length > 0
-                      ? project.requirements.data_types.join(", ")
-                      : "Any"}
-                  </span>
-                </p>
-                <p className="mt-1">
-                  Required formats:{" "}
-                  <span className="font-medium text-foreground">
-                    {project.requirements.formats.length > 0
-                      ? project.requirements.formats.join(", ")
-                      : "Any"}
-                  </span>
-                </p>
-              </div>
-
+              {/* Drop Zone with Requirements */}
               <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() =>
-                  !submitting && fileInputRef.current?.click()
-                }
                 className={`
-                  relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer
+                  relative border-2 border-dashed rounded-xl overflow-hidden cursor-pointer select-none
                   transition-all duration-200
                   ${
                     isDragOver
-                      ? "border-cyan-400 bg-cyan-400/10 shadow-[0_0_20px_rgba(34,211,238,0.15)]"
-                      : "border-border hover:border-muted-foreground hover:bg-muted"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/40 hover:bg-muted/40"
                   }
                   ${submitting ? "pointer-events-none opacity-50" : ""}
                 `}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => !submitting && fileInputRef.current?.click()}
               >
                 <input
                   ref={fileInputRef}
@@ -510,44 +550,80 @@ export default function SubmissionDialog({
                   className="hidden"
                   accept={acceptTypes}
                 />
-                <div className="space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mx-auto">
+                <div className="p-8 text-center space-y-3">
+                  <div
+                    className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto transition-colors duration-200 ${
+                      isDragOver ? "bg-primary/15" : "bg-muted"
+                    }`}
+                  >
                     <Upload
-                      className={`w-5 h-5 ${isDragOver ? "text-primary" : "text-muted-foreground"}`}
+                      className={`w-5 h-5 transition-colors duration-200 ${
+                        isDragOver ? "text-primary" : "text-muted-foreground"
+                      }`}
                     />
                   </div>
                   <div>
                     <p className="text-sm font-medium">
                       {isDragOver
-                        ? "Drop files here"
-                        : "Drag & drop files here"}
+                        ? "Release to add files"
+                        : "Drop files here or click to browse"}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      or click to browse. Max {MAX_FILES} files, 50MB each.
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Up to {MAX_FILES} files · 50 MB each
                     </p>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 justify-center">
-                    {["Images", "Videos", "Audio", "PDFs", "Documents"].map(
-                      (type) => (
-                        <span
-                          key={type}
-                          className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground"
-                        >
-                          {type}
-                        </span>
-                      )
-                    )}
                   </div>
                 </div>
+                {(project.requirements.data_types.length > 0 ||
+                  project.requirements.formats.length > 0) && (
+                  <div className="border-t border-dashed border-border px-4 py-3 bg-muted/30 space-y-2">
+                    {project.requirements.data_types.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground shrink-0 w-12">
+                          Types
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {project.requirements.data_types.map((type) => (
+                            <span
+                              key={type}
+                              className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium"
+                            >
+                              {type}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {project.requirements.formats.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground shrink-0 w-12">
+                          Formats
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {project.requirements.formats.map((fmt) => (
+                            <span
+                              key={fmt}
+                              className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border font-medium"
+                            >
+                              {fmt}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* File List */}
               {files.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">
-                      Files ({files.length}/{MAX_FILES})
-                    </Label>
+                    <p className="text-sm font-medium">
+                      Files{" "}
+                      <span className="text-muted-foreground font-normal">
+                        ({files.length}/{MAX_FILES})
+                      </span>
+                    </p>
                     {!submitting && (
                       <button
                         onClick={() => {
@@ -556,34 +632,36 @@ export default function SubmissionDialog({
                           });
                           setFiles([]);
                         }}
-                        className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                        className="text-xs text-muted-foreground hover:text-red-400 transition-colors"
                       >
-                        Remove All
+                        Clear all
                       </button>
                     )}
                   </div>
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                     {files.map((fileItem) => (
                       <div
                         key={fileItem.id}
-                        className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/50 border border-border group"
+                        className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/40 border border-border/60 group hover:bg-muted/70 transition-colors w-full min-w-0"
                       >
-                        {fileItem.preview ? (
-                          <img
-                            src={fileItem.preview}
-                            alt={fileItem.file.name}
-                            className="w-9 h-9 rounded object-cover shrink-0"
-                          />
-                        ) : (
-                          <div className="w-9 h-9 rounded bg-muted flex items-center justify-center shrink-0">
-                            {getFileIcon(fileItem.file.type)}
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
+                        <div className="shrink-0">
+                          {fileItem.preview ? (
+                            <img
+                              src={fileItem.preview}
+                              alt={fileItem.file.name}
+                              className="w-10 h-10 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-10 h-10 rounded-lg bg-background border border-border flex items-center justify-center">
+                              {getFileIcon(fileItem.file.type)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 overflow-hidden">
+                          <p className="text-sm font-medium truncate leading-tight">
                             {fileItem.file.name}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground mt-0.5">
                             {formatFileSize(fileItem.file.size)}
                           </p>
                         </div>
@@ -593,9 +671,9 @@ export default function SubmissionDialog({
                               e.stopPropagation();
                               removeFile(fileItem.id);
                             }}
-                            className="p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                            className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-muted-foreground hover:text-red-400 hover:bg-red-400/10 transition-all opacity-0 group-hover:opacity-100"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -605,63 +683,76 @@ export default function SubmissionDialog({
               )}
 
               {/* Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="submission-notes">Notes (Optional)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="submission-notes" className="text-sm">
+                  Notes{" "}
+                  <span className="text-muted-foreground font-normal">
+                    (Optional)
+                  </span>
+                </Label>
                 <Textarea
                   id="submission-notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add any notes about your data collection (conditions, equipment used, etc.)..."
+                  placeholder="Add notes about your data collection (conditions, equipment used, etc.)..."
                   rows={3}
                   disabled={submitting}
-                  className="resize-none"
+                  className="resize-none text-sm [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40"
                 />
               </div>
 
               {/* Upload Progress */}
               {submitting && (
-                <div className="space-y-2 p-3 rounded-lg bg-muted/30 border border-border">
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                    <p className="text-sm font-medium">{uploadStatus}</p>
+                <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+                    <p className="text-sm font-medium truncate">
+                      {uploadStatus}
+                    </p>
                   </div>
-                  <Progress value={uploadProgress} className="h-2" />
-                  <p className="text-xs text-muted-foreground text-right">
-                    {uploadProgress}%
-                  </p>
+                  <Progress value={uploadProgress} className="h-1.5" />
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Uploading files…
+                    </p>
+                    <p className="text-xs font-semibold text-primary">
+                      {uploadProgress}%
+                    </p>
+                  </div>
                 </div>
               )}
+            </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => handleOpenChange(false)}
-                  disabled={submitting}
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={submitting || files.length === 0}
-                  className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 mr-2" />
-                      Submit ({files.length}{" "}
-                      {files.length === 1 ? "file" : "files"})
-                    </>
-                  )}
-                </Button>
-              </div>
+            {/* Footer Actions */}
+            <div className="flex gap-3 px-6 pb-6 pt-1 mt-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                disabled={submitting}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={submitting || files.length === 0}
+                className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Submitting…
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4 mr-2" />
+                    {files.length > 0
+                      ? `Submit (${files.length} ${files.length === 1 ? "file" : "files"})`
+                      : "Submit"}
+                  </>
+                )}
+              </Button>
             </div>
           </>
         )}

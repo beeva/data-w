@@ -186,6 +186,36 @@ export async function getProposalsByProject(
 }
 
 /**
+ * Get a single proposal by collector and project
+ */
+export async function getProposalByCollectorAndProject(
+  collectorId: string,
+  projectId: string
+): Promise<{ data: Proposal | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("proposals")
+      .select("*")
+      .eq("collector_id", collectorId)
+      .eq("request_id", projectId)
+      .order("submitted_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    return { data: data as Proposal | null, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error("Failed to fetch proposal"),
+    };
+  }
+}
+
+/**
  * Get proposals by collector
  */
 export async function getProposalsByCollector(
@@ -203,6 +233,69 @@ export async function getProposalsByCollector(
     }
 
     return { data: data as Proposal[], error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error("Failed to fetch proposals"),
+    };
+  }
+}
+
+export interface ProposalWithProject extends Proposal {
+  project?: {
+    id: string;
+    title: string;
+    category: string;
+    budget: number;
+    deadline: string | null;
+    status: string;
+    description: string;
+    max_collectors: number;
+    location: { address?: string; lat?: number | null; lng?: number | null; radius_km?: number | null } | null;
+    requirements: { data_types: string[]; formats: string[]; specifications?: string };
+  };
+}
+
+/**
+ * Get proposals by collector with project details joined
+ */
+export async function getProposalsByCollectorWithProjects(
+  collectorId: string
+): Promise<{ data: ProposalWithProject[] | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("proposals")
+      .select(`
+        *,
+        requests(id, title, category, budget, deadline, status, description, max_collectors, location, requirements)
+      `)
+      .eq("collector_id", collectorId)
+      .order("submitted_at", { ascending: false });
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    return {
+      data: (data || []).map((row: any) => ({
+        ...row,
+        project: row.requests
+          ? {
+              id: row.requests.id,
+              title: row.requests.title,
+              category: row.requests.category,
+              budget: row.requests.budget,
+              deadline: row.requests.deadline,
+              status: row.requests.status,
+              description: row.requests.description,
+              max_collectors: row.requests.max_collectors,
+              location: row.requests.location,
+              requirements: row.requests.requirements,
+            }
+          : undefined,
+      })) as ProposalWithProject[],
+      error: null,
+    };
   } catch (err) {
     return {
       data: null,
@@ -479,6 +572,52 @@ export async function getAssignmentsByCollector(
     return {
       data: null,
       error: err instanceof Error ? err : new Error("Failed to fetch assignments"),
+    };
+  }
+}
+
+/**
+ * Get a single active assignment by collector and project
+ */
+export async function getAssignmentByCollectorAndProject(
+  collectorId: string,
+  projectId: string
+): Promise<{ data: CollectorAssignment | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase
+      .from("collector_assignments")
+      .select("*")
+      .eq("collector_id", collectorId)
+      .eq("request_id", projectId)
+      .eq("status", "active")
+      .order("assigned_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    if (!data) {
+      return { data: null, error: null };
+    }
+
+    const baseUrl =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+    return {
+      data: {
+        ...data,
+        submission_link: `${baseUrl}/submit/${data.submission_token}`,
+      } as CollectorAssignment,
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error: err instanceof Error ? err : new Error("Failed to fetch assignment"),
     };
   }
 }

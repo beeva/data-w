@@ -32,7 +32,7 @@ export const GridIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export type UserRole = 'requester' | 'collector' | 'agent' | 'admin';
+export type UserRole = "requester" | "collector" | "agent" | "admin";
 
 export interface SubMenuItem {
   name: string;
@@ -58,17 +58,25 @@ export const upperNavItems: NavItem[] = [
     name: "Projects",
     href: "/dashboard/projects",
     icon: FolderKanban,
-    roles: ['requester', 'admin'],
+    roles: ["requester", "admin"],
     submenu: [
-      { name: "Projects", href: "/dashboard/projects/active", roles: ['requester', 'admin'] },
-      { name: "Create New Project", href: "/dashboard/projects/new", roles: ['requester', 'admin'] },
+      {
+        name: "Projects",
+        href: "/dashboard/projects/active",
+        roles: ["requester", "admin"],
+      },
+      {
+        name: "Create New Project",
+        href: "/dashboard/projects/new",
+        roles: ["requester", "admin"],
+      },
     ],
   },
   {
     name: "Find Projects",
     href: "/dashboard/projects/find",
     icon: FolderKanban,
-    roles: ['collector'],
+    roles: ["collector"],
   },
   {
     name: "Messages",
@@ -80,13 +88,13 @@ export const upperNavItems: NavItem[] = [
     name: "Users",
     href: "/dashboard/users",
     icon: Users,
-    roles: ['admin'],
+    roles: ["admin"],
   },
   {
     name: "Support Tickets",
     href: "/dashboard/tickets",
     icon: Ticket,
-    roles: ['admin'],
+    roles: ["admin"],
   },
 ];
 
@@ -95,7 +103,7 @@ export const lowerNavItems: NavItem[] = [
     name: "Billing & Subscription",
     href: "/dashboard/billing",
     icon: CreditCard,
-    roles: ['requester', 'collector', 'agent'],
+    roles: ["requester", "collector", "agent"],
   },
   {
     name: "Account settings",
@@ -106,6 +114,6 @@ export const lowerNavItems: NavItem[] = [
     name: "Help & Support",
     href: "/dashboard/support",
     icon: HelpCircle,
-    roles: ['requester', 'collector', 'agent'],
+    roles: ["requester", "collector", "agent"],
   },
 ];
