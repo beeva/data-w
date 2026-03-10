@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getCategoryColor } from "@/lib/utils";
@@ -13,10 +14,12 @@ import {
 } from "@/lib/services/proposalService";
 import type { Project } from "@/types/project";
 import type { Proposal } from "@/types/proposal";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -26,26 +29,132 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  DollarSign,
   Clock,
-  Star,
   MapPin,
-  Calendar,
   Users,
-  Loader2,
   Navigation,
   Briefcase,
-  ExternalLink,
   Bookmark,
   BookmarkCheck,
-  Wallet,
-  Zap,
-  ArrowRight,
   TrendingUp,
   CheckCircle2,
+  Camera,
+  Video,
+  Mic,
+  FileText,
+  ClipboardList,
+  LocateFixed,
+  Activity,
+  Package,
+  ChevronRight,
+  XCircle,
+  LifeBuoy,
+  MessageSquare,
+  Settings,
+  BookOpen,
 } from "lucide-react";
 import ProjectDetailsSheet from "./ProjectDetailsSheet";
-import { LocationMapPreview } from "@/components/ui/location-map-preview";
+import {
+  LocationMapPreview,
+  type MapJobPin,
+} from "@/components/ui/location-map-preview";
+import { Photography1Svg } from "@/components/svg/photography/photography_1";
+import { Photography2Svg } from "@/components/svg/photography/photography_2";
+import { Photography3Svg } from "@/components/svg/photography/photography_3";
+import { Photography4Svg } from "@/components/svg/photography/photography_4";
+import { Photography5Svg } from "@/components/svg/photography/photography_5";
+import { Video1Svg } from "@/components/svg/video/video_1";
+import { Video2Svg } from "@/components/svg/video/video_2";
+import { Video3Svg } from "@/components/svg/video/video_3";
+import { Video4Svg } from "@/components/svg/video/video_4";
+import { Video5Svg } from "@/components/svg/video/video_5";
+import { Audio1Svg } from "@/components/svg/audio/audio_1";
+import { Audio2Svg } from "@/components/svg/audio/audio_2";
+import { Audio3Svg } from "@/components/svg/audio/audio_3";
+import { Audio4Svg } from "@/components/svg/audio/audio_4";
+import { Audio5Svg } from "@/components/svg/audio/audio_5";
+import { Text1Svg } from "@/components/svg/text/text_1";
+import { Text2Svg } from "@/components/svg/text/text_2";
+import { Text3Svg } from "@/components/svg/text/text_3";
+import { Text4Svg } from "@/components/svg/text/text_4";
+import { Text5Svg } from "@/components/svg/text/text_5";
+import { Survey1Svg } from "@/components/svg/survey/survey_1";
+import { Survey2Svg } from "@/components/svg/survey/survey_2";
+import { Survey3Svg } from "@/components/svg/survey/survey_3";
+import { Survey4Svg } from "@/components/svg/survey/survey_4";
+import { Survey5Svg } from "@/components/svg/survey/survey_5";
+import { Location1Svg } from "@/components/svg/location-data/location_1";
+import { Location2Svg } from "@/components/svg/location-data/location_2";
+import { Location3Svg } from "@/components/svg/location-data/location_3";
+import { Location4Svg } from "@/components/svg/location-data/location_4";
+import { Location5Svg } from "@/components/svg/location-data/location_5";
+import { Sensor1Svg } from "@/components/svg/sensor-data/sensor_1";
+import { Sensor2Svg } from "@/components/svg/sensor-data/sensor_2";
+import { Sensor3Svg } from "@/components/svg/sensor-data/sensor_3";
+import { Sensor4Svg } from "@/components/svg/sensor-data/sensor_4";
+import { Sensor5Svg } from "@/components/svg/sensor-data/sensor_5";
+import { Other1Svg } from "@/components/svg/other/other_1";
+import { Other2Svg } from "@/components/svg/other/other_2";
+
+const PHOTOGRAPHY_SVGS = [
+  Photography1Svg,
+  Photography2Svg,
+  Photography3Svg,
+  Photography4Svg,
+  Photography5Svg,
+] as const;
+
+const VIDEO_SVGS = [
+  Video1Svg,
+  Video2Svg,
+  Video3Svg,
+  Video4Svg,
+  Video5Svg,
+] as const;
+
+const AUDIO_SVGS = [
+  Audio1Svg,
+  Audio2Svg,
+  Audio3Svg,
+  Audio4Svg,
+  Audio5Svg,
+] as const;
+
+const TEXT_SVGS = [Text1Svg, Text2Svg, Text3Svg, Text4Svg, Text5Svg] as const;
+
+const SURVEY_SVGS = [
+  Survey1Svg,
+  Survey2Svg,
+  Survey3Svg,
+  Survey4Svg,
+  Survey5Svg,
+] as const;
+
+const LOCATION_SVGS = [
+  Location1Svg,
+  Location2Svg,
+  Location3Svg,
+  Location4Svg,
+  Location5Svg,
+] as const;
+
+const SENSOR_SVGS = [
+  Sensor1Svg,
+  Sensor2Svg,
+  Sensor3Svg,
+  Sensor4Svg,
+  Sensor5Svg,
+] as const;
+
+const OTHER_SVGS = [Other1Svg, Other2Svg] as const;
+
+function getProjectIconIndex(projectId: string, count: number): number {
+  let hash = 0;
+  for (let i = 0; i < projectId.length; i++) {
+    hash = (hash * 31 + projectId.charCodeAt(i)) >>> 0;
+  }
+  return hash % count;
+}
 
 /** Haversine distance in km between two lat/lng points */
 function getDistanceKm(
@@ -72,6 +181,54 @@ function formatDistance(km: number): string {
   return `${Math.round(km)} km`;
 }
 
+const CATEGORY_META: Record<
+  string,
+  { icon: React.ReactNode; accent: string; bg: string }
+> = {
+  Photography: {
+    icon: <Camera className="w-4 h-4" />,
+    accent: "#10b981",
+    bg: "bg-emerald-500/10",
+  },
+  Video: {
+    icon: <Video className="w-4 h-4" />,
+    accent: "#0ea5e9",
+    bg: "bg-sky-500/10",
+  },
+  Audio: {
+    icon: <Mic className="w-4 h-4" />,
+    accent: "#a855f7",
+    bg: "bg-purple-500/10",
+  },
+  Text: {
+    icon: <FileText className="w-4 h-4" />,
+    accent: "#f59e0b",
+    bg: "bg-amber-500/10",
+  },
+  Survey: {
+    icon: <ClipboardList className="w-4 h-4" />,
+    accent: "#22c55e",
+    bg: "bg-green-500/10",
+  },
+  "Location Data": {
+    icon: <LocateFixed className="w-4 h-4" />,
+    accent: "#14b8a6",
+    bg: "bg-teal-500/10",
+  },
+  "Sensor Data": {
+    icon: <Activity className="w-4 h-4" />,
+    accent: "#f97316",
+    bg: "bg-orange-500/10",
+  },
+  Other: {
+    icon: <Package className="w-4 h-4" />,
+    accent: "#06b6d4",
+    bg: "bg-cyan-500/10",
+  },
+};
+
+const DEFAULT_CATEGORY_META = CATEGORY_META["Other"];
+
 interface ProjectListProps {
   projects: Project[];
   activeTab: "best" | "recent" | "saved";
@@ -85,6 +242,227 @@ interface ProjectListProps {
   onSetMaxDistance: (d: number) => void;
   onViewAll: () => void;
   formatDate: (date: string | null) => string;
+}
+
+interface ProjectCardProps {
+  project: Project;
+  proposal: Proposal | undefined;
+  slotsFilled: boolean;
+  isSaved: boolean;
+  distance: string | null;
+  catMeta: (typeof CATEGORY_META)[keyof typeof CATEGORY_META];
+  onSelectProject: (project: Project) => void;
+  onToggleSave: (id: string) => void;
+  formatDate: (date: string | null) => string;
+}
+
+function ProjectCard({
+  project,
+  proposal,
+  slotsFilled,
+  isSaved,
+  distance,
+  catMeta,
+  onSelectProject,
+  onToggleSave,
+  formatDate,
+}: ProjectCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  const descRef = useRef<HTMLParagraphElement>(null);
+
+  const categoryIcon = (() => {
+    const svgPool =
+      project.category === "Photography"
+        ? PHOTOGRAPHY_SVGS
+        : project.category === "Video"
+          ? VIDEO_SVGS
+          : project.category === "Audio"
+            ? AUDIO_SVGS
+            : project.category === "Text"
+              ? TEXT_SVGS
+              : project.category === "Survey"
+                ? SURVEY_SVGS
+                : project.category === "Location Data"
+                  ? LOCATION_SVGS
+                  : project.category === "Sensor Data"
+                    ? SENSOR_SVGS
+                    : OTHER_SVGS;
+
+    if (svgPool) {
+      const idx = getProjectIconIndex(project.id, svgPool.length);
+      const SvgComp = svgPool[idx];
+      return (
+        <span className="w-8 h-8 flex items-center justify-center">
+          <SvgComp color={catMeta.accent} />
+        </span>
+      );
+    }
+    return catMeta.icon;
+  })();
+
+  useEffect(() => {
+    const el = descRef.current;
+    if (el) {
+      setClamped(el.scrollHeight > el.clientHeight);
+    }
+  }, [project.description]);
+
+  return (
+    <div
+      className="group relative flex items-stretch gap-4 rounded-xl border border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all cursor-pointer p-4"
+      onClick={() => onSelectProject(project)}
+    >
+      {/* Category icon */}
+      <div
+        className={`shrink-0 w-12 h-12 rounded-xl ${catMeta.bg} flex items-center justify-center mt-0.5`}
+        style={{ color: catMeta.accent }}
+      >
+        {categoryIcon}
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 min-w-0">
+        {/* Title row */}
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <h3 className="text-base font-semibold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">
+            {project.title}
+          </h3>
+          {slotsFilled && !proposal && (
+            <Badge className="text-[10px] px-1.5 py-0 bg-gray-500/15 text-gray-500 border-gray-400/20">
+              Full
+            </Badge>
+          )}
+        </div>
+
+        {/* Price & Deadline */}
+        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+          <span className="inline-flex items-center gap-1 text-xs">
+            <span className="text-muted-foreground">Price:</span>
+            <span className="font-semibold text-muted-foreground">
+              ${project.budget.toFixed(2)}
+            </span>
+          </span>
+          <span className="text-muted-foreground/30 text-xs">·</span>
+          <span className="inline-flex items-center gap-1 text-xs">
+            <span className="text-muted-foreground">Estimation Deadline:</span>
+            <span className="font-medium text-muted-foreground">
+              {formatDate(project.deadline)}
+            </span>
+          </span>
+        </div>
+
+        {/* Description */}
+        <div className="mb-4">
+          <p
+            ref={descRef}
+            className={`text-sm text-muted-foreground leading-relaxed ${expanded ? "" : "line-clamp-3"}`}
+          >
+            {project.description}
+          </p>
+          {(clamped || expanded) && (
+            <button
+              type="button"
+              className="text-sm text-cyan-600 dark:text-cyan-400 underline underline-offset-2 mt-0.5 hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded((v) => !v);
+              }}
+            >
+              {expanded ? "less" : "more"}
+            </button>
+          )}
+        </div>
+
+        {/* Meta chips */}
+        <div className="flex items-center gap-6 flex-wrap">
+          <span
+            className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md ${catMeta.bg}`}
+            style={{ color: catMeta.accent }}
+          >
+            {catMeta.icon && (
+              <span className="scale-75 origin-center">{catMeta.icon}</span>
+            )}
+            {project.category}
+          </span>
+
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Users className="w-3.5 h-3.5" />
+            {project.max_collectors}
+          </span>
+
+          {project.location?.address &&
+            (() => {
+              const parts = project.location.address
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              const city =
+                parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+              const country =
+                parts.length >= 2 ? parts[parts.length - 1] : null;
+              const label = country ? `${city}, ${country}` : city;
+              return (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  {label}
+                  {distance && (
+                    <span className="font-medium">({distance})</span>
+                  )}
+                </span>
+              );
+            })()}
+        </div>
+      </div>
+
+      {/* Right actions */}
+      <div
+        className="shrink-0 flex flex-col items-end justify-between gap-1 pl-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={() => onToggleSave(project.id)}
+          className="btn-gelatine text-muted-foreground hover:text-foreground transition-colors"
+          title={isSaved ? "Remove from saved" : "Save this project"}
+        >
+          {isSaved ? (
+            <Bookmark
+              className="w-6 h-6 text-cyan-600 dark:text-cyan-400"
+              fill="currentColor"
+            />
+          ) : (
+            <Bookmark className="w-6 h-6" />
+          )}
+        </button>
+
+        {proposal && (
+          <Badge
+            className={
+              proposal.status === "accepted"
+                ? "text-[10px] px-2 py-0.5 bg-green-500/15 text-green-600 border-green-500/25 flex items-center gap-1"
+                : proposal.status === "rejected"
+                  ? "text-[10px] px-2 py-0.5 bg-red-500/15 text-red-500 border-red-500/25 flex items-center gap-1"
+                  : "text-[10px] px-2 py-0.5 bg-yellow-500/15 text-yellow-600 border-yellow-500/25 flex items-center gap-1"
+            }
+          >
+            {proposal.status === "accepted" ? (
+              <CheckCircle2 className="w-3 h-3" />
+            ) : proposal.status === "rejected" ? (
+              <XCircle className="w-3 h-3" />
+            ) : (
+              <Clock className="w-3 h-3" />
+            )}
+            {proposal.status === "accepted"
+              ? "Accepted"
+              : proposal.status === "rejected"
+                ? "Rejected"
+                : "Pending"}
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function ProjectList({
@@ -101,6 +479,14 @@ function ProjectList({
   onViewAll,
   formatDate,
 }: ProjectListProps) {
+  const [visibleCount, setVisibleCount] = useState(
+    activeTab === "recent" ? 5 : 8,
+  );
+
+  useEffect(() => {
+    setVisibleCount(activeTab === "recent" ? 5 : 8);
+  }, [activeTab]);
+
   if (projects.length === 0) {
     return (
       <div className="text-center py-10">
@@ -128,8 +514,8 @@ function ProjectList({
   }
 
   return (
-    <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
-      {projects.slice(0, 8).map((project) => {
+    <div className="space-y-4 pr-6">
+      {projects.slice(0, visibleCount).map((project) => {
         const rawKm = getRawDistanceKm(project);
         const distance = rawKm !== null ? formatDistance(rawKm) : null;
         const proposal = proposalStatuses[project.id];
@@ -137,126 +523,49 @@ function ProjectList({
           (assignmentCounts[project.id] || 0) >= (project.max_collectors || 1);
         const isSaved = savedProjectIds.includes(project.id);
 
-        return (
-          <div
-            key={project.id}
-            className="py-4 first:pt-0 last:pb-0 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 -mx-4 px-4 transition-colors cursor-pointer rounded-lg"
-            onClick={() => onSelectProject(project)}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <h3 className="text-sm font-semibold text-foreground hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors truncate">
-                    {project.title}
-                  </h3>
-                  <Badge
-                    className={`text-[9px] px-1.5 py-0 ${getCategoryColor(project.category)}`}
-                  >
-                    {project.category}
-                  </Badge>
-                  {proposal && (
-                    <Badge
-                      className={
-                        proposal.status === "accepted"
-                          ? "bg-green-500/20 text-green-600 border-green-500/30 text-[9px] px-1.5 py-0"
-                          : proposal.status === "rejected"
-                            ? "bg-red-500/20 text-red-600 border-red-500/30 text-[9px] px-1.5 py-0"
-                            : "bg-yellow-500/20 text-yellow-600 border-yellow-500/30 text-[9px] px-1.5 py-0"
-                      }
-                    >
-                      {proposal.status === "accepted"
-                        ? "Accepted"
-                        : proposal.status === "rejected"
-                          ? "Rejected"
-                          : "Pending"}
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground line-clamp-2 mb-2 leading-relaxed">
-                  {project.description}
-                </p>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                  {distance && (
-                    <div className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400 font-medium">
-                      <MapPin className="w-3 h-3" />
-                      <span>{distance}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <DollarSign className="w-3 h-3 text-emerald-500" />
-                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      ${project.budget.toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    <span>{formatDate(project.deadline)}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Users className="w-3 h-3" />
-                    <span>
-                      {project.max_collectors} collector
-                      {project.max_collectors !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  {project.location?.address && !distance && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      <span className="truncate max-w-[150px]">
-                        {project.location.address}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+        const catMeta =
+          (project.category && CATEGORY_META[project.category]) ||
+          DEFAULT_CATEGORY_META;
 
-              <div
-                className="shrink-0 flex flex-col items-end gap-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  onClick={() => onToggleSave(project.id)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  title={isSaved ? "Remove from saved" : "Save this project"}
-                >
-                  {isSaved ? (
-                    <BookmarkCheck className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-                  ) : (
-                    <Bookmark className="w-4 h-4" />
-                  )}
-                </button>
-                {proposal ? (
-                  <p className="text-[10px] text-muted-foreground text-right leading-snug">
-                    Submitted
-                    <br />
-                    {new Date(proposal.submitted_at).toLocaleDateString()}
-                  </p>
-                ) : slotsFilled ? (
-                  <Badge
-                    variant="secondary"
-                    className="text-[10px] bg-gray-500/20 text-gray-400"
-                  >
-                    Slots Full
-                  </Badge>
-                ) : null}
-              </div>
-            </div>
-          </div>
+        return (
+          <ProjectCard
+            key={project.id}
+            project={project}
+            proposal={proposal}
+            slotsFilled={slotsFilled}
+            isSaved={isSaved}
+            distance={distance}
+            catMeta={catMeta}
+            onSelectProject={onSelectProject}
+            onToggleSave={onToggleSave}
+            formatDate={formatDate}
+          />
         );
       })}
 
-      {projects.length > 8 && (
-        <div className="pt-3 text-center">
-          <Button
-            variant="link"
-            className="text-xs text-cyan-600 dark:text-cyan-400"
-            onClick={onViewAll}
-          >
-            View all {projects.length} projects →
-          </Button>
-        </div>
-      )}
+      {activeTab === "recent"
+        ? projects.length > visibleCount && (
+            <div className="pt-3 text-center">
+              <Button
+                variant="link"
+                className="btn-gelatine text-xs text-cyan-600 dark:text-cyan-400"
+                onClick={() => setVisibleCount((v) => v + 5)}
+              >
+                View more ({Math.min(5, projects.length - visibleCount)} more)
+              </Button>
+            </div>
+          )
+        : projects.length > visibleCount && (
+            <div className="pt-3 text-center">
+              <Button
+                variant="link"
+                className="text-xs text-cyan-600 dark:text-cyan-400"
+                onClick={onViewAll}
+              >
+                View all {projects.length} projects →
+              </Button>
+            </div>
+          )}
     </div>
   );
 }
@@ -280,6 +589,7 @@ export default function CollectorDashboard() {
     "best",
   );
   const [savedProjectIds, setSavedProjectIds] = useState<string[]>([]);
+  const skipSaveWrite = useRef(true);
 
   const collectorLat = profile?.location?.lat;
   const collectorLng = profile?.location?.lng;
@@ -289,7 +599,11 @@ export default function CollectorDashboard() {
   const userId = user?.id;
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setSavedProjectIds([]);
+      return;
+    }
+    skipSaveWrite.current = true;
     const saved = localStorage.getItem(`collector-saved-projects-${userId}`);
     if (saved) {
       try {
@@ -299,14 +613,16 @@ export default function CollectorDashboard() {
             parsed.filter((id): id is string => typeof id === "string"),
           );
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
   }, [userId]);
 
   useEffect(() => {
     if (!userId) return;
+    if (skipSaveWrite.current) {
+      skipSaveWrite.current = false;
+      return;
+    }
     localStorage.setItem(
       `collector-saved-projects-${userId}`,
       JSON.stringify(savedProjectIds),
@@ -473,10 +789,167 @@ export default function CollectorDashboard() {
     : false;
   const showBestMatchesExtras = activeTab === "best";
 
+  const jobPins = useMemo<MapJobPin[]>(() => {
+    if (!showBestMatchesExtras || !hasLocation) return [];
+    return tabProjects
+      .filter(
+        (p) =>
+          typeof p.location?.lat === "number" &&
+          typeof p.location?.lng === "number",
+      )
+      .map((p) => {
+        const svgPool =
+          p.category === "Photography"
+            ? PHOTOGRAPHY_SVGS
+            : p.category === "Video"
+              ? VIDEO_SVGS
+              : p.category === "Audio"
+                ? AUDIO_SVGS
+                : p.category === "Text"
+                  ? TEXT_SVGS
+                  : p.category === "Survey"
+                    ? SURVEY_SVGS
+                    : p.category === "Location Data"
+                      ? LOCATION_SVGS
+                      : p.category === "Sensor Data"
+                        ? SENSOR_SVGS
+                        : OTHER_SVGS;
+        const idx = getProjectIconIndex(p.id, svgPool.length);
+        const SvgComp = svgPool[idx] as React.ComponentType<{ color: string }>;
+        const rawSvg = renderToStaticMarkup(<SvgComp color="white" />);
+        const iconSvg = rawSvg.replace(/^<svg/, '<svg width="26" height="26"');
+        return {
+          id: p.id,
+          lat: p.location!.lat!,
+          lng: p.location!.lng!,
+          title: p.title,
+          budget: p.budget,
+          category: p.category,
+          iconSvg,
+        };
+      });
+  }, [tabProjects, showBestMatchesExtras, hasLocation]);
+
+  const handleSelectPin = useCallback(
+    (id: string) => {
+      const project = tabProjects.find((p) => p.id === id);
+      if (project) setSelectedProject(project);
+    },
+    [tabProjects],
+  );
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="flex flex-col lg:flex-row gap-4 pt-2">
+        {/* ── Left panel skeleton ── */}
+        <aside className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-4">
+          {/* User info card skeleton */}
+          <Card className="dark:bg-gray-800/50 border-none shadow-sm">
+            <CardContent className="px-6">
+              <div className="flex flex-col items-start gap-3">
+                <div className="flex gap-4">
+                  <Skeleton className="w-20 h-20 rounded-full shrink-0" />
+                  <div className="flex flex-col gap-2 justify-center">
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-16 rounded-full" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <div className="w-full pt-2 space-y-2">
+                  <div className="flex justify-between">
+                    <Skeleton className="h-3 w-28" />
+                    <Skeleton className="h-3 w-8" />
+                  </div>
+                  <Skeleton className="h-1.5 w-full rounded-full" />
+                  <Skeleton className="h-3 w-36" />
+                </div>
+                <Skeleton className="h-10 w-full rounded-xl mt-1" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-4/5" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Balance card skeleton */}
+          <Card className="dark:bg-gray-800/50 border-none shadow-sm">
+            <CardContent className="px-6">
+              <Skeleton className="h-3 w-32 mb-3" />
+              <Skeleton className="h-7 w-24 mb-1.5" />
+              <Skeleton className="h-3 w-36 mb-4" />
+              <Skeleton className="h-10 w-full rounded-xl" />
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions card skeleton */}
+          <Card className="dark:bg-gray-800/50 border-none shadow-sm">
+            <CardContent className="px-6">
+              <Skeleton className="h-3 w-28 mb-4" />
+              <div className="flex flex-col gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-2 py-1.5">
+                    <Skeleton className="w-4 h-4 rounded" />
+                    <Skeleton className="h-3 flex-1" />
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </aside>
+
+        {/* ── Right panel skeleton ── */}
+        <section className="flex-1 min-w-0 flex flex-col gap-4">
+          <Card className="dark:bg-gray-800/50 border-none shadow-sm pt-2">
+            <CardHeader className="px-6 pt-4 pb-0">
+              <Skeleton className="h-6 w-36" />
+            </CardHeader>
+            <CardContent className="py-0 px-0">
+              {/* Tab + filter bar skeleton */}
+              <div className="flex items-center justify-between px-6 py-3">
+                <div className="flex items-center gap-5">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-20" />
+                </div>
+                <Skeleton className="h-7 w-32 rounded-md" />
+              </div>
+
+              {/* Project cards skeleton */}
+              <div className="space-y-4 px-6 pb-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-stretch gap-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4"
+                  >
+                    {/* Category icon */}
+                    <Skeleton className="shrink-0 w-12 h-12 rounded-xl mt-0.5" />
+
+                    {/* Main content */}
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <Skeleton className="h-4 w-3/5" />
+                      <div className="flex gap-3">
+                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-3 w-36" />
+                      </div>
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-5/6" />
+                      <Skeleton className="h-3 w-2/3" />
+                      <div className="flex items-center gap-4 pt-1">
+                        <Skeleton className="h-5 w-20 rounded-md" />
+                        <Skeleton className="h-3 w-10" />
+                        <Skeleton className="h-3 w-28" />
+                      </div>
+                    </div>
+
+                    {/* Right actions */}
+                    <div className="shrink-0 flex flex-col items-end justify-between gap-1 pl-1">
+                      <Skeleton className="w-6 h-6 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
       </div>
     );
   }
@@ -515,7 +988,7 @@ export default function CollectorDashboard() {
                   {profile?.location?.address ? (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <MapPin className="w-4 h-4 shrink-0" />
-                      <span className="truncate text-sm w-32">
+                      <span className="truncate text-sm w-24 md:w-32">
                         {[profile.location.city, profile.location.country]
                           .filter(Boolean)
                           .join(", ") || profile.location.address}
@@ -604,7 +1077,7 @@ export default function CollectorDashboard() {
         <Card className="dark:bg-gray-800/50 border-none shadow-sm">
           <CardContent className="px-6">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold text-muted-foreground">
+              <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Available Balance
               </span>
             </div>
@@ -625,6 +1098,49 @@ export default function CollectorDashboard() {
             >
               View Transactions
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Quick Actions card */}
+        <Card className="dark:bg-gray-800/50 border-none shadow-sm">
+          <CardContent className="px-6">
+            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              Quick Actions
+            </p>
+            <div className="flex flex-col gap-2">
+              {[
+                {
+                  icon: LifeBuoy,
+                  label: "Help Center",
+                  href: "/help",
+                },
+                {
+                  icon: BookOpen,
+                  label: "Collector Guide",
+                  href: "/docs/collector",
+                },
+                {
+                  icon: MessageSquare,
+                  label: "Contact Support",
+                  href: "/support",
+                },
+                {
+                  icon: Settings,
+                  label: "Account Settings",
+                  href: "/dashboard/settings",
+                },
+              ].map(({ icon: Icon, label, href }) => (
+                <Link
+                  key={label}
+                  href={href}
+                  className="flex items-center gap-3 px-2 py-2 rounded-lg text-sm text-foreground hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group"
+                >
+                  <Icon className={`w-4 h-4 shrink-0`} />
+                  <span className="flex-1 font-medium">{label}</span>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                </Link>
+              ))}
+            </div>
           </CardContent>
         </Card>
       </aside>
@@ -658,9 +1174,14 @@ export default function CollectorDashboard() {
         )}
 
         {/* Tabs + filter bar */}
-        <Card className="dark:bg-gray-800/50 border-none shadow-sm">
+        <Card className="dark:bg-gray-800/50 border-none shadow-sm pt-2">
+          <CardHeader className="px-6 pt-4 pb-0">
+            <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
+              Jobs for You
+            </CardTitle>
+          </CardHeader>
           <CardContent className="py-0 px-0">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between px-6 py-3">
               {/* Tab buttons */}
               <div className="flex items-center gap-5 text-sm">
                 <button
@@ -696,7 +1217,7 @@ export default function CollectorDashboard() {
                 >
                   Saved Jobs
                   {savedProjects.length > 0 && (
-                    <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-[9px] font-bold">
+                    <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs font-semibold">
                       {savedProjects.length}
                     </span>
                   )}
@@ -710,15 +1231,15 @@ export default function CollectorDashboard() {
                     value={String(maxDistance)}
                     onValueChange={(val) => setMaxDistance(Number(val))}
                   >
-                    <SelectTrigger className="h-7 w-[130px] text-xs">
+                    <SelectTrigger className="h-7 w-[130px] text-xs bg-white dark:bg-gray-800 border dark:border-none shadow-none">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-white dark:bg-gray-800 border dark:border-none shadow-none">
                       {distanceOptions.map((opt) => (
                         <SelectItem
                           key={opt.value}
                           value={opt.value}
-                          className="text-xs"
+                          className="text-xs hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer"
                         >
                           {opt.label}
                         </SelectItem>
@@ -726,63 +1247,53 @@ export default function CollectorDashboard() {
                     </SelectContent>
                   </Select>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => router.push("/dashboard/projects/find")}
-                >
-                  View All
-                  <ExternalLink className="w-3 h-3 ml-1" />
-                </Button>
               </div>
             </div>
 
-            {/* Tab subtitle */}
-            {showBestMatchesExtras && (
-              <div className="px-4 py-2 text-xs text-muted-foreground border-b border-gray-100 dark:border-gray-700">
-                {hasLocation ? (
-                  maxDistance > 0 ? (
-                    <>
-                      <span className="font-medium text-foreground">
-                        {nearbyProjects.length}
-                      </span>{" "}
-                      project{nearbyProjects.length !== 1 ? "s" : ""} within{" "}
-                      {maxDistance} km of your location
-                    </>
-                  ) : (
-                    <>
-                      <span className="font-medium text-foreground">
-                        {nearbyProjects.length}
-                      </span>{" "}
-                      open projects sorted by distance
-                    </>
-                  )
-                ) : (
-                  <>
-                    <span className="font-medium text-foreground">
-                      {nearbyProjects.length}
-                    </span>{" "}
-                    open projects available
-                  </>
-                )}
-              </div>
-            )}
-
             {/* Best Matches: two-column layout (map left, jobs right) */}
             {showBestMatchesExtras && hasLocation ? (
-              <div className="flex min-h-[480px]">
-                {/* Left: Map */}
-                <div className="w-2/5 shrink-0 border-r border-gray-100 dark:border-gray-700 sticky top-0 self-start">
-                  <LocationMapPreview
-                    lat={collectorLat!}
-                    lng={collectorLng!}
-                    radiusKm={maxDistance > 0 ? maxDistance : 0}
-                  />
+              <div className="flex h-[calc(100vh-280px)] overflow-hidden">
+                {/* Left: Map panel */}
+                <div className="w-2/5 pl-6 pt-3">
+                  <div className="rounded-xl overflow-hidden">
+                    <LocationMapPreview
+                      lat={collectorLat!}
+                      lng={collectorLng!}
+                      radiusKm={maxDistance > 0 ? maxDistance : 0}
+                      jobPins={jobPins}
+                      onSelectPin={handleSelectPin}
+                    />
+                  </div>
                 </div>
 
-                {/* Right: Jobs list */}
-                <div className="flex-1 overflow-y-auto max-h-[560px] px-4 py-3">
+                {/* Right: Jobs list panel */}
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="pl-4 py-3">
+                      <ProjectList
+                        projects={tabProjects}
+                        activeTab={activeTab}
+                        maxDistance={maxDistance}
+                        proposalStatuses={proposalStatuses}
+                        assignmentCounts={assignmentCounts}
+                        savedProjectIds={savedProjectIds}
+                        getRawDistanceKm={getRawDistanceKm}
+                        onSelectProject={setSelectedProject}
+                        onToggleSave={toggleSaveProject}
+                        onSetMaxDistance={setMaxDistance}
+                        onViewAll={() =>
+                          router.push("/dashboard/projects/find")
+                        }
+                        formatDate={formatDate}
+                      />
+                    </div>
+                  </ScrollArea>
+                </div>
+              </div>
+            ) : (
+              /* Recent / Saved / Best without location: single column */
+              <ScrollArea className="h-[calc(100vh-280px)]">
+                <div className="pl-6 pt-3">
                   <ProjectList
                     projects={tabProjects}
                     activeTab={activeTab}
@@ -798,25 +1309,7 @@ export default function CollectorDashboard() {
                     formatDate={formatDate}
                   />
                 </div>
-              </div>
-            ) : (
-              /* Recent / Saved / Best without location: single column */
-              <div className="px-4 py-3">
-                <ProjectList
-                  projects={tabProjects}
-                  activeTab={activeTab}
-                  maxDistance={maxDistance}
-                  proposalStatuses={proposalStatuses}
-                  assignmentCounts={assignmentCounts}
-                  savedProjectIds={savedProjectIds}
-                  getRawDistanceKm={getRawDistanceKm}
-                  onSelectProject={setSelectedProject}
-                  onToggleSave={toggleSaveProject}
-                  onSetMaxDistance={setMaxDistance}
-                  onViewAll={() => router.push("/dashboard/projects/find")}
-                  formatDate={formatDate}
-                />
-              </div>
+              </ScrollArea>
             )}
           </CardContent>
         </Card>

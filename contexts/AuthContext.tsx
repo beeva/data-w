@@ -4,12 +4,26 @@ import { createContext, useContext, useEffect, useState, useMemo, useCallback, u
 import { User, type AuthChangeEvent, type Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
 import { getProfileById } from '@/lib/services/profileService'
-import type { UserProfile } from '@/types/user'
+import type { UserProfile, UserRole } from '@/types/user'
+
+const ROLE_CACHE_KEY = 'dw_user_role'
+
+function getCachedRole(): UserRole | null {
+  if (typeof window === 'undefined') return null
+  return (localStorage.getItem(ROLE_CACHE_KEY) as UserRole) || null
+}
+
+function persistRole(role: UserRole | null) {
+  if (typeof window === 'undefined') return
+  if (role) localStorage.setItem(ROLE_CACHE_KEY, role)
+  else localStorage.removeItem(ROLE_CACHE_KEY)
+}
 
 interface AuthContextType {
   user: User | null
   profile: UserProfile | null
   loading: boolean
+  cachedRole: UserRole | null
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -18,6 +32,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  cachedRole: null,
   signOut: async () => {},
   refreshProfile: async () => {},
 })
@@ -26,7 +41,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [cachedRole, setCachedRole] = useState<UserRole | null>(null)
   const lastUserIdRef = useRef<string | null>(null)
+
+  // Read role from localStorage only on the client after hydration to avoid SSR mismatch
+  useEffect(() => {
+    const role = getCachedRole()
+    if (role) setCachedRole(role)
+  }, [])
   
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -101,9 +123,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           lastUserIdRef.current = session?.user?.id ?? null
           if (session?.user) {
             const userProfile = await fetchProfile(session.user.id)
-            if (isMounted) setProfile(userProfile)
+            if (isMounted) {
+              setProfile(userProfile)
+              const role = userProfile?.role ?? null
+              setCachedRole(role)
+              persistRole(role)
+            }
           } else {
             setProfile(null)
+            setCachedRole(null)
+            persistRole(null)
           }
           setLoading(false)
         }
@@ -136,6 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!nextUserId) {
         setProfile(null)
+        setCachedRole(null)
+        persistRole(null)
         return
       }
 
@@ -147,7 +178,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       Promise.resolve().then(async () => {
         if (!isMounted) return
         const userProfile = await fetchProfile(nextUserId)
-        if (isMounted) setProfile(userProfile)
+        if (isMounted) {
+          setProfile(userProfile)
+          const role = userProfile?.role ?? null
+          setCachedRole(role)
+          persistRole(role)
+        }
       })
     })
     
@@ -218,6 +254,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       const userProfile = await fetchProfile(user.id)
       setProfile(userProfile)
+      const role = userProfile?.role ?? null
+      setCachedRole(role)
+      persistRole(role)
     }
   }, [user, fetchProfile])
 
@@ -225,15 +264,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut()
     setUser(null)
     setProfile(null)
+    setCachedRole(null)
+    persistRole(null)
   }, [])
 
   const value = useMemo(() => ({
     user,
     profile,
     loading,
+    cachedRole,
     signOut,
     refreshProfile
-  }), [user, profile, loading, signOut, refreshProfile])
+  }), [user, profile, loading, cachedRole, signOut, refreshProfile])
 
   return (
     <AuthContext.Provider value={value}>

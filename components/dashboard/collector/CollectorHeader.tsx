@@ -65,6 +65,7 @@ export default function CollectorHeader() {
   const pathname = usePathname();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [notifTab, setNotifTab] = useState<"activity" | "messages">("activity");
   const [mounted, setMounted] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
@@ -205,9 +206,10 @@ export default function CollectorHeader() {
   const toggleNotifications = async () => {
     const next = !showNotifications;
     setShowNotifications(next);
+    if (!next) setNotifTab("activity");
     if (next && user) {
       setLoadingNotifications(true);
-      const { data } = await getNotifications(20);
+      const { data } = await getNotifications(5);
       setNotifications(data || []);
       await markAllNotificationsAsRead();
       setUnreadCount(0);
@@ -215,16 +217,24 @@ export default function CollectorHeader() {
     }
   };
 
+  const getNotifIconBg = (type?: string) => {
+    if (type?.includes("rejected"))
+      return "bg-red-50 dark:bg-red-900/20 ring-red-100 dark:ring-red-800/40";
+    if (type?.includes("accepted"))
+      return "bg-green-50 dark:bg-green-900/20 ring-green-100 dark:ring-green-800/40";
+    return "bg-cyan-50 dark:bg-cyan-900/20 ring-cyan-100 dark:ring-cyan-800/40";
+  };
+
   const getNotifIcon = (type?: string) => {
     if (type?.includes("rejected"))
-      return <XCircle className="w-3.5 h-3.5 text-red-500 mt-0.5 shrink-0" />;
+      return <XCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />;
     if (type?.includes("accepted"))
       return (
-        <CheckCircle2 className="w-3.5 h-3.5 text-green-500 mt-0.5 shrink-0" />
+        <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
       );
     if (type?.includes("system"))
-      return <Key className="w-3.5 h-3.5 text-cyan-500 shrink-0" />;
-    return <Info className="w-3.5 h-3.5 text-cyan-500 shrink-0" />;
+      return <Key className="w-4 h-4 text-cyan-500 shrink-0" />;
+    return <Info className="w-4 h-4 text-cyan-500 shrink-0" />;
   };
 
   const displayName =
@@ -245,10 +255,10 @@ export default function CollectorHeader() {
 
   const navButtonClass = (active: boolean) =>
     cn(
-      "flex items-center gap-2 px-3.5 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 outline-none",
+      "btn-gelatine flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all duration-150 outline-none",
       active
         ? "text-cyan-600 dark:text-cyan-400 bg-white dark:bg-transparent"
-        : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100/80 dark:hover:bg-gray-700/50",
+        : "text-gray-600 dark:text-gray-300",
     );
 
   return (
@@ -296,24 +306,27 @@ export default function CollectorHeader() {
                   <ChevronDown className="w-3.5 h-3.5 opacity-60" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-44">
+              <DropdownMenuContent
+                align="start"
+                className="w-44 space-y-2 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800"
+              >
                 <DropdownMenuItem
                   onClick={() => router.push("/dashboard/projects/find")}
-                  className="gap-2.5 cursor-pointer"
+                  className="gap-2.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
                 >
                   <Briefcase className="w-3.5 h-3.5 text-cyan-500" />
                   Find Work
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push("/dashboard/home")}
-                  className="gap-2.5 cursor-pointer"
+                  className="gap-2.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
                 >
                   <Bookmark className="w-3.5 h-3.5 text-cyan-500" />
                   Saved Jobs
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push("/dashboard/home")}
-                  className="gap-2.5 cursor-pointer"
+                  className="gap-2.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
                 >
                   <FileText className="w-3.5 h-3.5 text-cyan-500" />
                   Proposals
@@ -329,17 +342,20 @@ export default function CollectorHeader() {
                   <ChevronDown className="w-3.5 h-3.5 opacity-60" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48">
+              <DropdownMenuContent
+                align="start"
+                className="w-56 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 space-y-2"
+              >
                 <DropdownMenuItem
                   onClick={() => router.push("/dashboard/billing")}
-                  className="gap-2.5 cursor-pointer"
+                  className="gap-2.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
                 >
                   <CreditCard className="w-3.5 h-3.5 text-cyan-500" />
                   Billing &amp; Subscription
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push("/dashboard/wallet")}
-                  className="gap-2.5 cursor-pointer"
+                  className="gap-2.5 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
                 >
                   <ArrowLeftRight className="w-3.5 h-3.5 text-cyan-500" />
                   Transactions
@@ -605,30 +621,64 @@ export default function CollectorHeader() {
 
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] sm:w-80 max-w-80 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 z-40 overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-foreground">
-                      Notifications
-                    </span>
-                    {unreadCount === 0 && notifications.length > 0 && (
-                      <Badge
-                        variant="secondary"
-                        className="text-[9px] h-4 px-1.5 py-0"
+                {/* Header */}
+                <div className="px-4 pt-3 pb-0 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-foreground">
+                        Notifications
+                      </span>
+                      {unreadCount > 0 && (
+                        <Badge className="text-[9px] h-4 px-1.5 py-0 bg-cyan-500 text-white border-0">
+                          {unreadCount} new
+                        </Badge>
+                      )}
+                    </div>
+                    {loadingNotifications ? (
+                      <Skeleton className="h-3.5 w-16 rounded" />
+                    ) : notifications.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await markAllNotificationsAsRead();
+                          setUnreadCount(0);
+                          setNotifications((prev) =>
+                            prev.map((n) => ({ ...n, read: true })),
+                          );
+                        }}
+                        className="text-[11px] font-medium text-cyan-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors"
                       >
-                        All read
-                      </Badge>
-                    )}
+                        Mark all read
+                      </button>
+                    ) : null}
                   </div>
-                  {loadingNotifications ? (
-                    <Skeleton className="h-3.5 w-16 rounded" />
-                  ) : notifications.length > 0 ? (
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <CheckCheck className="w-3 h-3" />
-                      Marked as read
-                    </span>
-                  ) : null}
+
+                  {/* Tabs */}
+                  <div className="flex gap-0.5">
+                    {(["activity", "messages"] as const).map((tab) => {
+                      const label =
+                        tab === "activity" ? "Activity" : "Messages";
+                      const isActive = notifTab === tab;
+                      return (
+                        <button
+                          key={tab}
+                          type="button"
+                          onClick={() => setNotifTab(tab)}
+                          className={cn(
+                            "px-3.5 py-1.5 text-xs font-medium rounded-t-lg transition-all duration-150 relative",
+                            isActive
+                              ? "text-cyan-600 dark:text-cyan-400 bg-gray-50 dark:bg-gray-800 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-cyan-500 after:rounded-full"
+                              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200",
+                          )}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
+                {/* Content */}
                 <div className="max-h-[300px] overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/60">
                   {loadingNotifications ? (
                     <div className="divide-y divide-gray-50 dark:divide-gray-800/60">
@@ -643,50 +693,90 @@ export default function CollectorHeader() {
                         </div>
                       ))}
                     </div>
-                  ) : notifications.length === 0 ? (
-                    <div className="px-4 py-8 text-center">
-                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/30 dark:to-blue-900/20 border border-cyan-100 dark:border-cyan-800/40 flex items-center justify-center mx-auto mb-2">
-                        <Bell className="w-3.5 h-3.5 text-cyan-500" />
-                      </div>
-                      <p className="text-xs font-medium text-foreground/60">
-                        All caught up!
-                      </p>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        No notifications yet.
-                      </p>
-                    </div>
                   ) : (
-                    notifications.map((notif) => (
-                      <div
-                        key={notif.id}
-                        className={cn(
-                          "px-4 py-3 transition-colors",
-                          notif.read ? "" : "bg-cyan-50/60 dark:bg-cyan-900/10",
-                        )}
-                      >
-                        <div className="flex gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-cyan-50 flex items-center justify-center shrink-0">
-                            {getNotifIcon(notif.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground leading-tight">
-                              {notif.title || notif.type}
+                    (() => {
+                      const filtered =
+                        notifTab === "messages"
+                          ? notifications.filter(
+                              (n) =>
+                                n.type?.includes("message") ||
+                                n.type?.includes("chat"),
+                            )
+                          : notifications.filter(
+                              (n) =>
+                                !n.type?.includes("message") &&
+                                !n.type?.includes("chat"),
+                            );
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="px-4 py-8 text-center">
+                            <div className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-2">
+                              {notifTab === "messages" ? (
+                                <MessageSquare className="w-4 h-4 text-gray-400" />
+                              ) : (
+                                <Bell className="w-4 h-4 text-gray-400" />
+                              )}
+                            </div>
+                            <p className="text-xs font-medium text-foreground/60">
+                              {notifTab === "messages"
+                                ? "No message notifications"
+                                : "All caught up!"}
                             </p>
-                            {notif.body && (
-                              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                                {notif.body}
-                              </p>
-                            )}
-                            <p className="text-[11px] text-muted-foreground/60 mt-1">
-                              {new Date(notif.created_at).toLocaleString()}
+                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                              {notifTab === "messages"
+                                ? "New messages will appear here."
+                                : "No activity notifications yet."}
                             </p>
                           </div>
-                          {!notif.read && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1 shrink-0" />
+                        );
+                      }
+
+                      return filtered.map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={cn(
+                            "px-4 py-3 transition-colors",
+                            notif.read
+                              ? ""
+                              : "bg-cyan-50/60 dark:bg-cyan-900/10",
                           )}
+                        >
+                          <div className="flex gap-2.5">
+                            <div
+                              className={cn(
+                                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                                notifTab === "messages"
+                                  ? "bg-cyan-50 dark:bg-cyan-900/20 ring-cyan-100 dark:ring-cyan-800/40"
+                                  : getNotifIconBg(notif.type),
+                              )}
+                            >
+                              {notifTab === "messages" ? (
+                                <MessageSquare className="w-3.5 h-3.5 text-cyan-500" />
+                              ) : (
+                                getNotifIcon(notif.type)
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold text-foreground leading-tight">
+                                {notif.title || notif.type}
+                              </p>
+                              {notif.body && (
+                                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed line-clamp-2">
+                                  {notif.body}
+                                </p>
+                              )}
+                              <p className="text-[10px] text-muted-foreground/50 mt-1">
+                                {new Date(notif.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                            {!notif.read && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 mt-1 shrink-0" />
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ));
+                    })()
                   )}
                 </div>
 
@@ -698,9 +788,10 @@ export default function CollectorHeader() {
                         setShowNotifications(false);
                         router.push("/dashboard/notifications");
                       }}
-                      className="btn-gelatine flex items-center justify-center gap-1.5 w-full text-xs font-semibold py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-sm"
+                      className="btn-gelatine flex items-center justify-center gap-1.5 w-full text-xs font-semibold py-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all border border-gray-200 dark:border-gray-700"
                     >
                       View all notifications
+                      <span className="text-gray-400">→</span>
                     </button>
                   </div>
                 )}

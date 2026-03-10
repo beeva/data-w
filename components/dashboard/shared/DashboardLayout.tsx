@@ -14,18 +14,25 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { profile } = useAuth();
+  const { profile, cachedRole, loading } = useAuth();
+
+  // Use cachedRole (from localStorage) for immediate render; fall back to profile.role once loaded
+  const role = profile?.role ?? cachedRole;
+
+  // While role is unknown and auth is still loading, show a blank screen
+  // to prevent the wrong layout from flashing before the correct one is known
+  if (!role && loading) {
+    return <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900" />;
+  }
 
   // Collector layout: sticky top header with nav, no sidebar
-  if (profile?.role === "collector") {
+  if (role === "collector") {
     return (
       <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900">
-        <div className="sticky top-0 z-20 px-2 pt-2 md:px-4 md:pt-4 bg-[#F4F5FA] dark:bg-gray-900 pb-2 shadow-[0_2px_8px_0_rgba(0,0,0,0.03)]">
+        <div className="sticky top-0 z-20 px-2 pt-2 md:px-4 md:pt-4 bg-[#F4F5FA] dark:bg-gray-900 pb-2">
           <CollectorHeader />
         </div>
-        <main className="px-2 pb-4 md:px-4 md:pb-6">
-          {children}
-        </main>
+        <main className="px-2 pb-4 md:px-4 md:pb-6">{children}</main>
       </div>
     );
   }
