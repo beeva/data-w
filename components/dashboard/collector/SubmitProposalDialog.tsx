@@ -92,10 +92,9 @@ export default function SubmitProposalDialog({
     "Portuguese",
   ];
 
-
   const handleCheckboxChange = (
     field: "data_types" | "equipment" | "languages",
-    value: string
+    value: string,
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -140,11 +139,13 @@ export default function SubmitProposalDialog({
         },
         capabilities: {
           data_types: formData.data_types,
-          equipment: formData.equipment.length > 0 ? formData.equipment : undefined,
+          equipment:
+            formData.equipment.length > 0 ? formData.equipment : undefined,
           experience_years: formData.experience_years
             ? parseInt(formData.experience_years)
             : undefined,
-          languages: formData.languages.length > 0 ? formData.languages : undefined,
+          languages:
+            formData.languages.length > 0 ? formData.languages : undefined,
           availability: formData.availability || undefined,
           notes: formData.notes || undefined,
         },
@@ -154,7 +155,10 @@ export default function SubmitProposalDialog({
         message: formData.message || null,
       };
 
-      const { data, error: createError } = await createProposal(user.id, proposalData);
+      const { data, error: createError } = await createProposal(
+        user.id,
+        proposalData,
+      );
 
       if (createError) {
         throw createError;
@@ -187,7 +191,9 @@ export default function SubmitProposalDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className={`bg-primary text-primary-foreground hover:bg-primary/90 ${triggerClassName}`}>
+        <Button
+          className={`bg-primary text-primary-foreground hover:bg-primary/90 h-12 rounded-xl ${triggerClassName}`}
+        >
           Submit Proposal
           <Send className="w-4 h-4 ml-2" />
         </Button>
@@ -196,7 +202,8 @@ export default function SubmitProposalDialog({
         <DialogHeader>
           <DialogTitle>Submit Proposal for {project.title}</DialogTitle>
           <DialogDescription>
-            Provide your location, capabilities, and availability to apply for this project.
+            Provide your location, capabilities, and availability to apply for
+            this project.
           </DialogDescription>
         </DialogHeader>
 
@@ -254,7 +261,9 @@ export default function SubmitProposalDialog({
                 >
                   <Checkbox
                     checked={formData.data_types.includes(type)}
-                    onCheckedChange={() => handleCheckboxChange("data_types", type)}
+                    onCheckedChange={() =>
+                      handleCheckboxChange("data_types", type)
+                    }
                   />
                   <span className="text-sm">{type}</span>
                 </label>
@@ -273,7 +282,9 @@ export default function SubmitProposalDialog({
                 >
                   <Checkbox
                     checked={formData.equipment.includes(item)}
-                    onCheckedChange={() => handleCheckboxChange("equipment", item)}
+                    onCheckedChange={() =>
+                      handleCheckboxChange("equipment", item)
+                    }
                   />
                   <span className="text-sm">{item}</span>
                 </label>
@@ -290,7 +301,10 @@ export default function SubmitProposalDialog({
                 min="0"
                 value={formData.experience_years}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, experience_years: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    experience_years: e.target.value,
+                  }))
                 }
                 placeholder="e.g., 3"
               />
@@ -353,7 +367,10 @@ export default function SubmitProposalDialog({
               min="0"
               value={formData.proposed_budget}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, proposed_budget: e.target.value }))
+                setFormData((prev) => ({
+                  ...prev,
+                  proposed_budget: e.target.value,
+                }))
               }
               placeholder="Leave empty to accept project budget"
             />

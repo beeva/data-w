@@ -50,6 +50,59 @@ function TabsTrigger({
   )
 }
 
+/**
+ * Underline-style tab trigger — no pill background, just a bottom border indicator.
+ * Use alongside TabsUnderlineList for the sample-style tab bar.
+ */
+function TabsUnderlineTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+  return (
+    <TabsPrimitive.Trigger
+      data-slot="tabs-trigger"
+      className={cn(
+        // Reset all default pill styles
+        'relative inline-flex items-center justify-center gap-1.5 px-4 py-3',
+        'text-sm font-medium whitespace-nowrap',
+        'text-muted-foreground transition-colors',
+        // Bottom-border indicator
+        'border-b-2 border-transparent -mb-px',
+        'data-[state=active]:border-primary data-[state=active]:text-foreground',
+        // No background, no box-shadow, no rounded corners
+        'bg-transparent rounded-none shadow-none',
+        'data-[state=active]:bg-transparent data-[state=active]:shadow-none',
+        'dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-primary',
+        // Focus ring
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-1',
+        'disabled:pointer-events-none disabled:opacity-50',
+        '[&_svg]:pointer-events-none [&_svg]:shrink-0',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
+/**
+ * Underline-style tab list — full-width, no background pill, just a bottom border.
+ */
+function TabsUnderlineList({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.List>) {
+  return (
+    <TabsPrimitive.List
+      data-slot="tabs-list"
+      className={cn(
+        'flex w-full items-end border-b border-border bg-transparent px-5',
+        className,
+      )}
+      {...props}
+    />
+  )
+}
+
 function TabsContent({
   className,
   ...props
@@ -63,4 +116,4 @@ function TabsContent({
   )
 }
 
-export { Tabs, TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsUnderlineList, TabsUnderlineTrigger, TabsContent }
