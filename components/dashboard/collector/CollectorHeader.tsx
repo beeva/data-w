@@ -73,6 +73,7 @@ export default function CollectorHeader() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [realtimeToast, setRealtimeToast] = useState<{
+    title?: string;
     message: string;
     type: "success" | "error" | "info";
   } | null>(null);
@@ -157,6 +158,7 @@ export default function CollectorHeader() {
               ? "success"
               : "info";
           setRealtimeToast({
+            title: notif.title || "Notification",
             message: notif.body || notif.title || "New notification",
             type: toastType,
           });
@@ -265,6 +267,7 @@ export default function CollectorHeader() {
     <>
       {realtimeToast && (
         <ToastNotification
+          title={realtimeToast.title}
           message={realtimeToast.message}
           type={realtimeToast.type}
           duration={5000}

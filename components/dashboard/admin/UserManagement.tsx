@@ -70,7 +70,7 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{ title?: string; message: string; type: "success" | "error" } | null>(null);
 
   const userId = user?.id;
 
@@ -113,7 +113,7 @@ export default function UserManagement() {
 
   const handleRoleChange = async (targetUserId: string, newRole: UserRole) => {
     if (targetUserId === userId) {
-      setToast({ message: "You cannot change your own role", type: "error" });
+      setToast({ title: "Not allowed", message: "You cannot change your own role", type: "error" });
       return;
     }
 
@@ -129,10 +129,10 @@ export default function UserManagement() {
       setUsers((prev) =>
         prev.map((u) => (u.id === targetUserId ? { ...u, role: newRole } : u))
       );
-      setToast({ message: "Role updated successfully", type: "success" });
+      setToast({ title: "Role updated", message: "Role updated successfully", type: "success" });
     } catch (err: any) {
       console.error("Error updating role:", err);
-      setToast({ message: err.message || "Failed to update role", type: "error" });
+      setToast({ title: "Update failed", message: err.message || "Failed to update role", type: "error" });
     } finally {
       setUpdatingId(null);
     }
@@ -163,6 +163,7 @@ export default function UserManagement() {
     <>
       {toast && (
         <ToastNotification
+          title={toast.title}
           message={toast.message}
           type={toast.type}
           duration={3000}

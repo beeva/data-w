@@ -93,7 +93,7 @@ export default function AdminTickets() {
   const [replyText, setReplyText] = useState("");
   const [replyStatus, setReplyStatus] = useState<string>("no_change");
   const [replySubmitting, setReplySubmitting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{ title?: string; message: string; type: "success" | "error" } | null>(null);
 
   const fetchTickets = useCallback(async () => {
     if (!userId) { setLoading(false); return; }
@@ -161,11 +161,11 @@ export default function AdminTickets() {
         setSelectedTicket({ ...selectedTicket, status: replyStatus as TicketStatus });
       }
       setReplyStatus("no_change");
-      setToast({ message: "Reply sent", type: "success" });
+      setToast({ title: "Reply sent", message: "Reply sent", type: "success" });
       fetchReplies(selectedTicket.id);
       fetchTickets();
     } catch (err: any) {
-      setToast({ message: err.message || "Failed to send reply", type: "error" });
+      setToast({ title: "Send failed", message: err.message || "Failed to send reply", type: "error" });
     } finally {
       setReplySubmitting(false);
     }
@@ -181,10 +181,10 @@ export default function AdminTickets() {
       if (selectedTicket?.id === ticketId) {
         setSelectedTicket({ ...selectedTicket, status: newStatus as TicketStatus });
       }
-      setToast({ message: "Status updated", type: "success" });
+      setToast({ title: "Status updated", message: "Status updated", type: "success" });
       fetchTickets();
     } catch (err: any) {
-      setToast({ message: err.message || "Failed to update", type: "error" });
+      setToast({ title: "Update failed", message: err.message || "Failed to update", type: "error" });
     }
   };
 
@@ -208,7 +208,7 @@ export default function AdminTickets() {
     return (
       <>
         {toast && (
-          <ToastNotification message={toast.message} type={toast.type} duration={3000} onClose={() => setToast(null)} />
+          <ToastNotification title={toast.title} message={toast.message} type={toast.type} duration={3000} onClose={() => setToast(null)} />
         )}
         <div className="space-y-4 p-6">
           <button
@@ -342,7 +342,7 @@ export default function AdminTickets() {
   return (
     <>
       {toast && (
-        <ToastNotification message={toast.message} type={toast.type} duration={3000} onClose={() => setToast(null)} />
+        <ToastNotification title={toast.title} message={toast.message} type={toast.type} duration={3000} onClose={() => setToast(null)} />
       )}
 
       <div className="space-y-6 p-6">

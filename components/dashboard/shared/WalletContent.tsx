@@ -601,7 +601,7 @@ export default function WalletContent() {
           {/* Right sidebar skeleton */}
           <div className="space-y-4">
             {/* Category Breakdown */}
-            <Card>
+            <Card className="dark:bg-gray-800/50 border-none shadow-sm">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <Skeleton className="h-4 w-36" />
@@ -624,7 +624,7 @@ export default function WalletContent() {
             </Card>
 
             {/* AI Insight */}
-            <Card className="border-0 overflow-hidden">
+            <Card className="dark:bg-gray-800/50 border-none shadow-sm overflow-hidden">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <Skeleton className="w-4 h-4 rounded" />
@@ -1054,7 +1054,7 @@ export default function WalletContent() {
         {/* ── RIGHT sidebar ── */}
         <div className="space-y-6">
           {/* Category Breakdown */}
-          <Card>
+          <Card className="dark:bg-gray-800/50 border-none shadow-sm">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold">

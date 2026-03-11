@@ -1052,14 +1052,6 @@ export default function RequesterDashboard() {
                               dataKey="pct"
                               barSize={Math.min(32, BAR_INTERVAL_PX - 8)}
                               radius={[0, 8, 8, 0]}
-                              label={{
-                                position: "insideStart",
-                                offset: 8,
-                                dataKey: "name",
-                                fill: "#fff",
-                                fontSize: 12,
-                                fontWeight: 500,
-                              }}
                             >
                               {chartData.map((_, index) => (
                                 <Cell

@@ -161,7 +161,7 @@ export default function ProjectProposals({ projectId }: ProjectProposalsProps) {
         throw acceptError;
       }
 
-      setToast({ message: "Proposal accepted! Submission link generated.", type: "success" });
+      setToast({ title: "Proposal accepted", message: "Proposal accepted! Submission link generated.", type: "success" });
       setSelectedProposals((prev) => prev.filter((id) => id !== proposalId));
       await fetchData();
       
@@ -175,7 +175,7 @@ export default function ProjectProposals({ projectId }: ProjectProposalsProps) {
       }
     } catch (err: any) {
       setError(err.message || "Failed to accept proposal");
-      setToast({ message: err.message || "Failed to accept proposal", type: "error" });
+      setToast({ title: "Accept failed", message: err.message || "Failed to accept proposal", type: "error" });
     } finally {
       setProcessing(null);
     }
@@ -194,7 +194,7 @@ export default function ProjectProposals({ projectId }: ProjectProposalsProps) {
         throw rejectError;
       }
 
-      setToast({ message: "Proposal rejected.", type: "success" });
+      setToast({ title: "Proposal rejected", message: "Proposal rejected.", type: "success" });
       await fetchData();
       
       // Move to next proposal
@@ -209,7 +209,7 @@ export default function ProjectProposals({ projectId }: ProjectProposalsProps) {
       }
     } catch (err: any) {
       setError(err.message || "Failed to reject proposal");
-      setToast({ message: err.message || "Failed to reject proposal", type: "error" });
+      setToast({ title: "Reject failed", message: err.message || "Failed to reject proposal", type: "error" });
     } finally {
       setProcessing(null);
     }
@@ -230,12 +230,12 @@ export default function ProjectProposals({ projectId }: ProjectProposalsProps) {
         throw acceptError;
       }
 
-      setToast({ message: `Successfully assigned ${selectedProposals.length} collector(s)!`, type: "success" });
+      setToast({ title: "Collectors assigned", message: `Successfully assigned ${selectedProposals.length} collector(s)!`, type: "success" });
       setSelectedProposals([]);
       await fetchData();
     } catch (err: any) {
       setError(err.message || "Failed to accept proposals");
-      setToast({ message: err.message || "Failed to accept proposals", type: "error" });
+      setToast({ title: "Accept failed", message: err.message || "Failed to accept proposals", type: "error" });
     } finally {
       setAccepting(false);
     }
@@ -243,7 +243,7 @@ export default function ProjectProposals({ projectId }: ProjectProposalsProps) {
 
   const copySubmissionLink = (link: string) => {
     navigator.clipboard.writeText(link);
-    setToast({ message: "Submission link copied to clipboard!", type: "success" });
+    setToast({ title: "Link copied", message: "Submission link copied to clipboard!", type: "success" });
   };
 
   if (loading) {
@@ -288,6 +288,7 @@ export default function ProjectProposals({ projectId }: ProjectProposalsProps) {
     <>
       {toast && (
         <ToastNotification
+          title={toast.title}
           message={toast.message}
           type={toast.type}
           duration={5000}

@@ -135,7 +135,7 @@ export default function AgentDashboard() {
   const [loadingItems, setLoadingItems] = useState<string | null>(null);
   const [validatingId, setValidatingId] = useState<string | null>(null);
   const [aiResults, setAiResults] = useState<Record<string, AiValidationResult>>({});
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{ title?: string; message: string; type: "success" | "error" } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
 
@@ -204,7 +204,7 @@ export default function AgentDashboard() {
         files = (items as DataItemRow[]) || [];
         setItemsMap((prev) => ({ ...prev, [submissionId]: files }));
       } catch (err: any) {
-        setToast({ message: "Failed to load files for validation", type: "error" });
+        setToast({ title: "Load failed", message: "Failed to load files for validation", type: "error" });
         return;
       } finally {
         setLoadingItems(null);
@@ -212,7 +212,7 @@ export default function AgentDashboard() {
     }
 
     if (files.length === 0) {
-      setToast({ message: "No files to validate", type: "error" });
+      setToast({ title: "No files", message: "No files to validate", type: "error" });
       return;
     }
 
@@ -245,16 +245,16 @@ export default function AgentDashboard() {
       });
 
       if (result.has_ai_content) {
-        setToast({ message: "AI-generated content detected — submission auto-rejected", type: "error" });
+        setToast({ title: "AI content detected", message: "AI-generated content detected — submission auto-rejected", type: "error" });
       } else {
-        setToast({ message: "Validation passed — awaiting requester approval", type: "success" });
+        setToast({ title: "Validation passed", message: "Validation passed — awaiting requester approval", type: "success" });
       }
       fetchData();
 
       // Expand to show detail
       setExpandedId(submissionId);
     } catch (err: any) {
-      setToast({ message: err.message || "AI validation failed", type: "error" });
+      setToast({ title: "Validation failed", message: err.message || "AI validation failed", type: "error" });
     } finally {
       setValidatingId(null);
     }
@@ -311,7 +311,7 @@ export default function AgentDashboard() {
   return (
     <>
       {toast && (
-        <ToastNotification message={toast.message} type={toast.type} duration={3000} onClose={() => setToast(null)} />
+        <ToastNotification title={toast.title} message={toast.message} type={toast.type} duration={3000} onClose={() => setToast(null)} />
       )}
 
       <div className="space-y-4">

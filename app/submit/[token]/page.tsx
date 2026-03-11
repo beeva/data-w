@@ -515,6 +515,7 @@ export default function SubmitPage() {
   const handleSaveItemAccess = async (submissionId: string, item: DataItem) => {
     if (requiresCollectorFeedback) {
       setToast({
+        title: "Feedback required",
         message: "Please submit your feedback before updating access settings.",
         type: "error",
       });
@@ -524,6 +525,7 @@ export default function SubmitPage() {
     const priceValue = Number(draft.price);
     if (Number.isNaN(priceValue) || priceValue < 0) {
       setToast({
+        title: "Invalid price",
         message: "Please enter a valid non-negative price.",
         type: "error",
       });
@@ -550,11 +552,13 @@ export default function SubmitPage() {
         return next;
       });
       setToast({
+        title: "Access updated",
         message: "Access settings updated successfully.",
         type: "success",
       });
     } catch (err: any) {
       setToast({
+        title: "Update failed",
         message: err.message || "Failed to update access settings.",
         type: "error",
       });
@@ -566,11 +570,11 @@ export default function SubmitPage() {
   const handleSubmitCollectorFeedback = async () => {
     if (!project || !userId || !requesterFeedback) return;
     if (feedbackRating < 1 || feedbackRating > 5) {
-      setToast({ message: "Please select a star rating.", type: "error" });
+      setToast({ title: "Rating required", message: "Please select a star rating.", type: "error" });
       return;
     }
     if (!feedbackText.trim()) {
-      setToast({ message: "Please write your feedback.", type: "error" });
+      setToast({ title: "Feedback required", message: "Please write your feedback.", type: "error" });
       return;
     }
     try {
@@ -587,11 +591,13 @@ export default function SubmitPage() {
         throw new Error(feedbackError?.message || "Failed to submit feedback");
       setCollectorFeedback(data);
       setToast({
+        title: "Feedback sent",
         message: "Your feedback has been sent to the requester.",
         type: "success",
       });
     } catch (err: any) {
       setToast({
+        title: "Submit failed",
         message: err.message || "Failed to submit feedback.",
         type: "error",
       });
@@ -690,6 +696,7 @@ export default function SubmitPage() {
     <DashboardLayout>
       {toast && (
         <ToastNotification
+          title={toast.title}
           message={toast.message}
           type={toast.type}
           duration={5000}

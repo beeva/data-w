@@ -24,6 +24,7 @@ import { getAssignmentsByCollector } from "@/lib/services/proposalService";
 import { getProjectsByRequester } from "@/lib/services/projectService";
 import type { CollectorAssignment } from "@/types/proposal";
 import type { Project } from "@/types/project";
+import CreateProjectDialog from "@/components/dashboard/requester/CreateProjectDialog";
 
 interface DashboardSidebarProps {
   collapsed?: boolean;
@@ -45,6 +46,7 @@ export default function DashboardSidebar({
   const [requesterProjects, setRequesterProjects] = useState<Project[]>([]);
   const [projectsExpanded, setProjectsExpanded] = useState(true);
   const [loadingProjects, setLoadingProjects] = useState(false);
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
   const filterSubmenuByRole = (submenu: SubMenuItem[]) => {
     return submenu.filter((subItem) => {
@@ -311,14 +313,14 @@ export default function DashboardSidebar({
                           })}
 
                           {!isCollector && (
-                            <Link
-                              href="/dashboard/projects/new"
-                              onClick={onNavigate}
-                              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-800/60 transition-all"
+                            <button
+                              type="button"
+                              onClick={() => setCreateProjectOpen(true)}
+                              className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100/80 dark:hover:bg-gray-800/60 transition-all w-full text-left"
                             >
                               <Plus className="w-4 h-4 flex-shrink-0" />
                               <span>New Project</span>
-                            </Link>
+                            </button>
                           )}
                         </>
                       )}
@@ -522,6 +524,18 @@ export default function DashboardSidebar({
           })}
         </div>
       </nav>
+
+      <CreateProjectDialog
+        open={createProjectOpen}
+        onOpenChange={setCreateProjectOpen}
+        onSuccess={() => {
+          if (userId && (userRole === "requester" || userRole === "admin")) {
+            getProjectsByRequester(userId).then(({ data, error }) => {
+              if (!error && data) setRequesterProjects(data);
+            });
+          }
+        }}
+      />
 
       {/* Upgrade to Pro */}
       <div className={cn("px-4 pb-4 flex-shrink-0", collapsed && "px-2")}>

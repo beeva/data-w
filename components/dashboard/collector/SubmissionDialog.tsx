@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 
 export interface SubmissionToast {
+  title?: string;
   message: string;
   type: "success" | "error";
 }

@@ -355,6 +355,7 @@ export default function AccountSettings() {
     <>
       {passwordToast && (
         <ToastNotification
+          title="Password changed"
           message="Password changed successfully. Signing out..."
           type="success"
           duration={2500}

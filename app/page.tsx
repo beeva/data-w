@@ -19,9 +19,8 @@ function HomeContent() {
   useEffect(() => {
     const toast = searchParams.get("toast");
     if (toast === "signout-success") {
-      setToastMessage("Signed out successfully");
+      setToastMessage("You have been signed out successfully.");
       setShowToast(true);
-
       router.replace("/");
     }
   }, [searchParams, router]);
@@ -32,6 +31,7 @@ function HomeContent() {
     <main className="min-h-screen bg-[#0f172a] overflow-x-hidden">
       {showToast && toastMessage && (
         <ToastNotification
+          title="Signed out"
           message={toastMessage}
           type="success"
           duration={5000}

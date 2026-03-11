@@ -21,7 +21,7 @@ export default function Dashboard() {
   useEffect(() => {
     const toast = searchParams.get("toast");
     if (toast === "signin-success") {
-      setToastMessage("Signed in successfully");
+      setToastMessage("You have been signed in successfully.");
       setShowToast(true);
       router.replace("/dashboard/home");
     }
@@ -77,6 +77,7 @@ export default function Dashboard() {
     <>
       {showToast && toastMessage && (
         <ToastNotification
+          title="Login successful"
           message={toastMessage}
           type="success"
           duration={5000}

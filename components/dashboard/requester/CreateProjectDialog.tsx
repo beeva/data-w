@@ -40,6 +40,7 @@ import {
   Activity,
   MoreHorizontal,
   type LucideIcon,
+  TriangleAlert,
 } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import DataSuggestionsPanel from "./DataSuggestionsPanel";
@@ -649,7 +650,11 @@ export default function CreateProjectDialog({
               {phase === "form" && (
                 <div className="flex flex-col justify-center min-h-full">
                   {error && (
-                    <div className="mb-6 p-3 bg-red-900/20 dark:bg-red-900/20 border border-red-800 dark:border-red-800 rounded-xl text-red-400 dark:text-red-400 text-sm">
+                    <div className="mb-6 p-3 bg-red-500/10 dark:bg-red-900/20 border border-red-500 dark:border-red-800 rounded-xl text-red-500 dark:text-red-400 text-sm">
+                      <TriangleAlert
+                        className="h-4 w-4 inline-block mr-2"
+                        strokeWidth={3}
+                      />
                       {error}
                     </div>
                   )}
@@ -1404,50 +1409,52 @@ export default function CreateProjectDialog({
               )}
             </div>
 
-            {/* Footer — progress bar + navigation */}
-            <div className="shrink-0 flex flex-col gap-4 py-4 px-6 bg-white dark:bg-[#0a0a0a] rounded-b-xl">
-              <div className="h-1 w-full rounded-full bg-gray-200 dark:bg-[#2a2a2a] overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-black dark:bg-white transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
+            {/* Footer — progress bar + navigation (hidden when processing) */}
+            {phase !== "processing" && (
+              <div className="shrink-0 flex flex-col gap-4 py-4 px-6 bg-white dark:bg-[#0a0a0a] rounded-b-xl">
+                <div className="h-1 w-full rounded-full bg-gray-200 dark:bg-[#2a2a2a] overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-black dark:bg-white transition-all duration-300"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
 
-              {phase === "form" && (
-                <div
-                  className={cn(
-                    "flex items-center w-full gap-2",
-                    isFirstStep ? "justify-end" : "justify-between",
-                  )}
-                >
-                  {!isFirstStep && (
+                {phase === "form" && (
+                  <div
+                    className={cn(
+                      "flex items-center w-full gap-2",
+                      isFirstStep ? "justify-end" : "justify-between",
+                    )}
+                  >
+                    {!isFirstStep && (
+                      <Button
+                        type="button"
+                        onClick={handleBack}
+                        className="btn-gelatine rounded-full bg-[#0a0a0a] dark:bg-white hover:bg-[#0a0a0a] dark:hover:bg-white text-white dark:text-black disabled:bg-white dark:disabled:bg-[#0a0a0a] disabled:text-black dark:disabled:text-white disabled:pointer-events-none !px-6 h-11 text-sm font-medium"
+                      >
+                        <ChevronLeft className="h-4 w-4 inline-block" />
+                        Back
+                      </Button>
+                    )}
                     <Button
                       type="button"
-                      onClick={handleBack}
-                      className="btn-gelatine rounded-full bg-[#0a0a0a] dark:bg-white hover:bg-[#0a0a0a] dark:hover:bg-white text-white dark:text-black disabled:bg-white dark:disabled:bg-[#0a0a0a] disabled:text-black dark:disabled:text-white disabled:pointer-events-none !px-6 h-11 text-sm font-medium"
+                      onClick={handleNext}
+                      disabled={!canProceed()}
+                      className="btn-gelatine rounded-full bg-[#0a0a0a] dark:bg-white hover:bg-[#0a0a0a] dark:hover:bg-white text-white dark:text-black disabled:bg-white dark:disabled:bg-[#0a0a0a] disabled:text-black disabled:dark:text-white disabled:pointer-events-none !px-6 h-11 text-sm font-medium"
                     >
-                      <ChevronLeft className="h-4 w-4 inline-block" />
-                      Back
+                      {isLastStep ? (
+                        "Create Project"
+                      ) : (
+                        <>
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-1 inline-block" />
+                        </>
+                      )}
                     </Button>
-                  )}
-                  <Button
-                    type="button"
-                    onClick={handleNext}
-                    disabled={!canProceed()}
-                    className="btn-gelatine rounded-full bg-[#0a0a0a] dark:bg-white hover:bg-[#0a0a0a] dark:hover:bg-white text-white dark:text-black disabled:bg-white dark:disabled:bg-[#0a0a0a] disabled:text-black disabled:dark:text-white disabled:pointer-events-none !px-6 h-11 text-sm font-medium"
-                  >
-                    {isLastStep ? (
-                      "Create Project"
-                    ) : (
-                      <>
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1 inline-block" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </div>
+                  </div>
+                )}
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       )}

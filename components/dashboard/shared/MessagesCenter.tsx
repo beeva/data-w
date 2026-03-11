@@ -160,6 +160,7 @@ export default function MessagesCenter() {
   const [realtimeNotice, setRealtimeNotice] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<{
+    title?: string;
     message: string;
     type: "success" | "error";
   } | null>(null);
@@ -569,7 +570,7 @@ export default function MessagesCenter() {
             incoming.sender_id !== user.id &&
             selectedKeyRef.current !== key
           ) {
-            setToast({ message: "New message received", type: "success" });
+            setToast({ title: "New message", message: "New message received", type: "success" });
           }
         },
       )
@@ -901,6 +902,7 @@ export default function MessagesCenter() {
     <>
       {toast ? (
         <ToastNotification
+          title={toast.title}
           message={toast.message}
           type={toast.type}
           duration={3000}

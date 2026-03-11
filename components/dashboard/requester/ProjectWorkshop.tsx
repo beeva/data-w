@@ -105,7 +105,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
   const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
   const [dataItemsMap, setDataItemsMap] = useState<Record<string, DataItem[]>>({});
   const [loadingItems, setLoadingItems] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{ title?: string; message: string; type: "success" | "error" } | null>(null);
 
   const toggleCollector = (collectorId: string) => {
     setExpandedCollector((prev) => (prev === collectorId ? null : collectorId));
@@ -211,6 +211,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
           );
           if (txError) {
             setToast({
+              title: "Payment failed",
               message: txError.message,
               type: "error",
             });
@@ -221,6 +222,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
       }
 
       setToast({
+        title: approve ? "Submission approved" : "Submission rejected",
         message: approve
           ? "Submission approved and collector paid!"
           : "Submission rejected.",
@@ -231,6 +233,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
     } catch (err: any) {
       console.error("Error updating submission:", err);
       setToast({
+        title: "Update failed",
         message: err.message || "Failed to update submission status.",
         type: "error",
       });
@@ -332,6 +335,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
     <div className="space-y-3 p-4">
       {toast && (
         <ToastNotification
+          title={toast.title}
           message={toast.message}
           type={toast.type}
           duration={5000}
