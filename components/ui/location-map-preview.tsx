@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { loadGoogleMaps } from "@/lib/googleMapsLoader";
 
 export interface MapJobPin {
   id: string;
@@ -299,32 +300,22 @@ export function LocationMapPreview({
 
   // Load Google Maps script
   useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-    if (!apiKey) return;
+    if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) return;
+    let cancelled = false;
 
-    if (window.google?.maps) {
-      setMapsLoaded(true);
-      return;
-    }
+    void loadGoogleMaps(["places"])
+      .then(() => {
+        if (!cancelled) {
+          setMapsLoaded(true);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load Google Maps API", err);
+      });
 
-    const existingScript = document.querySelector(
-      'script[data-google-maps="true"]',
-    ) as HTMLScriptElement | null;
-
-    if (existingScript) {
-      existingScript.addEventListener("load", () => setMapsLoaded(true));
-      return () => {
-        existingScript.removeEventListener("load", () => setMapsLoaded(true));
-      };
-    }
-
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}`;
-    script.async = true;
-    script.defer = true;
-    script.dataset.googleMaps = "true";
-    script.onload = () => setMapsLoaded(true);
-    document.head.appendChild(script);
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Init map + user marker + radius circle

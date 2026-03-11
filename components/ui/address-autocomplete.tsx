@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { MapPin, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { loadGoogleMaps } from "@/lib/googleMapsLoader";
 
 interface AddressResult {
   address: string;
@@ -52,49 +53,31 @@ export function AddressAutocomplete({
 
   // Load Google Places API
   useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-    if (!apiKey) {
+    if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
       console.warn(
         "Google Maps API key not configured. Address autocomplete disabled.",
       );
       return;
     }
+    let cancelled = false;
 
-    // Check if already loaded
-    if (window.google?.maps?.places) {
-      setIsGoogleLoaded(true);
-      autocompleteService.current =
-        new window.google.maps.places.AutocompleteService();
-      placesDiv.current = document.createElement("div");
-      placesService.current = new window.google.maps.places.PlacesService(
-        placesDiv.current,
-      );
-      return;
-    }
-
-    // Load Google Maps script
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      setIsGoogleLoaded(true);
-      autocompleteService.current =
-        new window.google.maps.places.AutocompleteService();
-      placesDiv.current = document.createElement("div");
-      placesService.current = new window.google.maps.places.PlacesService(
-        placesDiv.current,
-      );
-    };
-    script.onerror = () => {
-      console.error("Failed to load Google Maps API");
-    };
-
-    document.head.appendChild(script);
+    void loadGoogleMaps(["places"])
+      .then(() => {
+        if (cancelled || !window.google?.maps?.places) return;
+        setIsGoogleLoaded(true);
+        autocompleteService.current =
+          new window.google.maps.places.AutocompleteService();
+        placesDiv.current = document.createElement("div");
+        placesService.current = new window.google.maps.places.PlacesService(
+          placesDiv.current,
+        );
+      })
+      .catch((err) => {
+        console.error("Failed to load Google Maps API", err);
+      });
 
     return () => {
-      // Cleanup if needed
+      cancelled = true;
     };
   }, []);
 
