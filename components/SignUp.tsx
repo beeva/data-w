@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 import DataTunnelCanvas from "@/components/DataTunnelCanvas";
+import EmailVerification from "@/components/EmailVerification";
 
 type UserRole = "requester" | "collector" | "agent";
 
@@ -33,8 +34,9 @@ export default function SignUp() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verificationStep, setVerificationStep] = useState(false);
   const router = useRouter();
-
+  
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
@@ -59,43 +61,56 @@ export default function SignUp() {
       return;
     }
 
-    setLoading(true);
+    // Don't create the account yet — start verification and send code
+    setVerificationStep(true);
+  };
 
+  const performSignup = async () => {
+    setError("");
+    setLoading(true);
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: formData.email,
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError("Verification session expired. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      // Detect existing account: user created more than 3 minutes ago
+      const createdMs = new Date(user.created_at).getTime();
+      const isExistingUser = Date.now() - createdMs > 3 * 60 * 1000;
+      if (isExistingUser) {
+        await supabase.auth.signOut();
+        setError("An account with this email already exists. Please log in instead.");
+        setLoading(false);
+        return;
+      }
+
+      await supabase.auth.updateUser({
         password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullName,
-            role: formData.role,
-          },
+        data: {
+          full_name: formData.fullName,
+          role: formData.role,
         },
       });
 
-      if (signUpError) throw signUpError;
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ role: formData.role, full_name: formData.fullName })
+        .eq("id", user.id);
 
-      // Update profile with role
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from("profiles")
-          .update({ role: formData.role, full_name: formData.fullName })
-          .eq("id", data.user.id);
-
-        if (profileError) {
-          console.error("Error updating profile:", profileError);
-        }
-
-        router.push("/dashboard");
-        router.refresh();
+      if (profileError) {
+        console.error("Error updating profile:", profileError);
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred during sign up");
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred during sign up");
     } finally {
       setLoading(false);
     }
   };
-
   return (
     <div className="signup-page h-screen min-h-screen flex flex-col overflow-hidden">
       <div className="absolute inset-0 w-full h-full bg-[#0a0f1e]">
@@ -186,6 +201,14 @@ export default function SignUp() {
                   </div>
                 )}
 
+                {verificationStep ? (
+                  <EmailVerification
+                    email={formData.email}
+                    onVerified={() => performSignup()}
+                    onChangeEmail={() => setVerificationStep(false)}
+                  />
+                ) : (
+              <>
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
                     <label
@@ -231,7 +254,11 @@ export default function SignUp() {
                     <label className="block text-sm font-medium text-slate-700 mb-3">
                       I want to
                     </label>
-                    <input type="hidden" name="role" value={formData.role} />
+                    <input
+                      type="hidden"
+                      name="role"
+                      value={formData.role}
+                    />
                     <div className="flex flex-wrap justify-center gap-6">
                       {[
                         {
@@ -274,7 +301,9 @@ export default function SignUp() {
                               />
                             </div>
                           </div>
-                          <span className="role-hero-title">{role.label}</span>
+                          <span className="role-hero-title">
+                            {role.label}
+                          </span>
                           <Image
                             src={`/characters/${role.value}.png`}
                             alt=""
@@ -468,6 +497,8 @@ export default function SignUp() {
                     Log in
                   </Link>
                 </p>
+              </>
+                )}
               </div>
             </main>
           </div>
