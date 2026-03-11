@@ -12,6 +12,7 @@ import { getSubmissionsByProject } from "@/lib/services/submissionService";
 import type { Project, ProjectStatus } from "@/types/project";
 import EditProjectDialog from "./EditProjectDialog";
 import CompleteProjectDialog from "./CompleteProjectDialog";
+import CreateProjectDialog from "./CreateProjectDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ export default function ActiveProjectsList() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [pendingCancelProjectId, setPendingCancelProjectId] = useState<string | null>(null);
   const [pendingCompleteProject, setPendingCompleteProject] = useState<Project | null>(null);
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [projectStats, setProjectStats] = useState<Record<string, {
     totalTarget: number;
     totalSubmissions: number;
@@ -532,7 +534,7 @@ export default function ActiveProjectsList() {
           <Button 
             size="sm" 
             className="h-7 text-xs"
-            onClick={() => router.push("/dashboard/projects/new")}
+            onClick={() => setCreateProjectOpen(true)}
           >
             <Plus className="w-3 h-3 mr-1" />
             Create Project
@@ -544,6 +546,11 @@ export default function ActiveProjectsList() {
 
   return (
     <div className="space-y-3 p-2">
+      <CreateProjectDialog
+        open={createProjectOpen}
+        onOpenChange={setCreateProjectOpen}
+        onSuccess={fetchProjects}
+      />
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
@@ -558,7 +565,7 @@ export default function ActiveProjectsList() {
           <Button 
             size="sm" 
             className="h-7 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => router.push("/dashboard/projects/new")}
+            onClick={() => setCreateProjectOpen(true)}
           >
             <Plus className="w-3 h-3 mr-1" />
             New Project

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -65,6 +65,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CompleteProjectDialog from "./CompleteProjectDialog";
+import CreateProjectDialog from "./CreateProjectDialog";
 import {
   BarChart,
   Bar,
@@ -104,60 +105,63 @@ export default function RequesterDashboard() {
   >(null);
   const [pendingCompleteProject, setPendingCompleteProject] =
     useState<Project | null>(null);
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
   const userId = user?.id;
+
+  const fetchData = useCallback(async () => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const [projectsRes, notificationsRes] = await Promise.all([
+        getProjectsByRequester(userId),
+        getNotifications(10),
+      ]);
+      const allProjects = projectsRes.data || [];
+      setProjects(allProjects);
+      setNotifications(notificationsRes.data || []);
+
+      const activeProjs = allProjects.filter((p) => p.status === "open");
+      if (activeProjs.length > 0) {
+        const statsResults = await Promise.all(
+          activeProjs.map((p) => getSubmissionsByProject(p.id)),
+        );
+        let totalPending = 0;
+        const progressMap: Record<string, number> = {};
+
+        statsResults.forEach((res, idx) => {
+          const subs = res.data || [];
+          const pending = subs.filter((s) => s.status === "pending").length;
+          const validated = subs.filter(
+            (s) => s.status === "validated",
+          ).length;
+          totalPending += pending;
+
+          const total = subs.length;
+          progressMap[activeProjs[idx].id] =
+            total > 0 ? Math.round((validated / total) * 100) : 0;
+        });
+
+        setPendingReviewCount(totalPending);
+        setProjectProgress(progressMap);
+      }
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) {
       setLoading(false);
       return;
     }
-
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [projectsRes, notificationsRes] = await Promise.all([
-          getProjectsByRequester(userId),
-          getNotifications(10),
-        ]);
-        const allProjects = projectsRes.data || [];
-        setProjects(allProjects);
-        setNotifications(notificationsRes.data || []);
-
-        // Fetch submission stats for all active projects to get pending count & progress
-        const activeProjs = allProjects.filter((p) => p.status === "open");
-        if (activeProjs.length > 0) {
-          const statsResults = await Promise.all(
-            activeProjs.map((p) => getSubmissionsByProject(p.id)),
-          );
-          let totalPending = 0;
-          const progressMap: Record<string, number> = {};
-
-          statsResults.forEach((res, idx) => {
-            const subs = res.data || [];
-            const pending = subs.filter((s) => s.status === "pending").length;
-            const validated = subs.filter(
-              (s) => s.status === "validated",
-            ).length;
-            totalPending += pending;
-
-            const total = subs.length;
-            progressMap[activeProjs[idx].id] =
-              total > 0 ? Math.round((validated / total) * 100) : 0;
-          });
-
-          setPendingReviewCount(totalPending);
-          setProjectProgress(progressMap);
-        }
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
-  }, [userId]);
+  }, [userId, fetchData]);
 
   const handleResumeProject = async (projectId: string) => {
     if (!user) return;
@@ -413,6 +417,11 @@ export default function RequesterDashboard() {
 
   return (
     <div className="space-y-6 p-2">
+      <CreateProjectDialog
+        open={createProjectOpen}
+        onOpenChange={setCreateProjectOpen}
+        onSuccess={fetchData}
+      />
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
@@ -422,7 +431,7 @@ export default function RequesterDashboard() {
           </p>
         </div>
         <Button
-          onClick={() => router.push("/dashboard/projects/new")}
+          onClick={() => setCreateProjectOpen(true)}
           size="sm"
           className="btn-gelatine h-9 text-xs rounded-lg"
         >
@@ -635,7 +644,7 @@ export default function RequesterDashboard() {
                     <Button
                       size="sm"
                       className="btn-gelatine h-7 text-[10px] bg-primary hover:bg-primary/90 text-white mt-2"
-                      onClick={() => router.push("/dashboard/projects/new")}
+                      onClick={() => setCreateProjectOpen(true)}
                     >
                       Create Project
                     </Button>

@@ -1,10 +1,18 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, ExternalLink, Database, Sparkles, DollarSign, Calendar, TrendingUp } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ExternalLink,
+  Database,
+  Sparkles,
+  DollarSign,
+  TrendingUp,
+  Eye,
+  Heart,
+} from "lucide-react";
 import {
   searchSimilarProjects,
   searchHuggingFaceDatasets,
@@ -14,6 +22,13 @@ import {
   type BudgetSuggestions,
 } from "@/lib/services/dataSuggestionsService";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { EmptyDataSvg } from "@/components/svg/EmptyDataSvg";
+import { getCategoryColor } from "@/lib/utils";
+
+// Card: title+link row → description → tag pills → footer (author left, stats right)
+const CARD_BASE =
+  "rounded-xl border border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all p-4";
 
 interface DataSuggestionsPanelProps {
   title: string;
@@ -27,8 +42,11 @@ export default function DataSuggestionsPanel({
   onBudgetSelect,
 }: DataSuggestionsPanelProps) {
   const [similarProjects, setSimilarProjects] = useState<SimilarProject[]>([]);
-  const [huggingFaceDatasets, setHuggingFaceDatasets] = useState<HuggingFaceDataset[]>([]);
-  const [budgetSuggestions, setBudgetSuggestions] = useState<BudgetSuggestions | null>(null);
+  const [huggingFaceDatasets, setHuggingFaceDatasets] = useState<
+    HuggingFaceDataset[]
+  >([]);
+  const [budgetSuggestions, setBudgetSuggestions] =
+    useState<BudgetSuggestions | null>(null);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingDatasets, setLoadingDatasets] = useState(false);
 
@@ -82,192 +100,296 @@ export default function DataSuggestionsPanel({
     return () => clearTimeout(searchTimeout);
   }, [searchQuery, title, description]);
 
-  const hasContent = similarProjects.length > 0 || huggingFaceDatasets.length > 0 || budgetSuggestions !== null;
+  const hasContent =
+    similarProjects.length > 0 ||
+    huggingFaceDatasets.length > 0 ||
+    budgetSuggestions !== null;
   const isLoading = loadingProjects || loadingDatasets;
+  const showLoadingSkeleton = isLoading && !hasContent;
 
   return (
     <div className="h-full flex flex-col">
-      <Card className="dark:bg-gray-800/50 border-none flex-1 flex flex-col">
-        <CardHeader className="py-2 px-3 border-b">
-          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-cyan-400" />
-            Data Suggestions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 p-0 overflow-hidden">
-          {!searchQuery || searchQuery.length < 3 ? (
-            <div className="p-4 text-center text-xs text-muted-foreground">
-              <Database className="w-8 h-8 mx-auto mb-2 opacity-50" />
-              <p>Enter a project title and description to see suggestions</p>
+      {!searchQuery || searchQuery.length < 3 ? (
+        <div className="p-4 text-center text-xs text-muted-foreground">
+          <Database className="w-8 h-8 mx-auto mb-2 opacity-50" />
+          <p>Enter a project title and description to see suggestions</p>
+        </div>
+      ) : showLoadingSkeleton ? (
+        <ScrollArea className="h-full">
+          <div className="space-y-4 p-4">
+            {/* Budget skeleton */}
+            <div>
+              <Skeleton className="h-3.5 w-36 mb-2" />
+              <div className={CARD_BASE}>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3.5 w-16" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex items-center gap-1">
+                        <Skeleton className="h-3 w-12" />
+                        <Skeleton className="h-3 w-10" />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                    <Skeleton className="h-3 w-32" />
+                    <Skeleton className="h-8 w-full rounded-md" />
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : isLoading && !hasContent ? (
-            <div className="p-4 text-center">
-              <Loader2 className="w-6 h-6 mx-auto mb-2 animate-spin text-cyan-400" />
-              <p className="text-xs text-muted-foreground">Searching...</p>
+            {/* Similar projects skeleton */}
+            <div>
+              <Skeleton className="h-3.5 w-28 mb-2" />
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div key={i} className={CARD_BASE}>
+                    <Skeleton className="h-4 w-3/4 mb-1.5" />
+                    <Skeleton className="h-3 w-full mb-1" />
+                    <Skeleton className="h-3 w-4/5 mb-3" />
+                    <div className="flex flex-wrap gap-1.5">
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-5 w-14 rounded-full" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : !hasContent ? (
-            <div className="p-4 text-center text-xs text-muted-foreground">
-              <p>No suggestions found. Try different keywords.</p>
+            {/* Hugging Face section skeleton */}
+            <div>
+              <Skeleton className="h-3.5 w-40 mb-2" />
+              <div className="space-y-3">
+                {[1, 2].map((i) => (
+                  <div key={i} className={CARD_BASE}>
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <Skeleton className="h-4 flex-1 max-w-[200px]" />
+                      <Skeleton className="h-4 w-4 rounded shrink-0" />
+                    </div>
+                    <Skeleton className="h-3 w-full mb-1" />
+                    <Skeleton className="h-3 w-5/6 mb-3" />
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      <Skeleton className="h-5 w-12 rounded-full" />
+                      <Skeleton className="h-5 w-14 rounded-full" />
+                      <Skeleton className="h-5 w-10 rounded-full" />
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="w-6 h-6 rounded-full shrink-0" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                      <div className="flex gap-3">
+                        <Skeleton className="h-3 w-12" />
+                        <Skeleton className="h-3 w-8" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          ) : (
-            <ScrollArea className="h-full">
-              <div className="p-3 space-y-4">
-                {/* Budget Suggestions Section */}
-                {budgetSuggestions && (
-                  <div>
-                    <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-cyan-400">
-                      <TrendingUp className="w-3 h-3" />
-                      Budget Suggestions
-                    </h3>
-                    <Card className="dark:bg-gray-700/50 border border-gray-600/50 p-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] text-muted-foreground">Recommended</span>
-                          <span className="text-sm font-semibold text-cyan-400">
-                            ${budgetSuggestions.recommended.toFixed(2)}
+            <p className="text-xs text-muted-foreground text-center py-2">
+              Searching...
+            </p>
+          </div>
+        </ScrollArea>
+      ) : !hasContent ? (
+        <div className="flex flex-col items-center justify-center py-8 gap-3 px-4">
+          <div className="w-24 h-24 shrink-0">
+            <EmptyDataSvg />
+          </div>
+          <h3 className="text-sm font-semibold text-foreground text-center">
+            No suggestions found
+          </h3>
+          <p className="text-xs text-muted-foreground text-center">
+            Try different keywords or a longer description.
+          </p>
+        </div>
+      ) : (
+        <ScrollArea className="h-full">
+          <div className="space-y-4">
+            {/* Budget Suggestions Section */}
+            {budgetSuggestions && (
+              <div>
+                <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-cyan-400">
+                  <TrendingUp className="w-3 h-3" />
+                  Budget Suggestions
+                </h3>
+                <div className={CARD_BASE}>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">
+                        Recommended
+                      </span>
+                      <span className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">
+                        ${budgetSuggestions.recommended.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Average:</span>
+                        <span className="ml-1 font-medium text-foreground">
+                          ${budgetSuggestions.average.toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Median:</span>
+                        <span className="ml-1 font-medium text-foreground">
+                          ${budgetSuggestions.median.toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Min:</span>
+                        <span className="ml-1 font-medium text-foreground">
+                          ${budgetSuggestions.min.toFixed(2)}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Max:</span>
+                        <span className="ml-1 font-medium text-foreground">
+                          ${budgetSuggestions.max.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <p className="text-[11px] text-muted-foreground mb-2">
+                        Based on {budgetSuggestions.count} similar project
+                        {budgetSuggestions.count !== 1 ? "s" : ""}
+                      </p>
+                      <Button
+                        size="sm"
+                        className="w-full h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+                        onClick={() =>
+                          onBudgetSelect?.(budgetSuggestions.recommended)
+                        }
+                      >
+                        Use Recommended: $
+                        {budgetSuggestions.recommended.toFixed(2)}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Similar Projects Section */}
+            {similarProjects.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-cyan-400">
+                  <Database className="w-3 h-3" />
+                  Similar Projects
+                </h3>
+                <div className="space-y-3">
+                  {similarProjects.map((project) => (
+                    <div key={project.id} className={CARD_BASE}>
+                      {/* Header: title only */}
+                      <h4 className="text-base font-semibold text-foreground truncate mb-1.5">
+                        {project.title}
+                      </h4>
+                      {/* Description */}
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-3">
+                        {project.description}
+                      </p>
+                      {/* Tags: category + budget pills */}
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge
+                          variant="outline"
+                          className={`text-xs px-2.5 py-1 border-none rounded-full ${getCategoryColor(project.category)}`}
+                        >
+                          {project.category}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-2.5 py-1 border-none rounded-full bg-gray-100 dark:bg-gray-800 text-muted-foreground"
+                        >
+                          <DollarSign className="w-3 h-3 mr-1 inline" />
+                          {project.budget.toFixed(2)}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Hugging Face Datasets Section */}
+            {huggingFaceDatasets.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-cyan-400">
+                  <Sparkles className="w-3 h-3" />
+                  Hugging Face Datasets
+                </h3>
+                <div className="space-y-3">
+                  {huggingFaceDatasets.map((dataset) => (
+                    <div key={dataset.id} className={CARD_BASE}>
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <h4 className="text-base font-semibold text-foreground truncate flex-1 min-w-0">
+                          {dataset.name}
+                        </h4>
+                        <a
+                          href={dataset.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 p-0.5 text-muted-foreground hover:text-foreground transition-colors rounded"
+                          onClick={(e) => e.stopPropagation()}
+                          aria-label="Open dataset"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                      {/* Description */}
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-3">
+                        {dataset.description}
+                      </p>
+                      {/* Tags: pill row */}
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {dataset.tags.slice(0, 5).map((tag, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="text-xs px-2.5 py-1 border-none text-muted-foreground bg-gray-100 dark:bg-gray-700 rounded-full font-normal"
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                      {/* Footer: [avatar] By Author (left) | views · likes (right) */}
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Avatar className="w-6 h-6 shrink-0">
+                            <AvatarImage src="/default-avatar.svg" alt="" />
+                            <AvatarFallback className="p-0 overflow-hidden bg-muted">
+                              <img
+                                src="/default-avatar.svg"
+                                alt=""
+                                className="w-full h-full object-cover"
+                              />
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs text-muted-foreground truncate">
+                            By {dataset.author}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-[10px]">
-                          <div>
-                            <span className="text-muted-foreground">Average:</span>
-                            <span className="ml-1 font-medium">
-                              ${budgetSuggestions.average.toFixed(2)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Median:</span>
-                            <span className="ml-1 font-medium">
-                              ${budgetSuggestions.median.toFixed(2)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Min:</span>
-                            <span className="ml-1 font-medium">
-                              ${budgetSuggestions.min.toFixed(2)}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Max:</span>
-                            <span className="ml-1 font-medium">
-                              ${budgetSuggestions.max.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="pt-2 border-t border-gray-600/50">
-                          <p className="text-[9px] text-muted-foreground mb-2">
-                            Based on {budgetSuggestions.count} similar project{budgetSuggestions.count !== 1 ? 's' : ''}
-                          </p>
-                          <Button
-                            size="sm"
-                            className="w-full h-6 text-[10px] bg-primary text-primary-foreground hover:bg-primary/90"
-                            onClick={() => onBudgetSelect?.(budgetSuggestions.recommended)}
-                          >
-                            Use Recommended: ${budgetSuggestions.recommended.toFixed(2)}
-                          </Button>
+                        <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-3.5 h-3.5" />
+                            {dataset.downloads.toLocaleString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3.5 h-3.5" />
+                            {dataset.likes}
+                          </span>
                         </div>
                       </div>
-                    </Card>
-                  </div>
-                )}
-
-                {/* Similar Projects Section */}
-                {similarProjects.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-cyan-400">
-                      <Database className="w-3 h-3" />
-                      Similar Projects
-                    </h3>
-                    <div className="space-y-2">
-                      {similarProjects.map((project) => (
-                        <Card
-                          key={project.id}
-                          className="dark:bg-gray-700/50 border border-gray-600/50 p-2 hover:border-cyan-400/50 transition-colors"
-                        >
-                          <div className="space-y-1.5">
-                            <h4 className="text-xs font-medium line-clamp-1">
-                              {project.title}
-                            </h4>
-                            <p className="text-[10px] text-muted-foreground line-clamp-2">
-                              {project.description}
-                            </p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge
-                                variant="outline"
-                                className="text-[9px] px-1.5 py-0 border-cyan-400/30 text-cyan-300/80"
-                              >
-                                {project.category}
-                              </Badge>
-                              <div className="flex items-center gap-1 text-[9px] text-muted-foreground">
-                                <DollarSign className="w-2.5 h-2.5" />
-                                ${project.budget.toFixed(2)}
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      ))}
                     </div>
-                  </div>
-                )}
-
-                {/* Hugging Face Datasets Section */}
-                {huggingFaceDatasets.length > 0 && (
-                  <div>
-                    <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-cyan-400">
-                      <Sparkles className="w-3 h-3" />
-                      Hugging Face Datasets
-                    </h3>
-                    <div className="space-y-2">
-                      {huggingFaceDatasets.map((dataset) => (
-                        <Card
-                          key={dataset.id}
-                          className="dark:bg-gray-700/50 border border-gray-600/50 p-2 hover:border-cyan-400/50 transition-colors"
-                        >
-                          <div className="space-y-1.5">
-                            <div className="flex items-start justify-between gap-2">
-                              <h4 className="text-xs font-medium line-clamp-1 flex-1">
-                                {dataset.name}
-                              </h4>
-                              <a
-                                href={dataset.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-cyan-400 hover:text-cyan-300"
-                              >
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            </div>
-                            <p className="text-[10px] text-muted-foreground line-clamp-2">
-                              {dataset.description}
-                            </p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {dataset.tags.slice(0, 3).map((tag, idx) => (
-                                <Badge
-                                  key={idx}
-                                  variant="outline"
-                                  className="text-[9px] px-1.5 py-0 border-cyan-400/30 text-cyan-300/80"
-                                >
-                                  {tag}
-                                </Badge>
-                              ))}
-                              <div className="flex items-center gap-1 text-[9px] text-muted-foreground ml-auto">
-                                <span>👁 {dataset.downloads.toLocaleString()}</span>
-                                <span className="ml-1">❤️ {dataset.likes}</span>
-                              </div>
-                            </div>
-                            <p className="text-[9px] text-muted-foreground">
-                              by {dataset.author}
-                            </p>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </div>
+        </ScrollArea>
+      )}
     </div>
   );
 }

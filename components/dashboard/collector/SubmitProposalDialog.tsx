@@ -23,6 +23,15 @@ import {
   Check,
   Send,
   Info,
+  Image,
+  Video,
+  Music,
+  FileText,
+  Table,
+  MapPin,
+  Activity,
+  MoreHorizontal,
+  type LucideIcon,
 } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { cn } from "@/lib/utils";
@@ -150,6 +159,17 @@ const DATA_TYPES = [
   "Other",
 ];
 
+const DATA_TYPE_ICONS: Record<string, LucideIcon> = {
+  Images: Image,
+  Videos: Video,
+  "Audio Files": Music,
+  "Text Documents": FileText,
+  Spreadsheets: Table,
+  "GPS Coordinates": MapPin,
+  "Sensor Readings": Activity,
+  Other: MoreHorizontal,
+};
+
 const EQUIPMENT_OPTIONS = [
   "Camera",
   "Video Camera",
@@ -162,14 +182,14 @@ const EQUIPMENT_OPTIONS = [
 ];
 
 const LANGUAGE_OPTIONS = [
-  "English",
-  "Spanish",
-  "French",
-  "German",
-  "Chinese",
-  "Japanese",
-  "Arabic",
-  "Portuguese",
+  { value: "English", label: "English" },
+  { value: "Spanish", label: "Español" },
+  { value: "French", label: "Français" },
+  { value: "German", label: "Deutsch" },
+  { value: "Chinese", label: "中文" },
+  { value: "Japanese", label: "日本語" },
+  { value: "Arabic", label: "العربية" },
+  { value: "Portuguese", label: "Português" },
 ];
 
 const AVAILABILITY_OPTIONS = [
@@ -577,6 +597,8 @@ export default function SubmitProposalDialog({
                       <div className="flex flex-wrap gap-3">
                         {DATA_TYPES.map((type) => {
                           const selected = formData.data_types.includes(type);
+                          const IconComponent =
+                            DATA_TYPE_ICONS[type] ?? MoreHorizontal;
                           return (
                             <button
                               key={type}
@@ -589,13 +611,33 @@ export default function SubmitProposalDialog({
                                   : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
                               )}
                             >
-                              {selected && (
-                                <Check
-                                  className="h-3.5 w-3.5 shrink-0"
-                                  strokeWidth={3}
+                              <span className="flex shrink-0 w-8 h-8 flex items-center justify-center rounded overflow-hidden">
+                                <IconComponent
+                                  className={cn(
+                                    "w-6 h-6 object-contain",
+                                    selected
+                                      ? "dark:text-[#0a0a0a] text-white"
+                                      : "text-[#0a0a0a] dark:text-white",
+                                  )}
+                                  strokeWidth={1.5}
+                                  aria-hidden
                                 />
-                              )}
-                              {type}
+                              </span>
+                              <span className="flex-1 min-w-0 truncate">
+                                {type}
+                              </span>
+                              <span
+                                className={cn(
+                                  "flex shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-all ml-4",
+                                  selected
+                                    ? "bg-white dark:bg-[#0a0a0a] border-white dark:border-[#0a0a0a] text-[#0a0a0a] dark:text-white"
+                                    : "dark:border-white/50 border-[#0a0a0a] bg-transparent",
+                                )}
+                              >
+                                {selected && (
+                                  <Check className="h-3 w-3" strokeWidth={3} />
+                                )}
+                              </span>
                             </button>
                           );
                         })}
@@ -701,13 +743,13 @@ export default function SubmitProposalDialog({
                           Select all languages you speak.
                         </p>
                         <div className="flex flex-wrap gap-3">
-                          {LANGUAGE_OPTIONS.map((lang) => {
-                            const selected = formData.languages.includes(lang);
+                          {LANGUAGE_OPTIONS.map((opt) => {
+                            const selected = formData.languages.includes(opt.value);
                             return (
                               <button
-                                key={lang}
+                                key={opt.value}
                                 type="button"
-                                onClick={() => toggleItem("languages", lang)}
+                                onClick={() => toggleItem("languages", opt.value)}
                                 className={cn(
                                   "btn-gelatine flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium transition-all border",
                                   selected
@@ -721,7 +763,7 @@ export default function SubmitProposalDialog({
                                     strokeWidth={3}
                                   />
                                 )}
-                                {lang}
+                                {opt.label}
                               </button>
                             );
                           })}

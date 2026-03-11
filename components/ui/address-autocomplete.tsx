@@ -197,7 +197,7 @@ export function AddressAutocomplete({
   return (
     <div ref={wrapperRef} className="relative">
       <div className="relative">
-        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-black dark:text-white/50 pointer-events-none" />
         <Input
           type="text"
           value={value}
