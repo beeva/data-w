@@ -21,6 +21,7 @@ export interface ChatConversation {
   counterpartAvatar: string | null;
   counterpartEmail: string | null;
   counterpartAddress: string | null;
+  counterpartLastActiveAt: string | null;
   assignedAt: string;
   status: string;
   lastMessage?: ProjectMessage;
@@ -56,6 +57,7 @@ type ProfileRow = {
   avatar_url: string | null;
   email: string | null;
   location?: ProfileLocation;
+  last_active_at?: string | null;
 };
 
 export async function getUserConversations(
@@ -114,7 +116,7 @@ export async function getUserConversations(
         supabase.from("requests").select("id, requester_id, title").in("id", requestIds),
         supabase
           .from("profiles")
-          .select("id, full_name, avatar_url, email, location")
+          .select("id, full_name, avatar_url, email, location, last_active_at")
           .in("id", collectorIds),
       ]);
 
@@ -134,7 +136,7 @@ export async function getUserConversations(
 
     const { data: requesterProfilesData, error: requestersError } = await supabase
       .from("profiles")
-      .select("id, full_name, avatar_url, email, location")
+      .select("id, full_name, avatar_url, email, location, last_active_at")
       .in("id", requesterIds);
 
     if (requestersError) {
@@ -226,6 +228,7 @@ export async function getUserConversations(
           counterpartAvatar: counterpartProfile?.avatar_url || null,
           counterpartEmail: counterpartProfile?.email || null,
           counterpartAddress: counterpartAddress || null,
+          counterpartLastActiveAt: counterpartProfile?.last_active_at || null,
           assignedAt: assignment.assigned_at,
           status: assignment.status,
           lastMessage: latestByConversation.get(conversationKey),

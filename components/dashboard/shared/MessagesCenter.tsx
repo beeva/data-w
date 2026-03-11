@@ -12,7 +12,10 @@ import {
   type ProjectMessage,
 } from "@/lib/services/chatService";
 import { supabase } from "@/lib/supabase/client";
-import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
+import type {
+  RealtimeChannel,
+  RealtimePostgresChangesPayload,
+} from "@supabase/supabase-js";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +61,51 @@ function timeLabel(dateText?: string) {
     ? date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
+
+type PresenceState = "online" | "idle" | "offline";
+
+function getPresenceState(
+  lastActiveAt?: string | null,
+  nowMs: number = Date.now(),
+): PresenceState {
+  if (!lastActiveAt) return "offline";
+  const lastActiveMs = new Date(lastActiveAt).getTime();
+  if (Number.isNaN(lastActiveMs)) return "offline";
+  const minutesAway = (nowMs - lastActiveMs) / (1000 * 60);
+  if (minutesAway >= 30) return "offline";
+  if (minutesAway >= 15) return "idle";
+  return "online";
+}
+
+function presenceMeta(state: PresenceState) {
+  if (state === "online") {
+    return {
+      label: "Online",
+      dotClass: "bg-emerald-500",
+      textClass: "text-emerald-600 dark:text-emerald-400",
+    };
+  }
+  if (state === "idle") {
+    return {
+      label: "Idle",
+      dotClass: "bg-amber-500",
+      textClass: "text-amber-600 dark:text-amber-400",
+    };
+  }
+  return {
+    label: "Offline",
+    dotClass: "bg-slate-400",
+    textClass: "text-slate-500 dark:text-slate-400",
+  };
+}
+
+type TypingPayload = {
+  requestId: string;
+  collectorId: string;
+  requesterId: string;
+  senderId: string;
+  senderName: string;
+};
 
 function MessageContent({ text }: { text: string }) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -113,6 +161,19 @@ export default function MessagesCenter() {
   const selectedKeyRef = useRef("");
   const conversationsRef = useRef<ChatConversation[]>([]);
   const emojiInputRef = useRef<HTMLTextAreaElement>(null);
+  const presenceLastSyncedRef = useRef(0);
+  const [presenceTick, setPresenceTick] = useState(Date.now());
+  const [typingMap, setTypingMap] = useState<Record<string, string>>({});
+  const typingChannelRef = useRef<RealtimeChannel | null>(null);
+  const typingSentRef = useRef<Record<string, boolean>>({});
+  const typingLastSentRef = useRef<Record<string, number>>({});
+  const typingIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const typingClearTimeoutsRef = useRef<
+    Record<string, ReturnType<typeof setTimeout>>
+  >({});
+  const previousSelectedKeyRef = useRef("");
   const TEXTAREA_LINE_HEIGHT_PX = 20;
   const TEXTAREA_MIN_LINES = 2;
   const TEXTAREA_MAX_LINES = 8;
@@ -193,6 +254,48 @@ export default function MessagesCenter() {
     [conversations, selectedKey],
   );
 
+  const clearTypingForKey = (key: string) => {
+    setTypingMap((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  };
+
+  const scheduleTypingClear = (key: string, delayMs = 4000) => {
+    const existing = typingClearTimeoutsRef.current[key];
+    if (existing) clearTimeout(existing);
+    typingClearTimeoutsRef.current[key] = setTimeout(() => {
+      clearTypingForKey(key);
+      delete typingClearTimeoutsRef.current[key];
+    }, delayMs);
+  };
+
+  const emitTypingEvent = (event: "typing" | "stop-typing", key?: string) => {
+    if (!user?.id || !key) return;
+    const channel = typingChannelRef.current;
+    if (!channel) return;
+    const conversation = conversationsRef.current.find(
+      (item) => conversationKey(item) === key,
+    );
+    if (!conversation) return;
+
+    const payload: TypingPayload = {
+      requestId: conversation.requestId,
+      collectorId: conversation.collectorId,
+      requesterId: conversation.requesterId,
+      senderId: user.id,
+      senderName:
+        profile?.full_name?.trim() || profile?.email || "Someone",
+    };
+    void channel.send({
+      type: "broadcast",
+      event,
+      payload,
+    });
+  };
+
   useEffect(() => {
     selectedKeyRef.current = selectedKey;
   }, [selectedKey]);
@@ -248,6 +351,65 @@ export default function MessagesCenter() {
   useEffect(() => {
     if (!user?.id || !isMessagingRole) return;
 
+    const channel = supabase
+      .channel("project-conversation-typing")
+      .on("broadcast", { event: "typing" }, ({ payload }: { payload: unknown }) => {
+        const typingPayload = payload as TypingPayload;
+        if (!typingPayload || typingPayload.senderId === user.id) return;
+        const key = `${typingPayload.requestId}:${typingPayload.collectorId}`;
+        const conversation = conversationsRef.current.find(
+          (item) => conversationKey(item) === key,
+        );
+        if (!conversation) return;
+        if (typingPayload.senderId !== conversation.counterpartId) return;
+
+        setTypingMap((prev) => ({
+          ...prev,
+          [key]:
+            typingPayload.senderName?.trim() ||
+            conversation.counterpartName ||
+            "Someone",
+        }));
+        scheduleTypingClear(key);
+      })
+      .on(
+        "broadcast",
+        { event: "stop-typing" },
+        ({ payload }: { payload: unknown }) => {
+        const typingPayload = payload as TypingPayload;
+        if (!typingPayload || typingPayload.senderId === user.id) return;
+        const key = `${typingPayload.requestId}:${typingPayload.collectorId}`;
+        const conversation = conversationsRef.current.find(
+          (item) => conversationKey(item) === key,
+        );
+        if (!conversation) return;
+        if (typingPayload.senderId !== conversation.counterpartId) return;
+          clearTypingForKey(key);
+        },
+      )
+      .subscribe(
+        (status: "SUBSCRIBED" | "TIMED_OUT" | "CLOSED" | "CHANNEL_ERROR") => {
+          if (status === "CHANNEL_ERROR") {
+            console.warn("Typing indicator channel error");
+          }
+        },
+      );
+
+    typingChannelRef.current = channel;
+
+    return () => {
+      typingChannelRef.current = null;
+      Object.values(typingClearTimeoutsRef.current).forEach((timeout) =>
+        clearTimeout(timeout),
+      );
+      typingClearTimeoutsRef.current = {};
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, isMessagingRole]);
+
+  useEffect(() => {
+    if (!user?.id || !isMessagingRole) return;
+
     const channelName = `project-messages-${user.id}`;
 
     const channel = supabase
@@ -266,6 +428,9 @@ export default function MessagesCenter() {
             incoming.collector_id === user.id;
           if (!involvesCurrentUser) return;
           const key = `${incoming.request_id}:${incoming.collector_id}`;
+          if (incoming.sender_id !== user.id) {
+            clearTypingForKey(key);
+          }
 
           setConversations((prev) => {
             const idx = prev.findIndex((item) => conversationKey(item) === key);
@@ -365,6 +530,10 @@ export default function MessagesCenter() {
     });
   }, [conversations, search, pinnedKeys]);
 
+  const activeTypingName = selectedConversation
+    ? typingMap[conversationKey(selectedConversation)] || ""
+    : "";
+
   const requestNotificationPermission = async () => {
     if (typeof window === "undefined" || !("Notification" in window)) {
       setNotificationPermission("unsupported");
@@ -381,11 +550,140 @@ export default function MessagesCenter() {
     }
   }, [notificationPermission, isMessagingRole]);
 
+  useEffect(() => {
+    if (!selectedConversation || !isMessagingRole) return;
+    const currentKey = conversationKey(selectedConversation);
+    const previousKey = previousSelectedKeyRef.current;
+
+    if (
+      previousKey &&
+      previousKey !== currentKey &&
+      typingSentRef.current[previousKey]
+    ) {
+      emitTypingEvent("stop-typing", previousKey);
+      typingSentRef.current[previousKey] = false;
+      delete typingLastSentRef.current[previousKey];
+    }
+
+    previousSelectedKeyRef.current = currentKey;
+  }, [selectedConversation, isMessagingRole]);
+
+  useEffect(() => {
+    if (!selectedConversation || !user?.id || !isMessagingRole) return;
+    const key = conversationKey(selectedConversation);
+    const hasText = draft.trim().length > 0;
+    const now = Date.now();
+    const wasTyping = Boolean(typingSentRef.current[key]);
+    const lastSentAt = typingLastSentRef.current[key] || 0;
+
+    if (!hasText) {
+      if (typingIdleTimeoutRef.current) {
+        clearTimeout(typingIdleTimeoutRef.current);
+        typingIdleTimeoutRef.current = null;
+      }
+      if (wasTyping) {
+        emitTypingEvent("stop-typing", key);
+        typingSentRef.current[key] = false;
+        delete typingLastSentRef.current[key];
+      }
+      return;
+    }
+
+    if (!wasTyping || now - lastSentAt > 2000) {
+      emitTypingEvent("typing", key);
+      typingSentRef.current[key] = true;
+      typingLastSentRef.current[key] = now;
+    }
+
+    if (typingIdleTimeoutRef.current) {
+      clearTimeout(typingIdleTimeoutRef.current);
+    }
+    typingIdleTimeoutRef.current = setTimeout(() => {
+      if (!typingSentRef.current[key]) return;
+      emitTypingEvent("stop-typing", key);
+      typingSentRef.current[key] = false;
+      delete typingLastSentRef.current[key];
+    }, 2500);
+
+    return () => {
+      if (typingIdleTimeoutRef.current) {
+        clearTimeout(typingIdleTimeoutRef.current);
+        typingIdleTimeoutRef.current = null;
+      }
+    };
+  }, [draft, selectedConversation, user?.id, isMessagingRole]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setPresenceTick(Date.now());
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id || !isMessagingRole) return;
+
+    const syncPresence = async (force = false) => {
+      const now = Date.now();
+      if (!force && now - presenceLastSyncedRef.current < 60_000) return;
+      presenceLastSyncedRef.current = now;
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ last_active_at: new Date(now).toISOString() })
+        .eq("id", user.id);
+
+      if (updateError) {
+        // Presence updates are best-effort; chat should keep working even when this fails.
+        console.warn("Failed to update presence", updateError.message);
+      }
+    };
+
+    void syncPresence(true);
+    const heartbeat = window.setInterval(() => {
+      void syncPresence();
+    }, 5 * 60_000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void syncPresence(true);
+      }
+    };
+
+    const onFocus = () => void syncPresence(true);
+    const onPointerDown = () => void syncPresence();
+    const onKeyDown = () => void syncPresence();
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [user?.id, isMessagingRole]);
+
   const handleSend = async () => {
     if (!selectedConversation || !user?.id || sending) return;
+    const key = conversationKey(selectedConversation);
     const hasText = draft.trim().length > 0;
     const hasAttachments = attachmentFiles.length > 0;
     if (!hasText && !hasAttachments) return;
+
+    if (typingSentRef.current[key]) {
+      emitTypingEvent("stop-typing", key);
+      typingSentRef.current[key] = false;
+      delete typingLastSentRef.current[key];
+    }
+    if (typingIdleTimeoutRef.current) {
+      clearTimeout(typingIdleTimeoutRef.current);
+      typingIdleTimeoutRef.current = null;
+    }
 
     setSending(true);
     setError("");
@@ -429,7 +727,6 @@ export default function MessagesCenter() {
     attachmentFiles.forEach((a) => a.preview && URL.revokeObjectURL(a.preview));
     setAttachmentFiles([]);
 
-    const key = conversationKey(selectedConversation);
     setMessages((prev) =>
       prev.some((msg) => msg.id === data.id) ? prev : [...prev, data],
     );
@@ -540,8 +837,8 @@ export default function MessagesCenter() {
               </Button>
             </div>
 
-            <ScrollArea className="flex-1">
-              <div className="space-y-1 pr-1">
+            <div className="flex-1 overflow-y-auto pr-1 dashboard-scrollbar">
+              <div className="space-y-1">
                 {loadingConversations ? (
                   <div className="space-y-1">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -570,6 +867,12 @@ export default function MessagesCenter() {
                     const key = conversationKey(conversation);
                     const unread = unreadMap[key] || 0;
                     const isActive = selectedKey === key;
+                    const currentPresence = presenceMeta(
+                      getPresenceState(
+                        conversation.counterpartLastActiveAt,
+                        presenceTick,
+                      ),
+                    );
                     return (
                       <button
                         key={key}
@@ -595,7 +898,8 @@ export default function MessagesCenter() {
                           </Avatar>
                           <span
                             className={cn(
-                              "absolute top-7 -right-0.5 h-3 w-3 rounded-full border-2 bg-emerald-500",
+                              "absolute top-7 -right-0.5 h-3 w-3 rounded-full border-2",
+                              currentPresence.dotClass,
                               isActive
                                 ? isDark
                                   ? "border-[#102938]"
@@ -636,6 +940,14 @@ export default function MessagesCenter() {
                           <p className="truncate text-[10px] text-muted-foreground/80">
                             {conversation.projectTitle}
                           </p>
+                          <p
+                            className={cn(
+                              "text-[10px] font-medium",
+                              currentPresence.textClass,
+                            )}
+                          >
+                            {currentPresence.label}
+                          </p>
                         </div>
                         {unread > 0 ? (
                           <Badge className="ml-1 h-5 min-w-5 justify-center rounded-full px-1 text-[10px]">
@@ -647,7 +959,7 @@ export default function MessagesCenter() {
                   })
                 )}
               </div>
-            </ScrollArea>
+            </div>
           </aside>
 
           <section className="flex flex-1 flex-col rounded-xl">
@@ -718,6 +1030,12 @@ export default function MessagesCenter() {
                         ) : (
                           messages.map((message, index) => {
                             const mine = message.sender_id === user?.id;
+                            const selectedPresence = presenceMeta(
+                              getPresenceState(
+                                selectedConversation.counterpartLastActiveAt,
+                                presenceTick,
+                              ),
+                            );
                             const previous = messages[index - 1];
                             const showDateDivider =
                               !previous ||
@@ -763,8 +1081,11 @@ export default function MessagesCenter() {
                                         </AvatarFallback>
                                       </Avatar>
                                       <span
-                                        className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-green-500"
-                                        title="Available"
+                                        className={cn(
+                                          "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background",
+                                          selectedPresence.dotClass,
+                                        )}
+                                        title={selectedPresence.label}
                                         aria-hidden
                                       />
                                     </div>
@@ -863,6 +1184,11 @@ export default function MessagesCenter() {
                     <div className="bg-white dark:bg-gray-800 p-3 backdrop-blur rounded-b-2xl">
                       {error ? (
                         <p className="mb-2 text-xs text-red-500">{error}</p>
+                      ) : null}
+                      {activeTypingName ? (
+                        <p className="mb-2 text-xs text-muted-foreground">
+                          {activeTypingName} is typing...
+                        </p>
                       ) : null}
                       <div className="relative" ref={composerRef}>
                         <input
@@ -1087,12 +1413,47 @@ export default function MessagesCenter() {
                             </AvatarFallback>
                           </Avatar>
                           <span
-                            className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-[3px] border-white bg-emerald-500 dark:border-gray-800"
-                            title="Active"
+                            className={cn(
+                              "absolute bottom-0 right-0 h-4 w-4 rounded-full border-[3px] border-white dark:border-gray-800",
+                              presenceMeta(
+                                getPresenceState(
+                                  selectedConversation.counterpartLastActiveAt,
+                                  presenceTick,
+                                ),
+                              ).dotClass,
+                            )}
+                            title={
+                              presenceMeta(
+                                getPresenceState(
+                                  selectedConversation.counterpartLastActiveAt,
+                                  presenceTick,
+                                ),
+                              ).label
+                            }
                           />
                         </div>
                         <p className="mt-2 text-center text-base font-semibold">
                           {selectedConversation.counterpartName}
+                        </p>
+                        <p
+                          className={cn(
+                            "mt-1 text-xs font-medium",
+                            presenceMeta(
+                              getPresenceState(
+                                selectedConversation.counterpartLastActiveAt,
+                                presenceTick,
+                              ),
+                            ).textClass,
+                          )}
+                        >
+                          {
+                            presenceMeta(
+                              getPresenceState(
+                                selectedConversation.counterpartLastActiveAt,
+                                presenceTick,
+                              ),
+                            ).label
+                          }
                         </p>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
                           <MapPin className="h-3.5 w-3.5 shrink-0" />

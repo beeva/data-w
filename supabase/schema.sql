@@ -21,6 +21,7 @@ CREATE TABLE profiles (
   phone TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
+  last_active_at TIMESTAMPTZ DEFAULT NOW(),
   
   -- Wallet balance (all users)
   balance DECIMAL(10, 2) DEFAULT 0,
