@@ -527,7 +527,7 @@ export default function ProposalDetailPage() {
           <Button
             variant="ghost"
             size="icon"
-            className="shrink-0 -ml-2 text-muted-foreground hover:text-foreground"
+            className="btn-gelatine shrink-0 -ml-2 text-muted-foreground hover:text-foreground hover:bg-background"
             onClick={() => router.back()}
           >
             <ArrowLeft className="w-4 h-4" />

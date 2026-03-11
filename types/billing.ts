@@ -74,6 +74,24 @@ export interface UsageData {
   amount_earned: number;
 }
 
+export interface WeeklyUsageData {
+  /** e.g. "2026-03-W2" */
+  weekKey: string;
+  /** e.g. "Mar W2" */
+  label: string;
+  amount_spent: number;
+  amount_earned: number;
+}
+
+export interface DailyUsageData {
+  /** e.g. "2026-03-11" */
+  dateKey: string;
+  /** e.g. "Mar 11" */
+  label: string;
+  amount_spent: number;
+  amount_earned: number;
+}
+
 export interface BillingStats {
   total_spent: number;
   total_earned: number;

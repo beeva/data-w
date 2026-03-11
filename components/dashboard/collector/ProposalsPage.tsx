@@ -437,7 +437,7 @@ function SectionHeader({
       <span className="text-xs text-muted-foreground font-medium bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5">
         {count}
       </span>
-      <div className="flex-1 h-px bg-border" />
+      <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
       <ChevronDown
         className={`w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
       />
@@ -485,6 +485,7 @@ export default function ProposalsPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeOpen, setActiveOpen] = useState(true);
   const [pendingOpen, setPendingOpen] = useState(true);
+  const [rejectedOpen, setRejectedOpen] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -509,6 +510,7 @@ export default function ProposalsPage() {
 
   const active = proposals.filter((p) => p.status === "accepted");
   const pending = proposals.filter((p) => p.status === "pending");
+  const rejected = proposals.filter((p) => p.status === "rejected");
 
   const handleCardClick = (proposal: ProposalWithProject) => {
     const projectId = proposal.project?.id ?? proposal.request_id;
@@ -622,6 +624,37 @@ export default function ProposalsPage() {
                 ) : (
                   <div className="space-y-3 pb-1">
                     {pending.map((p) => (
+                      <ProposalCard
+                        key={p.id}
+                        proposal={p}
+                        onClick={() => handleCardClick(p)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Rejected */}
+          <section>
+            <SectionHeader
+              title="Rejected"
+              count={rejected.length}
+              dot="bg-red-500"
+              open={rejectedOpen}
+              onToggle={() => setRejectedOpen((v) => !v)}
+            />
+            <div
+              className="grid transition-all duration-300 ease-in-out"
+              style={{ gridTemplateRows: rejectedOpen ? "1fr" : "0fr" }}
+            >
+              <div className="overflow-hidden">
+                {rejected.length === 0 ? (
+                  <EmptyState label="No rejected proposals." />
+                ) : (
+                  <div className="space-y-3 pb-1">
+                    {rejected.map((p) => (
                       <ProposalCard
                         key={p.id}
                         proposal={p}

@@ -7,6 +7,8 @@ import type {
   BillingStats,
   ProjectBilling,
   UsageData,
+  WeeklyUsageData,
+  DailyUsageData,
   Invoice,
   SubscriptionPlan,
   UserSubscription,
@@ -311,6 +313,177 @@ export async function getUsageData(
       data: null,
       error:
         err instanceof Error ? err : new Error("Failed to fetch usage data"),
+    };
+  }
+}
+
+/**
+ * Get weekly usage data for the last 12 weeks (up to and including the current week).
+ * Weeks are defined as W1=days 1-7, W2=days 8-14, W3=days 15-21, W4=days 22-end.
+ */
+export async function getWeeklyUsageData(
+  userId: string
+): Promise<{ data: WeeklyUsageData[] | null; error: Error | null }> {
+  try {
+    const now = new Date();
+
+    // Helper: get week slot (1-4) for a day-of-month
+    const weekSlot = (day: number) => {
+      if (day <= 7) return 1;
+      if (day <= 14) return 2;
+      if (day <= 21) return 3;
+      return 4;
+    };
+
+    // Helper: week start/end dates for a given year, month (0-indexed), slot
+    const weekBounds = (year: number, month: number, slot: number) => {
+      const starts = [1, 8, 15, 22];
+      const start = new Date(year, month, starts[slot - 1]);
+      const end =
+        slot === 4
+          ? new Date(year, month + 1, 0, 23, 59, 59, 999)
+          : new Date(year, month, starts[slot - 1] + 6, 23, 59, 59, 999);
+      return { start, end };
+    };
+
+    const currentWeekSlot = weekSlot(now.getDate());
+
+    // Build ordered list of the last 12 week buckets up to today
+    const buckets: { year: number; month: number; slot: number }[] = [];
+    let y = now.getFullYear();
+    let m = now.getMonth();
+    let s = currentWeekSlot;
+
+    for (let i = 0; i < 12; i++) {
+      buckets.unshift({ year: y, month: m, slot: s });
+      s--;
+      if (s < 1) {
+        s = 4;
+        m--;
+        if (m < 0) {
+          m = 11;
+          y--;
+        }
+      }
+    }
+
+    // Fetch all transactions within the range
+    const rangeStart = weekBounds(
+      buckets[0].year,
+      buckets[0].month,
+      buckets[0].slot
+    ).start;
+
+    const { data: transactions, error: txError } = await supabase
+      .from("transactions")
+      .select("*")
+      .or(`requester_id.eq.${userId},collector_id.eq.${userId}`)
+      .gte("created_at", rangeStart.toISOString());
+
+    if (txError) {
+      return { data: null, error: new Error(txError.message) };
+    }
+
+    const monthShort = (m: number) =>
+      new Date(2000, m, 1).toLocaleString("en-US", { month: "short" });
+
+    const weeklyData: WeeklyUsageData[] = buckets.map(({ year, month, slot }) => {
+      const { start, end } = weekBounds(year, month, slot);
+      let spent = 0;
+      let earned = 0;
+
+      (transactions || []).forEach((tx: TransactionRow) => {
+        const txDate = new Date(tx.created_at);
+        if (txDate >= start && txDate <= end && tx.status === "completed") {
+          if (tx.requester_id === userId) {
+            spent += parseFloat(tx.amount) + parseFloat(tx.platform_fee);
+          } else if (tx.collector_id === userId) {
+            earned += parseFloat(tx.amount);
+          }
+        }
+      });
+
+      return {
+        weekKey: `${year}-${String(month + 1).padStart(2, "0")}-W${slot}`,
+        label: `${monthShort(month)} W${slot}`,
+        amount_spent: spent,
+        amount_earned: earned,
+      };
+    });
+
+    return { data: weeklyData, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to fetch weekly usage data"),
+    };
+  }
+}
+
+/**
+ * Get daily usage data for the last 30 days
+ */
+export async function getDailyUsageData(
+  userId: string
+): Promise<{ data: DailyUsageData[] | null; error: Error | null }> {
+  try {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    const { data: transactions, error: txError } = await supabase
+      .from("transactions")
+      .select("*")
+      .or(`requester_id.eq.${userId},collector_id.eq.${userId}`)
+      .gte("created_at", thirtyDaysAgo.toISOString());
+
+    if (txError) {
+      return { data: null, error: new Error(txError.message) };
+    }
+
+    const monthShort = (m: number) =>
+      new Date(2000, m, 1).toLocaleString("en-US", { month: "short" });
+
+    const dailyData: DailyUsageData[] = [];
+
+    for (let i = 29; i >= 0; i--) {
+      const day = new Date(now);
+      day.setDate(day.getDate() - i);
+      day.setHours(0, 0, 0, 0);
+
+      const dayEnd = new Date(day);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const dateKey = day.toISOString().slice(0, 10);
+      const label = `${monthShort(day.getMonth())} ${day.getDate()}`;
+
+      let spent = 0;
+      let earned = 0;
+
+      (transactions || []).forEach((tx: TransactionRow) => {
+        const txDate = new Date(tx.created_at);
+        if (txDate >= day && txDate <= dayEnd && tx.status === "completed") {
+          if (tx.requester_id === userId) {
+            spent += parseFloat(tx.amount) + parseFloat(tx.platform_fee);
+          } else if (tx.collector_id === userId) {
+            earned += parseFloat(tx.amount);
+          }
+        }
+      });
+
+      dailyData.push({ dateKey, label, amount_spent: spent, amount_earned: earned });
+    }
+
+    return { data: dailyData, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err : new Error("Failed to fetch daily usage data"),
     };
   }
 }
