@@ -107,6 +107,16 @@ type TypingPayload = {
   senderName: string;
 };
 
+type PresenceBroadcastPayload = {
+  senderId: string;
+  lastActiveAt: string;
+};
+
+type ProfilePresenceRow = {
+  id: string;
+  last_active_at: string | null;
+};
+
 function MessageContent({ text }: { text: string }) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
@@ -163,6 +173,7 @@ export default function MessagesCenter() {
   const conversationsRef = useRef<ChatConversation[]>([]);
   const emojiInputRef = useRef<HTMLTextAreaElement>(null);
   const presenceLastSyncedRef = useRef(0);
+  const presenceActivityLastSyncedRef = useRef(0);
   const [presenceTick, setPresenceTick] = useState(Date.now());
   const [typingMap, setTypingMap] = useState<Record<string, string>>({});
   const typingChannelRef = useRef<RealtimeChannel | null>(null);
@@ -388,6 +399,40 @@ export default function MessagesCenter() {
           clearTypingForKey(key);
         },
       )
+      .on(
+        "broadcast",
+        { event: "presence-update" },
+        ({ payload }: { payload: unknown }) => {
+          const presencePayload = payload as PresenceBroadcastPayload;
+          if (
+            !presencePayload?.senderId ||
+            !presencePayload.lastActiveAt ||
+            presencePayload.senderId === user.id
+          ) {
+            return;
+          }
+          setConversations((prev) => {
+            let changed = false;
+            const next = prev.map((conversation) => {
+              if (conversation.counterpartId !== presencePayload.senderId) {
+                return conversation;
+              }
+              if (
+                conversation.counterpartLastActiveAt ===
+                presencePayload.lastActiveAt
+              ) {
+                return conversation;
+              }
+              changed = true;
+              return {
+                ...conversation,
+                counterpartLastActiveAt: presencePayload.lastActiveAt,
+              };
+            });
+            return changed ? next : prev;
+          });
+        },
+      )
       .subscribe(
         (status: "SUBSCRIBED" | "TIMED_OUT" | "CLOSED" | "CHANNEL_ERROR") => {
           if (status === "CHANNEL_ERROR") {
@@ -405,6 +450,46 @@ export default function MessagesCenter() {
       );
       typingClearTimeoutsRef.current = {};
       supabase.removeChannel(channel);
+    };
+  }, [user?.id, isMessagingRole]);
+
+  useEffect(() => {
+    if (!user?.id || !isMessagingRole) return;
+
+    const presenceChannel = supabase
+      .channel(`profile-presence-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+        },
+        (payload: RealtimePostgresChangesPayload<ProfilePresenceRow>) => {
+          const updated = payload.new as ProfilePresenceRow;
+          if (!updated?.id) return;
+
+          setConversations((prev) => {
+            let changed = false;
+            const next = prev.map((conversation) => {
+              if (conversation.counterpartId !== updated.id) return conversation;
+              if (conversation.counterpartLastActiveAt === updated.last_active_at) {
+                return conversation;
+              }
+              changed = true;
+              return {
+                ...conversation,
+                counterpartLastActiveAt: updated.last_active_at,
+              };
+            });
+            return changed ? next : prev;
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(presenceChannel);
     };
   }, [user?.id, isMessagingRole]);
 
@@ -628,24 +713,34 @@ export default function MessagesCenter() {
 
     const syncPresence = async (force = false) => {
       const now = Date.now();
-      if (!force && now - presenceLastSyncedRef.current < 60_000) return;
+      if (!force && now - presenceLastSyncedRef.current < 30_000) return;
       presenceLastSyncedRef.current = now;
+      const nowIso = new Date(now).toISOString();
 
       const { error: updateError } = await supabase
         .from("profiles")
-        .update({ last_active_at: new Date(now).toISOString() })
+        .update({ last_active_at: nowIso })
         .eq("id", user.id);
 
       if (updateError) {
         // Presence updates are best-effort; chat should keep working even when this fails.
         console.warn("Failed to update presence", updateError.message);
       }
+
+      const typingChannel = typingChannelRef.current;
+      if (typingChannel) {
+        void typingChannel.send({
+          type: "broadcast",
+          event: "presence-update",
+          payload: {
+            senderId: user.id,
+            lastActiveAt: nowIso,
+          } satisfies PresenceBroadcastPayload,
+        });
+      }
     };
 
     void syncPresence(true);
-    const heartbeat = window.setInterval(() => {
-      void syncPresence();
-    }, 5 * 60_000);
 
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -654,20 +749,28 @@ export default function MessagesCenter() {
     };
 
     const onFocus = () => void syncPresence(true);
-    const onPointerDown = () => void syncPresence();
-    const onKeyDown = () => void syncPresence();
+    const syncPresenceFromActivity = () => {
+      const now = Date.now();
+      if (now - presenceActivityLastSyncedRef.current < 15_000) return;
+      presenceActivityLastSyncedRef.current = now;
+      void syncPresence(true);
+    };
+    const onPointerDown = () => syncPresenceFromActivity();
+    const onKeyDown = () => syncPresenceFromActivity();
+    const onMouseMove = () => syncPresenceFromActivity();
 
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("focus", onFocus);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("mousemove", onMouseMove, { passive: true });
 
     return () => {
-      window.clearInterval(heartbeat);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("mousemove", onMouseMove);
     };
   }, [user?.id, isMessagingRole]);
 
