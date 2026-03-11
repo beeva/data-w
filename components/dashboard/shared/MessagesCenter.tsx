@@ -147,6 +147,7 @@ export default function MessagesCenter() {
     { id: string; file: File; preview?: string }[]
   >([]);
   const [error, setError] = useState("");
+  const [realtimeNotice, setRealtimeNotice] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [toast, setToast] = useState<{
     message: string;
@@ -489,10 +490,12 @@ export default function MessagesCenter() {
       )
       .subscribe(
         (status: "SUBSCRIBED" | "TIMED_OUT" | "CLOSED" | "CHANNEL_ERROR") => {
-          if (status === "CHANNEL_ERROR") {
-            setError(
-              "Realtime connection issue. Messages may require refresh.",
-            );
+          if (status === "SUBSCRIBED") {
+            setRealtimeNotice("");
+          } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            setRealtimeNotice("Realtime disconnected. Reconnecting...");
+          } else if (status === "CLOSED") {
+            setRealtimeNotice("Realtime connection closed.");
           }
         },
       );
@@ -1184,6 +1187,11 @@ export default function MessagesCenter() {
                     <div className="bg-white dark:bg-gray-800 p-3 backdrop-blur rounded-b-2xl">
                       {error ? (
                         <p className="mb-2 text-xs text-red-500">{error}</p>
+                      ) : null}
+                      {realtimeNotice ? (
+                        <p className="mb-2 text-xs text-amber-600 dark:text-amber-400">
+                          {realtimeNotice}
+                        </p>
                       ) : null}
                       {activeTypingName ? (
                         <p className="mb-2 text-xs text-muted-foreground">
