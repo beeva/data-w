@@ -168,6 +168,7 @@ export default function BillingContent() {
   >("monthly");
 
   const userId = user?.id;
+  const role = profile?.role || "";
 
   const fetchBillingData = async (showSpinner = false) => {
     if (!userId) return;
@@ -368,7 +369,12 @@ export default function BillingContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-2">
+      <div
+        className={cn(
+          "min-h-screen pt-2",
+          role !== "collector" && "ml-2 mr-2 pt-0",
+        )}
+      >
         {/* Page Header */}
         <div className="mb-6 flex items-start justify-between">
           <div className="space-y-2">
@@ -548,7 +554,12 @@ export default function BillingContent() {
   }
 
   return (
-    <div className="min-h-screen pt-2">
+    <div
+      className={cn(
+        "min-h-screen pt-2",
+        role !== "collector" && "ml-2 mr-2 pt-0",
+      )}
+    >
       {/* Page Header */}
       <div className="mb-6 flex items-start justify-between">
         <div>

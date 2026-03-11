@@ -505,7 +505,12 @@ export default function MessagesCenter() {
         />
       ) : null}
       <div>
-        <div className="flex h-[calc(100dvh-114px)] mr-2 ml-2">
+        <div
+          className={cn(
+            "flex h-[calc(100dvh-114px)]",
+            role === "collector" ? "mr-0 ml-0 pt-4" : "mr-2 ml-2",
+          )}
+        >
           <aside className="hidden w-80 bg-white dark:bg-gray-800 rounded-2xl p-3 sm:flex sm:flex-col mr-6">
             <div className="mb-3 flex items-center justify-between gap-2 px-1">
               <div>
@@ -1093,8 +1098,7 @@ export default function MessagesCenter() {
                           <MapPin className="h-3.5 w-3.5 shrink-0" />
                           <span className="truncate">
                             {selectedConversation.counterpartAddress ||
-                              selectedConversation.counterpartEmail ||
-                              "—"}
+                              "No address available"}
                           </span>
                         </div>
                         <Button

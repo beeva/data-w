@@ -17,8 +17,8 @@ export interface WalletTransaction {
   created_at: string;
   completed_at: string | null;
   // Joined fields
-  requester?: { full_name: string | null; email: string };
-  collector?: { full_name: string | null; email: string };
+  requester?: { full_name: string | null; email: string; avatar_url: string | null };
+  collector?: { full_name: string | null; email: string; avatar_url: string | null };
 }
 
 /**
@@ -58,7 +58,7 @@ export async function getWalletTransactions(
     const { data, error } = await supabase
       .from("transactions")
       .select(
-        "*, requester:profiles!transactions_requester_id_fkey(full_name, email), collector:profiles!transactions_collector_id_fkey(full_name, email)"
+        "*, requester:profiles!transactions_requester_id_fkey(full_name, email, avatar_url), collector:profiles!transactions_collector_id_fkey(full_name, email, avatar_url)"
       )
       .or(`requester_id.eq.${userId},collector_id.eq.${userId}`)
       .order("created_at", { ascending: false })
