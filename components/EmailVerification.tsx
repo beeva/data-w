@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ClipboardEvent, KeyboardEvent } from "react";
 import { supabase } from "@/lib/supabase/client";
 
@@ -17,41 +17,14 @@ export default function EmailVerification({
   initialCooldown = 60,
   onChangeEmail,
 }: Props) {
-  const [savedEmail, setSavedEmail] = useState<string | null>(null);
-  const [digits, setDigits] = useState<string[]>(() => Array(6).fill(""));
+  const CODE_LENGTH = 8;
+  const [digits, setDigits] = useState<string[]>(() => Array(CODE_LENGTH).fill(""));
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState("");
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const lastSentEmail = useRef<string | null>(null);
-
-  const sendOtp = async () => {
-    setError("");
-    setSending(true);
-    try {
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: { shouldCreateUser: true },
-      });
-      if (otpError) throw otpError;
-      setSavedEmail(email);
-      setResendCooldown(initialCooldown);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to send verification code";
-      setError(msg);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  useEffect(() => {
-    if (lastSentEmail.current === email) return;
-    lastSentEmail.current = email;
-    setSavedEmail(null);
-    setDigits(Array(6).fill(""));
-    sendOtp();
-  }, [email]);
+  const lastAutoVerifiedCode = useRef<string | null>(null);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -59,10 +32,14 @@ export default function EmailVerification({
     return () => clearInterval(t);
   }, [resendCooldown]);
 
-  const handleVerify = async () => {
+  useEffect(() => {
+    setResendCooldown(initialCooldown)
+  }, [initialCooldown]);
+
+  const handleVerify = useCallback(async () => {
     const codeEntered = digits.join("");
-    if (!codeEntered || codeEntered.length !== 6) {
-      setError("Please enter the 6-digit code");
+    if (!codeEntered || codeEntered.length !== CODE_LENGTH) {
+      setError(`Please enter the ${CODE_LENGTH}-digit code`);
       return;
     }
     setError("");
@@ -71,7 +48,9 @@ export default function EmailVerification({
       const { error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: codeEntered,
-        type: "email",
+        // When confirming the email address that was just used for sign-up,
+        // Supabase expects the "signup" verification type.
+        type: "signup",
       });
       if (verifyError) throw verifyError;
       onVerified();
@@ -81,21 +60,44 @@ export default function EmailVerification({
     } finally {
       setVerifying(false);
     }
-  };
+  }, [CODE_LENGTH, digits, email, onVerified]);
 
   const handleResend = async () => {
     setError("");
-    await sendOtp();
+    setResendCooldown(initialCooldown);
+    setSending(true);
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        email,
+        // Resend the signup confirmation email/code
+        type: "signup",
+      });
+      if (resendError) throw resendError;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to resend verification code";
+      setError(msg);
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleChangeEmail = () => {
-    setSavedEmail(null);
-    setDigits(Array(6).fill(""));
+    setDigits(Array(CODE_LENGTH).fill(""));
     setError("");
     if (onChangeEmail) onChangeEmail();
   };
 
   const allFilled = digits.every((d) => d !== "");
+
+  useEffect(() => {
+    if (!allFilled || verifying) return;
+
+    const currentCode = digits.join("");
+    if (!currentCode || currentCode === lastAutoVerifiedCode.current) return;
+
+    lastAutoVerifiedCode.current = currentCode;
+    void handleVerify();
+  }, [allFilled, verifying, digits, handleVerify]);
 
   const handleDigitChange = (index: number, value: string) => {
     const v = value.replace(/\D/g, "").slice(0, 1);
@@ -132,12 +134,12 @@ export default function EmailVerification({
   };
 
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, CODE_LENGTH);
     if (!pasted) return;
-    const arr = Array(6).fill("");
-    for (let i = 0; i < Math.min(6, pasted.length); i++) arr[i] = pasted[i];
+    const arr = Array(CODE_LENGTH).fill("");
+    for (let i = 0; i < Math.min(CODE_LENGTH, pasted.length); i++) arr[i] = pasted[i];
     setDigits(arr);
-    const nextIndex = Math.min(5, pasted.length - 1);
+    const nextIndex = Math.min(CODE_LENGTH - 1, pasted.length - 1);
     setTimeout(() => inputRefs.current[nextIndex]?.focus(), 0);
     e.preventDefault();
   };
@@ -149,19 +151,19 @@ export default function EmailVerification({
       )}
 
       <p className="text-sm text-slate-600">
-        We've generated a 6-digit verification code for {email}. Enter it below to verify your account.
+        We've generated an 8-digit verification code for {email}. Enter it below to verify your account.
       </p>
 
       <div>
         <div className="text-center">
           <p className="text-lg font-semibold">Code Verification</p>
-          <p className="text-sm text-slate-500 mt-1">A 6-digit code has been sent to</p>
+          <p className="text-sm text-slate-500 mt-1">An 8-digit code has been sent to</p>
           <p className="text-sm font-medium text-slate-900 mt-1">{email}</p>
           <p className="text-sm text-slate-500 mt-1">The code expires in 1 hour</p>
         </div>
 
         <div className="mt-4 flex justify-center">
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-2">
             {digits.map((d, idx) => (
               <input
                 key={idx}

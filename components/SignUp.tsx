@@ -49,7 +49,6 @@ export default function SignUp() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-
     // Validation
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
@@ -61,55 +60,37 @@ export default function SignUp() {
       return;
     }
 
-    // Don't create the account yet — start verification and send code
-    setVerificationStep(true);
+    // Before starting verification, check if the email is already registered.
+    // If it is, don't proceed to the verification step.
+    setLoading(true);
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            role: formData.role,
+          },
+        },
+      });
+      console.log(data);
+
+      if (signUpError) throw signUpError;
+      setVerificationStep(true);
+    } catch(error: any) {
+      setError(error.message);
+      console.error(error);
+    }
+    finally {
+      setLoading(false);
+    }
   };
 
   const performSignup = async () => {
     setError("");
+    router.push("/login");
     setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setError("Verification session expired. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      // Detect existing account: user created more than 3 minutes ago
-      const createdMs = new Date(user.created_at).getTime();
-      const isExistingUser = Date.now() - createdMs > 3 * 60 * 1000;
-      if (isExistingUser) {
-        await supabase.auth.signOut();
-        setError("An account with this email already exists. Please log in instead.");
-        setLoading(false);
-        return;
-      }
-
-      await supabase.auth.updateUser({
-        password: formData.password,
-        data: {
-          full_name: formData.fullName,
-          role: formData.role,
-        },
-      });
-
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ role: formData.role, full_name: formData.fullName })
-        .eq("id", user.id);
-
-      if (profileError) {
-        console.error("Error updating profile:", profileError);
-      }
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "An error occurred during sign up");
-    } finally {
-      setLoading(false);
-    }
   };
   return (
     <div className="signup-page h-screen min-h-screen flex flex-col overflow-hidden">
