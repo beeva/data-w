@@ -57,7 +57,7 @@ export default function Header() {
               <Link
                 href="/projects"
                 className={`hover:text-cyan-500 hover:scale-105 transition-all duration-300 font-medium ${
-                  isActive('/projects') ? 'text-cyan-400' : 'text-white/90'
+                  isActive("/projects") ? "text-cyan-400" : "text-white/90"
                 }`}
               >
                 Projects
@@ -65,7 +65,7 @@ export default function Header() {
               <Link
                 href="/datapool"
                 className={`hover:text-cyan-500 hover:scale-105 transition-all duration-300 font-medium ${
-                  isActive('/datapool') ? 'text-cyan-400' : 'text-white/90'
+                  isActive("/datapool") ? "text-cyan-400" : "text-white/90"
                 }`}
               >
                 DataPool
@@ -73,7 +73,7 @@ export default function Header() {
               <Link
                 href="/about"
                 className={`hover:text-cyan-500 hover:scale-105 transition-all duration-300 font-medium ${
-                  isActive('/about') ? 'text-cyan-400' : 'text-white/90'
+                  isActive("/about") ? "text-cyan-400" : "text-white/90"
                 }`}
               >
                 About
@@ -81,7 +81,7 @@ export default function Header() {
               <Link
                 href="/crypto"
                 className={`hover:text-cyan-500 hover:scale-105 transition-all duration-300 font-medium ${
-                  isActive('/crypto') ? 'text-cyan-400' : 'text-white/90'
+                  isActive("/crypto") ? "text-cyan-400" : "text-white/90"
                 }`}
               >
                 Crypto
@@ -174,7 +174,7 @@ export default function Header() {
                 href="/projects"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`hover:text-cyan-500 transition-colors font-medium py-2 ${
-                  isActive('/projects') ? 'text-cyan-400' : 'text-white/90'
+                  isActive("/projects") ? "text-cyan-400" : "text-white/90"
                 }`}
               >
                 Projects
@@ -183,7 +183,7 @@ export default function Header() {
                 href="/datapool"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`hover:text-cyan-500 transition-colors font-medium py-2 ${
-                  isActive('/datapool') ? 'text-cyan-400' : 'text-white/90'
+                  isActive("/datapool") ? "text-cyan-400" : "text-white/90"
                 }`}
               >
                 DataPool
@@ -192,7 +192,7 @@ export default function Header() {
                 href="/about"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`hover:text-cyan-500 transition-colors font-medium py-2 ${
-                  isActive('/about') ? 'text-cyan-400' : 'text-white/90'
+                  isActive("/about") ? "text-cyan-400" : "text-white/90"
                 }`}
               >
                 About
@@ -201,7 +201,7 @@ export default function Header() {
                 href="/crypto"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`hover:text-cyan-500 transition-colors font-medium py-2 ${
-                  isActive('/crypto') ? 'text-cyan-400' : 'text-white/90'
+                  isActive("/crypto") ? "text-cyan-400" : "text-white/90"
                 }`}
               >
                 Crypto

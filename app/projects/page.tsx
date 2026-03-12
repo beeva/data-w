@@ -1,5 +1,9 @@
 import Projects from '@/components/Projects'
 
 export default function ProjectsPage() {
-  return <Projects />
+  return (
+    <div className="dark">
+      <Projects />
+    </div>
+  )
 }

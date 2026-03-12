@@ -20,6 +20,8 @@ interface LocationMapPreviewProps {
   jobPins?: MapJobPin[];
   onSelectPin?: (id: string) => void;
   className?: string;
+  /** When true, always use dark map style (e.g. when used inside project detail sheet on landing projects page). */
+  forceDarkMode?: boolean;
 }
 
 declare global {
@@ -255,6 +257,7 @@ export function LocationMapPreview({
   jobPins = [],
   onSelectPin,
   className = "",
+  forceDarkMode = false,
 }: LocationMapPreviewProps) {
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -268,18 +271,23 @@ export function LocationMapPreview({
   const onSelectPinRef = useRef(onSelectPin);
   const isDarkRef = useRef(false);
   const [mapsLoaded, setMapsLoaded] = useState(false);
-  const [isDark, setIsDark] = useState(isDarkMode);
+  const [isDark, setIsDark] = useState(() => forceDarkMode || isDarkMode());
 
   useEffect(() => {
     onSelectPinRef.current = onSelectPin;
   }, [onSelectPin]);
 
+  const effectiveDark = forceDarkMode || isDark;
   useEffect(() => {
-    isDarkRef.current = isDark;
-  }, [isDark]);
+    isDarkRef.current = effectiveDark;
+  }, [effectiveDark]);
 
-  // Watch for dark/light class toggle on <html>
+  // When forceDarkMode, keep dark; otherwise watch for dark/light class toggle on <html>
   useEffect(() => {
+    if (forceDarkMode) {
+      setIsDark(true);
+      return;
+    }
     const observer = new MutationObserver(() => {
       setIsDark(isDarkMode());
     });
@@ -288,15 +296,15 @@ export function LocationMapPreview({
       attributeFilter: ["class"],
     });
     return () => observer.disconnect();
-  }, []);
+  }, [forceDarkMode]);
 
-  // Apply map styles whenever theme changes
+  // Apply map styles whenever theme (or forceDarkMode) changes
   useEffect(() => {
     if (!mapInstanceRef.current) return;
     mapInstanceRef.current.setOptions({
-      styles: isDark ? MAP_STYLES_DARK : MAP_STYLES_LIGHT,
+      styles: effectiveDark ? MAP_STYLES_DARK : MAP_STYLES_LIGHT,
     });
-  }, [isDark]);
+  }, [effectiveDark]);
 
   // Load Google Maps script
   useEffect(() => {
@@ -335,7 +343,7 @@ export function LocationMapPreview({
         zoomControl: false,
         gestureHandling: "greedy",
         keyboardShortcuts: false,
-        styles: isDark ? MAP_STYLES_DARK : MAP_STYLES_LIGHT,
+        styles: effectiveDark ? MAP_STYLES_DARK : MAP_STYLES_LIGHT,
       });
 
       userMarkerRef.current = new window.google.maps.Marker({
@@ -382,7 +390,7 @@ export function LocationMapPreview({
       circleRef.current?.setRadius(radiusMeters);
       mapInstanceRef.current.setCenter(center);
     }
-  }, [mapsLoaded, lat, lng, radiusKm]);
+  }, [mapsLoaded, lat, lng, radiusKm, effectiveDark]);
 
   // Animated wave rings on the radius circle
   useEffect(() => {
@@ -462,7 +470,7 @@ export function LocationMapPreview({
         position: { lat: pin.lat, lng: pin.lng },
         zIndex: 10 + i,
         icon: {
-          url: makeJobMarkerUrl(pin.category, isDark),
+          url: makeJobMarkerUrl(pin.category, effectiveDark),
           scaledSize: new window.google.maps.Size(28, 36),
           anchor: new window.google.maps.Point(14, 36),
         },
@@ -544,7 +552,7 @@ export function LocationMapPreview({
       map.setCenter({ lat, lng });
       map.setZoom(radiusToZoom(radiusKm));
     }
-  }, [mapsLoaded, jobPins, lat, lng, radiusKm, isDark]);
+  }, [mapsLoaded, jobPins, lat, lng, radiusKm, effectiveDark]);
 
   if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
     return (

@@ -379,3 +379,217 @@
 .role-hero-card.selected:focus-visible {
   outline: none;
 }
+
+/* JobsListWindow: new job card slides in from right (GPU-friendly, smooth easing) */
+@keyframes jobCardEnter {
+  from {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+/* JobsListWindow: card sections stagger in from right */
+@keyframes jobSectionEnter {
+  from {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+.job-card-enter {
+  opacity: 0;
+  transform: translate3d(100%, 0, 0);
+  animation: jobCardEnter 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  will-change: transform;
+}
+
+.job-section-enter {
+  animation: jobSectionEnter 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  will-change: transform;
+}
+
+@keyframes filterCheckScale {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.filter-check-enter {
+  animation: filterCheckScale 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  transform-origin: center;
+}
+
+@keyframes filterSectionFocus {
+  from {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.18);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.filter-section-focus {
+  animation: filterSectionFocus 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  transform-origin: left center;
+}
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.job-card-slide-in {
+  opacity: 0;
+  animation: cardSlideIn 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* Hover scale: cancel slide-in animation so our transform applies (animation with forwards was winning) */
+.job-card-hover {
+  animation: none !important;
+  opacity: 1;
+  transform: scale(1.08);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.15), 0 4px 12px -4px rgba(0, 0, 0, 0.08);
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.25s ease;
+}
+
+.dark .job-card-hover {
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.4), 0 4px 12px -4px rgba(0, 0, 0, 0.25);
+}
+
+/* Click: scale animation (press then release) */
+@keyframes jobCardClickScale {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.job-card-clicked {
+  animation: jobCardClickScale 0.35s ease-out forwards !important;
+  opacity: 1;
+  box-shadow: none;
+}
+
+.drawer-enter {
+  animation: drawerSlideIn 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  transform-origin: right center;
+}
+
+@keyframes drawerSlideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Drawer content scroll up */
+.drawer-content-scrolled {
+  transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Map pin wave / pulse animation */
+@keyframes mapPinWave {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+.map-pin-wave {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: mapPinWave 1.5s ease-out infinite;
+  pointer-events: none;
+}
+
+/* Map pin up-down motion in sync with wave speed (1.5s) */
+@keyframes mapPinBounce {
+  0%, 100% {
+    transform: translate(-50%, -50%) translateY(0);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-4px);
+  }
+}
+
+.map-pin-bounce {
+  animation: mapPinBounce 1.5s ease-in-out infinite;
+}
+
+/* Confetti for JobsListWindow congrats overlay */
+.confetti-piece-jobs {
+  position: absolute;
+  top: -10%;
+  left: var(--left-start);
+  border-radius: 9999px;
+  animation: confetti-fall-jobs 5s linear infinite;
+}
+
+@keyframes confetti-fall-jobs {
+  0% {
+    top: -10%;
+    left: var(--left-start);
+  }
+  100% {
+    top: 110%;
+    left: var(--left-end);
+  }
+}
+
+/* Submit button click animation (drawer): press then release */
+@keyframes drawerSubmitClick {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.94);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.drawer-submit-btn-clicked {
+  animation: drawerSubmitClick 0.35s ease-out forwards;
+}

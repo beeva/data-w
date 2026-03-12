@@ -54,6 +54,9 @@ import {
   Package,
   Bookmark,
   Eye,
+  LogIn,
+  UserPlus,
+  AlertCircle,
 } from "lucide-react";
 import { Photography1Svg } from "@/components/svg/photography/photography_1";
 import { Photography2Svg } from "@/components/svg/photography/photography_2";
@@ -93,6 +96,7 @@ import { Sensor5Svg } from "@/components/svg/sensor-data/sensor_5";
 import { Other1Svg } from "@/components/svg/other/other_1";
 import { Other2Svg } from "@/components/svg/other/other_2";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 const PHOTOGRAPHY_SVGS = [
@@ -224,6 +228,8 @@ interface ProjectDetailsSheetProps {
   onToggleSaveProject?: () => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When true, sheet always uses dark mode (e.g. when opened from landing projects page). */
+  forceDarkMode?: boolean;
 }
 
 function formatDate(dateString: string | null) {
@@ -244,8 +250,9 @@ export default function ProjectDetailsSheet({
   onToggleSaveProject,
   open,
   onOpenChange,
+  forceDarkMode = false,
 }: ProjectDetailsSheetProps) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [requesterProjects, setRequesterProjects] = useState<
     RequesterHistoryProject[]
@@ -366,444 +373,510 @@ export default function ProjectDetailsSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-3xl overflow-y-auto p-0 flex flex-col bg-white dark:bg-[#111827] border-none shadow-none"
+        className={cn(
+          "w-full sm:max-w-3xl overflow-y-auto p-0 flex flex-col border-none shadow-none",
+          forceDarkMode ? "bg-[#111827]" : "bg-white dark:bg-[#111827]",
+        )}
       >
-        {/* Visually hidden accessible header */}
-        <SheetHeader className="sr-only">
-          <SheetTitle>{project.title}</SheetTitle>
-          <SheetDescription>Project details for collectors.</SheetDescription>
-        </SheetHeader>
+        <div className={cn(forceDarkMode && "dark")}>
+          {/* Visually hidden accessible header */}
+          <SheetHeader className="sr-only">
+            <SheetTitle>{project.title}</SheetTitle>
+            <SheetDescription>Project details for collectors.</SheetDescription>
+          </SheetHeader>
 
-        {/* Hero header */}
-        <div className="px-5 pt-6 pb-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 min-w-0">
-              <div
-                className={`shrink-0 w-12 h-12 rounded-xl ${catMeta.bg} flex items-center justify-center mt-0.5`}
-                style={{ color: catMeta.accent }}
-              >
-                {categoryIcon}
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-xl font-bold text-foreground leading-tight">
-                  {project.title}
-                </h2>
-                {project.location?.address && (
-                  <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">{project.location.address}</span>
-                  </p>
-                )}
+          {/* Hero header */}
+          <div className="px-5 pt-6 pb-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 min-w-0">
+                <div
+                  className={`shrink-0 w-12 h-12 rounded-xl ${catMeta.bg} flex items-center justify-center mt-0.5`}
+                  style={{ color: catMeta.accent }}
+                >
+                  {categoryIcon}
+                </div>
+                <div className="min-w-0">
+                  <h2 className="text-xl font-bold text-foreground leading-tight">
+                    {project.title}
+                  </h2>
+                  {project.location?.address && (
+                    <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
+                      <MapPin className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">
+                        {project.location.address}
+                      </span>
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex flex-wrap items-center gap-2 mt-3">
-              <span
-                className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md ${catMeta.bg}`}
-                style={{ color: catMeta.accent }}
-              >
-                {catMeta.icon && (
-                  <span className="scale-75 origin-center">{catMeta.icon}</span>
-                )}
-                {project.category}
-              </span>
-              <Badge
-                variant="outline"
-                className={`capitalize gap-1.5 ${
-                  project.status === "completed"
-                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                    : project.status === "cancelled"
-                      ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
-                      : project.status === "paused"
-                        ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                        : "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                }`}
-              >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2 mt-3">
                 <span
-                  className={`size-1.5 rounded-full ${
+                  className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md ${catMeta.bg}`}
+                  style={{ color: catMeta.accent }}
+                >
+                  {catMeta.icon && (
+                    <span className="scale-75 origin-center">
+                      {catMeta.icon}
+                    </span>
+                  )}
+                  {project.category}
+                </span>
+                <Badge
+                  variant="outline"
+                  className={`capitalize gap-1.5 ${
                     project.status === "completed"
-                      ? "bg-emerald-500"
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                       : project.status === "cancelled"
-                        ? "bg-red-500"
+                        ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
                         : project.status === "paused"
-                          ? "bg-amber-500"
-                          : "bg-blue-500"
+                          ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                          : "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
                   }`}
-                />
-                {project.status}
-              </Badge>
+                >
+                  <span
+                    className={`size-1.5 rounded-full ${
+                      project.status === "completed"
+                        ? "bg-emerald-500"
+                        : project.status === "cancelled"
+                          ? "bg-red-500"
+                          : project.status === "paused"
+                            ? "bg-amber-500"
+                            : "bg-blue-500"
+                    }`}
+                  />
+                  {project.status}
+                </Badge>
+              </div>
+              <p className="text-2xl font-bold text-foreground">
+                ${project.budget.toFixed(2)}
+              </p>
             </div>
-            <p className="text-2xl font-bold text-foreground">
-              ${project.budget.toFixed(2)}
-            </p>
           </div>
-        </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="overview" className="flex-1 flex flex-col">
-          <TabsUnderlineList className="border-b border-gray-200 dark:border-gray-800">
-            <TabsUnderlineTrigger value="overview">
-              Overview
-            </TabsUnderlineTrigger>
-            <TabsUnderlineTrigger value="reviews">Reviews</TabsUnderlineTrigger>
-            <TabsUnderlineTrigger value="requester">About</TabsUnderlineTrigger>
-          </TabsUnderlineList>
+          {/* Tabs */}
+          <Tabs defaultValue="overview" className="flex-1 flex flex-col">
+            <TabsUnderlineList className="border-b border-gray-200 dark:border-gray-800">
+              <TabsUnderlineTrigger value="overview">
+                Overview
+              </TabsUnderlineTrigger>
+              <TabsUnderlineTrigger value="reviews">
+                Reviews
+              </TabsUnderlineTrigger>
+              <TabsUnderlineTrigger value="requester">
+                About
+              </TabsUnderlineTrigger>
+            </TabsUnderlineList>
 
-          {/* ── Overview ── */}
-          <TabsContent value="overview" className="flex-1 p-5 space-y-5 mt-0">
-            {/* Description */}
-            <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                Description
-              </p>
-              <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                {project.description}
-              </p>
-            </div>
+            {/* ── Overview ── */}
+            <TabsContent value="overview" className="flex-1 p-5 space-y-5 mt-0">
+              {/* Description */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                  Description
+                </p>
+                <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                  {project.description}
+                </p>
+              </div>
 
-            {/* Feature chips */}
-            <div className="flex flex-wrap gap-2">
-              <Badge
-                variant="outline"
-                className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
-              >
-                <Users className="w-6 h-6" />
-                {project.max_collectors}{" "}
-                {project.max_collectors === 1 ? "collector" : "collectors"}
-              </Badge>
-              <Badge
-                variant="outline"
-                className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
-              >
-                <Calendar className="w-5 h-5" />
-                {formatDate(project.deadline)}
-              </Badge>
-              {typeof project.location?.radius_km === "number" && (
+              {/* Feature chips */}
+              <div className="flex flex-wrap gap-2">
                 <Badge
                   variant="outline"
                   className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
                 >
-                  <Ruler className="w-5 h-5" />
-                  {`${project.location.radius_km} km`}
+                  <Users className="w-6 h-6" />
+                  {project.max_collectors}{" "}
+                  {project.max_collectors === 1 ? "collector" : "collectors"}
                 </Badge>
-              )}
-            </div>
-
-            {/* Data types */}
-            {project.requirements.data_types.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                  Required Data Types
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {project.requirements.data_types.map((type, idx) => (
-                    <Badge
-                      key={`${type}-${idx}`}
-                      variant="secondary"
-                      className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
-                    >
-                      {type}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Formats */}
-            {project.requirements.formats.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                  Preferred Formats
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {project.requirements.formats.map((format, idx) => (
-                    <Badge
-                      key={`${format}-${idx}`}
-                      variant="outline"
-                      className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
-                    >
-                      {format}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Specifications */}
-            {project.requirements.specifications && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                  Additional Specifications
-                </p>
-                <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
-                  {project.requirements.specifications}
-                </p>
-              </div>
-            )}
-
-            {/* Action buttons */}
-            <div className="flex gap-2.5 pt-1">
-              {onToggleSaveProject && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="flex-1 gap-2 bg-primary/10 hover:bg-primary/20 dark:hover:bg-primary/30 h-12 rounded-xl"
-                  onClick={onToggleSaveProject}
-                >
-                  {isSavedProject ? (
-                    <Bookmark
-                      className="w-6 h-6 text-primary"
-                      fill="currentColor"
-                    />
-                  ) : (
-                    <Bookmark className="w-6 h-6 text-primary" />
-                  )}
-                  <span className={cn("text-base font-medium text-primary")}>
-                    {isSavedProject ? "Saved" : "Save"}
-                  </span>
-                </Button>
-              )}
-              {proposal ? (
-                <Button
-                  type="button"
-                  className="flex-1 bg-primary text-white hover:bg-primary/90 h-12 rounded-xl [&_svg]:size-4"
-                  onClick={() => {
-                    router.push(`/dashboard/projects/${project.id}/proposal`);
-                  }}
-                >
-                  <Eye className="w-5 h-5" />
-                  <span className="text-base font-medium text-white">
-                    View Proposal
-                  </span>
-                </Button>
-              ) : slotsFilled ? (
                 <Badge
-                  variant="secondary"
-                  className="flex-1 justify-center text-xs py-2 bg-gray-500/20 text-gray-400"
+                  variant="outline"
+                  className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
                 >
-                  Slots Full
+                  <Calendar className="w-5 h-5" />
+                  {formatDate(project.deadline)}
                 </Badge>
-              ) : (
-                <SubmitProposalDialog
-                  project={project}
-                  onSuccess={onProposalSuccess}
-                  triggerClassName="flex-1 justify-center"
-                />
-              )}
-            </div>
-
-            {/* Map */}
-            {hasMapCoordinates && (
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                  Location Map
-                </p>
-                <div className="overflow-hidden rounded-xl border border-border">
-                  <LocationMapPreview
-                    lat={project.location!.lat as number}
-                    lng={project.location!.lng as number}
-                    radiusKm={radiusKm}
-                  />
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          {/* ── Reviews ── */}
-          <TabsContent value="reviews" className="flex-1 p-5 space-y-4 mt-0">
-            {loadingRequesterProjects ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                Loading history…
-              </p>
-            ) : requesterProjects.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                No previous projects found for this requester.
-              </p>
-            ) : (
-              requesterProjects.map((historyProject) => {
-                const hCatMeta =
-                  CATEGORY_META[historyProject.category] ||
-                  DEFAULT_CATEGORY_META;
-                const HSvgComp = getSvgForProject(
-                  historyProject.id,
-                  historyProject.category,
-                );
-                const collectorFb =
-                  collectorFeedbackByProject[historyProject.id] ?? null;
-                const requesterFb =
-                  requesterFeedbackByProject[historyProject.id] ?? null;
-                const hasFeedback =
-                  collectorFb !== null || requesterFb !== null;
-                return (
-                  <div
-                    key={historyProject.id}
-                    className="rounded-xl border-none bg-gray-50 dark:bg-gray-800/50 overflow-hidden"
+                {typeof project.location?.radius_km === "number" && (
+                  <Badge
+                    variant="outline"
+                    className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
                   >
-                    {/* Card header */}
-                    <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3">
-                      <div className="flex items-start gap-3 min-w-0 flex-1">
-                        {/* Category icon */}
-                        <div
-                          className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${hCatMeta.bg}`}
-                        >
-                          <span className="w-7 h-7 flex items-center justify-center">
-                            <HSvgComp color={hCatMeta.accent} />
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-foreground truncate leading-snug">
-                            {historyProject.title}
-                          </p>
-                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 mt-2">
-                            <span
-                              className="text-[11px] font-medium"
-                              style={{ color: hCatMeta.accent }}
-                            >
-                              {historyProject.category}
-                            </span>
-                            <span className="text-muted-foreground/40 text-[11px]">
-                              ·
-                            </span>
-                            <span className="text-[11px] text-muted-foreground">
-                              {formatDate(historyProject.created_at)}
-                            </span>
-                            {historyProject.deadline && (
-                              <>
-                                <span className="text-muted-foreground/40 text-[11px]">
-                                  ·
-                                </span>
-                                <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
-                                  <Calendar className="w-2.5 h-2.5" />
-                                  Due {formatDate(historyProject.deadline)}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2 shrink-0">
-                        <Badge
-                          variant="outline"
-                          className={`capitalize text-[11px] gap-1.5 ${
-                            historyProject.status === "completed"
-                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                              : historyProject.status === "cancelled"
-                                ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
-                                : historyProject.status === "paused"
-                                  ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                                  : "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                          }`}
-                        >
-                          <span
-                            className={`size-1.5 rounded-full ${
-                              historyProject.status === "completed"
-                                ? "bg-emerald-500"
-                                : historyProject.status === "cancelled"
-                                  ? "bg-red-500"
-                                  : historyProject.status === "paused"
-                                    ? "bg-amber-500"
-                                    : "bg-blue-500"
-                            }`}
-                          />
-                          {historyProject.status}
-                        </Badge>
-                        <span className="text-xs font-semibold text-foreground tabular-nums">
-                          ${historyProject.budget.toFixed(2)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Feedback section — only when at least one feedback exists */}
-                    {hasFeedback && (
-                      <div className="border-t border-border divide-y divide-border">
-                        {collectorFb && (
-                          <FeedbackBlock
-                            label="Collector"
-                            feedback={collectorFb}
-                          />
-                        )}
-                        {requesterFb && (
-                          <FeedbackBlock
-                            label="Requester"
-                            feedback={requesterFb}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </TabsContent>
-
-          {/* ── About / Requester ── */}
-          <TabsContent value="requester" className="flex-1 p-5 space-y-5 mt-0">
-            {/* Location & time */}
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4 flex items-start gap-3">
-              <div className="shrink-0 w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center mt-0.5">
-                <MapPin className="w-4 h-4 text-blue-500" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                  Location
-                </p>
-                <p className="text-sm font-semibold text-foreground leading-snug">
-                  {requesterProfile?.location?.country || "Unknown country"}
-                </p>
-                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                  <Clock className="w-3 h-3 shrink-0" />
-                  <span>
-                    {requesterProfile?.location?.city || "Unknown city"}
-                    <span className="mx-1 opacity-40">·</span>
-                    {currentRequesterTime}
-                  </span>
-                </p>
-              </div>
-            </div>
-
-            {/* Stats - Donut Chart */}
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  Project Activity
-                </p>
-                {!loadingRequesterProjects && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2.5 py-0.5 text-[11px] font-semibold text-white">
-                    <ClipboardList className="w-3 h-3" />
-                    {requesterProjects.length + 1} Posted
-                  </span>
+                    <Ruler className="w-5 h-5" />
+                    {`${project.location.radius_km} km`}
+                  </Badge>
                 )}
               </div>
 
-              {loadingRequesterProjects ? (
-                <div className="flex items-center justify-center h-36 text-muted-foreground text-sm">
-                  …
+              {/* Data types */}
+              {project.requirements.data_types.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Required Data Types
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {project.requirements.data_types.map((type, idx) => (
+                      <Badge
+                        key={`${type}-${idx}`}
+                        variant="secondary"
+                        className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
+                      >
+                        {type}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <RequesterDonutChart
-                  total={requesterProjects.length + 1}
-                  completed={completedProjectsCount}
-                  cancelled={cancelledProjectsCount}
-                />
               )}
-            </div>
 
-            {/* Total spent */}
-            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
-                  <DollarSign className="w-4 h-4 text-violet-500" />
+              {/* Formats */}
+              {project.requirements.formats.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Preferred Formats
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {project.requirements.formats.map((format, idx) => (
+                      <Badge
+                        key={`${format}-${idx}`}
+                        variant="outline"
+                        className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
+                      >
+                        {format}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">Total spent</p>
+              )}
+
+              {/* Specifications */}
+              {project.requirements.specifications && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                    Additional Specifications
+                  </p>
+                  <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                    {project.requirements.specifications}
+                  </p>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex flex-col gap-3 pt-1">
+                {!user && !authLoading ? (
+                  <>
+                    <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
+                        <AlertCircle className="h-5 w-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-amber-600 dark:text-amber-400">
+                          Sign in required
+                        </p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          You need to sign in to apply for this project.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        size="lg"
+                        className="w-full h-12 rounded-xl gap-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 dark:hover:bg-amber-500/30 [&_svg]:size-5"
+                        asChild
+                      >
+                        <Link
+                          href="/signup?role=collector"
+                          className="flex items-center justify-center gap-2"
+                        >
+                          <UserPlus className="shrink-0" />
+                          Create Account
+                        </Link>
+                      </Button>
+                      <Button
+                        size="lg"
+                        className="w-full h-12 rounded-xl gap-2 bg-amber-500 text-white hover:bg-amber-500/90 [&_svg]:size-5"
+                        asChild
+                      >
+                        <Link href="/login?redirect=/projects">
+                          <LogIn className="shrink-0" />
+                          Sign In
+                        </Link>
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex gap-2.5">
+                    {onToggleSaveProject && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="flex-1 gap-2 bg-primary/10 hover:bg-primary/20 dark:hover:bg-primary/30 h-12 rounded-xl"
+                        onClick={onToggleSaveProject}
+                      >
+                        {isSavedProject ? (
+                          <Bookmark
+                            className="w-6 h-6 text-primary"
+                            fill="currentColor"
+                          />
+                        ) : (
+                          <Bookmark className="w-6 h-6 text-primary" />
+                        )}
+                        <span
+                          className={cn("text-base font-medium text-primary")}
+                        >
+                          {isSavedProject ? "Saved" : "Save"}
+                        </span>
+                      </Button>
+                    )}
+                    {proposal ? (
+                      <Button
+                        type="button"
+                        className="flex-1 bg-primary text-white hover:bg-primary/90 h-12 rounded-xl [&_svg]:size-4"
+                        onClick={() => {
+                          router.push(
+                            `/dashboard/projects/${project.id}/proposal`,
+                          );
+                        }}
+                      >
+                        <Eye className="w-5 h-5" />
+                        <span className="text-base font-medium text-white">
+                          View Proposal
+                        </span>
+                      </Button>
+                    ) : slotsFilled ? (
+                      <Badge
+                        variant="secondary"
+                        className="flex-1 justify-center text-xs py-2 bg-gray-500/20 text-gray-400"
+                      >
+                        Slots Full
+                      </Badge>
+                    ) : (
+                      <SubmitProposalDialog
+                        project={project}
+                        onSuccess={onProposalSuccess}
+                        triggerClassName="flex-1 justify-center"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
-              <p className="text-base font-bold text-foreground tabular-nums">
-                {loadingRequesterProjects ? "…" : `$${totalSpent.toFixed(2)}`}
-              </p>
-            </div>
-          </TabsContent>
-        </Tabs>
+
+              {/* Map */}
+              {hasMapCoordinates && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                    Location Map
+                  </p>
+                  <div className="overflow-hidden rounded-xl border border-border">
+                    <LocationMapPreview
+                      lat={project.location!.lat as number}
+                      lng={project.location!.lng as number}
+                      radiusKm={radiusKm}
+                      forceDarkMode={forceDarkMode}
+                    />
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            {/* ── Reviews ── */}
+            <TabsContent value="reviews" className="flex-1 p-5 space-y-4 mt-0">
+              {loadingRequesterProjects ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  Loading history…
+                </p>
+              ) : requesterProjects.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-8 text-center">
+                  No previous projects found for this requester.
+                </p>
+              ) : (
+                requesterProjects.map((historyProject) => {
+                  const hCatMeta =
+                    CATEGORY_META[historyProject.category] ||
+                    DEFAULT_CATEGORY_META;
+                  const HSvgComp = getSvgForProject(
+                    historyProject.id,
+                    historyProject.category,
+                  );
+                  const collectorFb =
+                    collectorFeedbackByProject[historyProject.id] ?? null;
+                  const requesterFb =
+                    requesterFeedbackByProject[historyProject.id] ?? null;
+                  const hasFeedback =
+                    collectorFb !== null || requesterFb !== null;
+                  return (
+                    <div
+                      key={historyProject.id}
+                      className="rounded-xl border-none bg-gray-50 dark:bg-gray-800/50 overflow-hidden"
+                    >
+                      {/* Card header */}
+                      <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          {/* Category icon */}
+                          <div
+                            className={`shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${hCatMeta.bg}`}
+                          >
+                            <span className="w-7 h-7 flex items-center justify-center">
+                              <HSvgComp color={hCatMeta.accent} />
+                            </span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate leading-snug">
+                              {historyProject.title}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-2 mt-2">
+                              <span
+                                className="text-[11px] font-medium"
+                                style={{ color: hCatMeta.accent }}
+                              >
+                                {historyProject.category}
+                              </span>
+                              <span className="text-muted-foreground/40 text-[11px]">
+                                ·
+                              </span>
+                              <span className="text-[11px] text-muted-foreground">
+                                {formatDate(historyProject.created_at)}
+                              </span>
+                              {historyProject.deadline && (
+                                <>
+                                  <span className="text-muted-foreground/40 text-[11px]">
+                                    ·
+                                  </span>
+                                  <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                                    <Calendar className="w-2.5 h-2.5" />
+                                    Due {formatDate(historyProject.deadline)}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2 shrink-0">
+                          <Badge
+                            variant="outline"
+                            className={`capitalize text-[11px] gap-1.5 ${
+                              historyProject.status === "completed"
+                                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                : historyProject.status === "cancelled"
+                                  ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
+                                  : historyProject.status === "paused"
+                                    ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                    : "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                            }`}
+                          >
+                            <span
+                              className={`size-1.5 rounded-full ${
+                                historyProject.status === "completed"
+                                  ? "bg-emerald-500"
+                                  : historyProject.status === "cancelled"
+                                    ? "bg-red-500"
+                                    : historyProject.status === "paused"
+                                      ? "bg-amber-500"
+                                      : "bg-blue-500"
+                              }`}
+                            />
+                            {historyProject.status}
+                          </Badge>
+                          <span className="text-xs font-semibold text-foreground tabular-nums">
+                            ${historyProject.budget.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Feedback section — only when at least one feedback exists */}
+                      {hasFeedback && (
+                        <div className="border-t border-border divide-y divide-border">
+                          {collectorFb && (
+                            <FeedbackBlock
+                              label="Collector"
+                              feedback={collectorFb}
+                            />
+                          )}
+                          {requesterFb && (
+                            <FeedbackBlock
+                              label="Requester"
+                              feedback={requesterFb}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </TabsContent>
+
+            {/* ── About / Requester ── */}
+            <TabsContent
+              value="requester"
+              className="flex-1 p-5 space-y-5 mt-0"
+            >
+              {/* Location & time */}
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4 flex items-start gap-3">
+                <div className="shrink-0 w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center mt-0.5">
+                  <MapPin className="w-4 h-4 text-blue-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                    Location
+                  </p>
+                  <p className="text-sm font-semibold text-foreground leading-snug">
+                    {requesterProfile?.location?.country || "Unknown country"}
+                  </p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <Clock className="w-3 h-3 shrink-0" />
+                    <span>
+                      {requesterProfile?.location?.city || "Unknown city"}
+                      <span className="mx-1 opacity-40">·</span>
+                      {currentRequesterTime}
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Stats - Donut Chart */}
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Project Activity
+                  </p>
+                  {!loadingRequesterProjects && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-violet-500 px-2.5 py-0.5 text-[11px] font-semibold text-white">
+                      <ClipboardList className="w-3 h-3" />
+                      {requesterProjects.length + 1} Posted
+                    </span>
+                  )}
+                </div>
+
+                {loadingRequesterProjects ? (
+                  <div className="flex items-center justify-center h-36 text-muted-foreground text-sm">
+                    …
+                  </div>
+                ) : (
+                  <RequesterDonutChart
+                    total={requesterProjects.length + 1}
+                    completed={completedProjectsCount}
+                    cancelled={cancelledProjectsCount}
+                  />
+                )}
+              </div>
+
+              {/* Total spent */}
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center shrink-0">
+                    <DollarSign className="w-4 h-4 text-violet-500" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Total spent</p>
+                </div>
+                <p className="text-base font-bold text-foreground tabular-nums">
+                  {loadingRequesterProjects ? "…" : `$${totalSpent.toFixed(2)}`}
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
       </SheetContent>
     </Sheet>
   );

@@ -1,32 +1,32 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import Header from './Header'
-import { getOpenProjects } from '@/lib/services/projectService'
-import type { Project } from '@/types/project'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Progress } from '@/components/ui/progress'
-import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
+import { useState, useEffect, useRef, useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Header from "./Header";
+import { getOpenProjects } from "@/lib/services/projectService";
+import type { Project } from "@/types/project";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet'
-import { useAuth } from '@/contexts/AuthContext'
-import { 
-  Calendar, 
-  DollarSign, 
-  Users, 
-  MapPin, 
-  Clock, 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import ProjectDetailsSheet from "./dashboard/collector/ProjectDetailsSheet";
+import { useAuth } from "@/contexts/AuthContext";
+import CTASceneCanvas from "./CTASceneCanvas";
+import {
+  Users,
+  MapPin,
+  Clock,
   Search,
-  Loader2,
   FolderKanban,
   ArrowRight,
   Camera,
@@ -43,374 +43,1039 @@ import {
   ChevronUp,
   Globe,
   Briefcase,
-  CheckCircle2,
+  SlidersHorizontal,
   AlertCircle,
   LogIn,
-  Target,
-  TrendingUp,
-  Coins,
-} from 'lucide-react'
-import PageHero from './PageHero'
+  ArrowUpToLine,
+} from "lucide-react";
+import PageHero from "./PageHero";
+import { JobsListWindow } from "./JobsListWindow";
+import Footer from "./Footer";
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Photography1Svg } from "@/components/svg/photography/photography_1";
+import { Photography2Svg } from "@/components/svg/photography/photography_2";
+import { Photography3Svg } from "@/components/svg/photography/photography_3";
+import { Photography4Svg } from "@/components/svg/photography/photography_4";
+import { Photography5Svg } from "@/components/svg/photography/photography_5";
+import { Video1Svg } from "@/components/svg/video/video_1";
+import { Video2Svg } from "@/components/svg/video/video_2";
+import { Video3Svg } from "@/components/svg/video/video_3";
+import { Video4Svg } from "@/components/svg/video/video_4";
+import { Video5Svg } from "@/components/svg/video/video_5";
+import { Audio1Svg } from "@/components/svg/audio/audio_1";
+import { Audio2Svg } from "@/components/svg/audio/audio_2";
+import { Audio3Svg } from "@/components/svg/audio/audio_3";
+import { Audio4Svg } from "@/components/svg/audio/audio_4";
+import { Audio5Svg } from "@/components/svg/audio/audio_5";
+import { Text1Svg } from "@/components/svg/text/text_1";
+import { Text2Svg } from "@/components/svg/text/text_2";
+import { Text3Svg } from "@/components/svg/text/text_3";
+import { Text4Svg } from "@/components/svg/text/text_4";
+import { Text5Svg } from "@/components/svg/text/text_5";
+import { Survey1Svg } from "@/components/svg/survey/survey_1";
+import { Survey2Svg } from "@/components/svg/survey/survey_2";
+import { Survey3Svg } from "@/components/svg/survey/survey_3";
+import { Survey4Svg } from "@/components/svg/survey/survey_4";
+import { Survey5Svg } from "@/components/svg/survey/survey_5";
+import { Location1Svg } from "@/components/svg/location-data/location_1";
+import { Location2Svg } from "@/components/svg/location-data/location_2";
+import { Location3Svg } from "@/components/svg/location-data/location_3";
+import { Location4Svg } from "@/components/svg/location-data/location_4";
+import { Location5Svg } from "@/components/svg/location-data/location_5";
+import { Sensor1Svg } from "@/components/svg/sensor-data/sensor_1";
+import { Sensor2Svg } from "@/components/svg/sensor-data/sensor_2";
+import { Sensor3Svg } from "@/components/svg/sensor-data/sensor_3";
+import { Sensor4Svg } from "@/components/svg/sensor-data/sensor_4";
+import { Sensor5Svg } from "@/components/svg/sensor-data/sensor_5";
+import { Other1Svg } from "@/components/svg/other/other_1";
+import { Other2Svg } from "@/components/svg/other/other_2";
+
+const PHOTOGRAPHY_SVGS = [
+  Photography1Svg,
+  Photography2Svg,
+  Photography3Svg,
+  Photography4Svg,
+  Photography5Svg,
+] as const;
+const VIDEO_SVGS = [
+  Video1Svg,
+  Video2Svg,
+  Video3Svg,
+  Video4Svg,
+  Video5Svg,
+] as const;
+const AUDIO_SVGS = [
+  Audio1Svg,
+  Audio2Svg,
+  Audio3Svg,
+  Audio4Svg,
+  Audio5Svg,
+] as const;
+const TEXT_SVGS = [Text1Svg, Text2Svg, Text3Svg, Text4Svg, Text5Svg] as const;
+const SURVEY_SVGS = [
+  Survey1Svg,
+  Survey2Svg,
+  Survey3Svg,
+  Survey4Svg,
+  Survey5Svg,
+] as const;
+const LOCATION_SVGS = [
+  Location1Svg,
+  Location2Svg,
+  Location3Svg,
+  Location4Svg,
+  Location5Svg,
+] as const;
+const SENSOR_SVGS = [
+  Sensor1Svg,
+  Sensor2Svg,
+  Sensor3Svg,
+  Sensor4Svg,
+  Sensor5Svg,
+] as const;
+const OTHER_SVGS = [Other1Svg, Other2Svg] as const;
+
+const CATEGORY_SVG_POOLS: Record<
+  string,
+  readonly React.ComponentType<{ color: string }>[]
+> = {
+  Photography: PHOTOGRAPHY_SVGS,
+  Video: VIDEO_SVGS,
+  Audio: AUDIO_SVGS,
+  Text: TEXT_SVGS,
+  Survey: SURVEY_SVGS,
+  "Location Data": LOCATION_SVGS,
+  "Sensor Data": SENSOR_SVGS,
+  Other: OTHER_SVGS,
+};
+
+function getProjectIconIndex(projectId: string, count: number): number {
+  let hash = 0;
+  for (let i = 0; i < projectId.length; i++) {
+    hash = (hash * 31 + projectId.charCodeAt(i)) >>> 0;
+  }
+  return hash % count;
+}
+
+const CATEGORY_META: Record<
+  string,
+  {
+    icon: React.ComponentType<{ className?: string }>;
+    accent: string;
+    bg: string;
+  }
+> = {
+  Photography: { icon: Camera, accent: "#10b981", bg: "bg-emerald-500/10" },
+  Video: { icon: Video, accent: "#0ea5e9", bg: "bg-sky-500/10" },
+  Audio: { icon: Mic, accent: "#a855f7", bg: "bg-purple-500/10" },
+  Text: { icon: FileText, accent: "#f59e0b", bg: "bg-amber-500/10" },
+  Survey: { icon: BarChart3, accent: "#22c55e", bg: "bg-green-500/10" },
+  "Location Data": { icon: MapPinned, accent: "#14b8a6", bg: "bg-teal-500/10" },
+  "Sensor Data": { icon: Cpu, accent: "#f97316", bg: "bg-orange-500/10" },
+  Other: { icon: MoreHorizontal, accent: "#06b6d4", bg: "bg-cyan-500/10" },
+};
+
+const DEFAULT_CATEGORY_META = CATEGORY_META["Other"];
+
+const CATEGORY_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
+  Photography: Camera,
+  Video: Video,
+  Audio: Mic,
+  Text: FileText,
+  Survey: BarChart3,
+  "Location Data": MapPinned,
+  "Sensor Data": Cpu,
+  Other: MoreHorizontal,
+};
+
+function getCategoryIconNode(
+  projectId: string,
+  category: string,
+  wrapperClassName: string,
+): React.ReactNode {
+  const catMeta = CATEGORY_META[category] || DEFAULT_CATEGORY_META;
+  const svgPool = CATEGORY_SVG_POOLS[category];
+  if (svgPool) {
+    const idx = getProjectIconIndex(projectId, svgPool.length);
+    const SvgComp = svgPool[idx];
+    return (
+      <span
+        className={cn("flex items-center justify-center", wrapperClassName)}
+      >
+        <SvgComp color={catMeta.accent} />
+      </span>
+    );
+  }
+  const Icon = catMeta.icon;
+  return <Icon className={wrapperClassName} />;
+}
+
+interface ProjectCardProps {
+  project: Project;
+  formatDate: (date: string | null) => string;
+  getDaysLeft: (deadline: string | null) => number | null;
+  onApplyClick: (project: Project) => void;
+}
+
+function ProjectCard({
+  project,
+  formatDate,
+  getDaysLeft,
+  onApplyClick,
+}: ProjectCardProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  const descRef = useRef<HTMLParagraphElement>(null);
+
+  const catMeta = CATEGORY_META[project.category] || DEFAULT_CATEGORY_META;
+  const categoryIcon = getCategoryIconNode(
+    project.id,
+    project.category,
+    "w-8 h-8",
+  );
+  const daysLeft = getDaysLeft(project.deadline);
+  const isUrgent = daysLeft !== null && daysLeft <= 3;
+
+  useEffect(() => {
+    const el = descRef.current;
+    if (el) {
+      setClamped(el.scrollHeight > el.clientHeight);
+    }
+  }, [project.description]);
+
+  return (
+    <div
+      className="group relative flex items-stretch gap-4 rounded-xl border border-white/10 bg-white/5 dark:bg-gray-800/50 hover:border-cyan-500/50 hover:bg-white/[0.07] dark:hover:border-gray-600 dark:hover:bg-gray-800 transition-all cursor-pointer p-4"
+      onClick={() => onApplyClick(project)}
+    >
+      <div
+        className={cn(
+          "shrink-0 w-12 h-12 rounded-xl flex items-center justify-center mt-0.5",
+          catMeta.bg,
+        )}
+        style={{ color: catMeta.accent }}
+      >
+        {categoryIcon}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <h3 className="text-base font-semibold text-white group-hover:text-cyan-400 transition-colors truncate">
+            {project.title}
+          </h3>
+          {isUrgent && (
+            <Badge className="text-[10px] px-1.5 py-0 bg-orange-500/20 text-orange-400 border-orange-500/30">
+              <Clock className="w-3 h-3 mr-1" />
+              Urgent
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+          <span className="inline-flex items-center gap-1 text-xs">
+            <span className="text-white/50">Price:</span>
+            <span className="font-semibold text-emerald-400">
+              ${project.budget.toLocaleString()}
+            </span>
+          </span>
+          <span className="text-white/30 text-xs">·</span>
+          <span className="inline-flex items-center gap-1 text-xs">
+            <span className="text-white/50">Deadline:</span>
+            <span className="font-medium text-white/70">
+              {formatDate(project.deadline)}
+            </span>
+          </span>
+        </div>
+
+        <div className="mb-3">
+          <p
+            ref={descRef}
+            className={cn(
+              "text-sm text-white/60 leading-relaxed",
+              expanded ? "" : "line-clamp-3",
+            )}
+          >
+            {project.description}
+          </p>
+          {(clamped || expanded) && (
+            <button
+              type="button"
+              className="text-sm text-cyan-400 underline underline-offset-2 mt-0.5 hover:text-cyan-300 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded((v) => !v);
+              }}
+            >
+              {expanded ? "less" : "more"}
+            </button>
+          )}
+        </div>
+
+        {project.requirements?.data_types?.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {project.requirements.data_types.slice(0, 3).map((type, idx) => (
+              <Badge
+                key={idx}
+                variant="outline"
+                className="text-xs px-2.5 py-1 border-cyan-400/30 text-cyan-300/80 bg-transparent rounded-full"
+              >
+                {type}
+              </Badge>
+            ))}
+            {project.requirements.data_types.length > 3 && (
+              <Badge
+                variant="outline"
+                className="text-xs px-2.5 py-1 border-cyan-400/30 text-cyan-300/80 bg-transparent rounded-full"
+              >
+                +{project.requirements.data_types.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center gap-4 flex-wrap">
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md",
+              catMeta.bg,
+            )}
+            style={{ color: catMeta.accent }}
+          >
+            {catMeta.icon && (
+              <span className="scale-75 origin-center">
+                {(() => {
+                  const Icon = catMeta.icon;
+                  return <Icon className="w-4 h-4 shrink-0" />;
+                })()}
+              </span>
+            )}
+            {project.category}
+          </span>
+          <span className="inline-flex items-center gap-1 text-xs text-white/50">
+            <Users className="w-3.5 h-3.5" />
+            {project.max_collectors} collector
+            {project.max_collectors !== 1 ? "s" : ""}
+          </span>
+          {project.location?.address ? (
+            (() => {
+              const parts = project.location.address
+                .split(",")
+                .map((s: string) => s.trim())
+                .filter(Boolean);
+              const city =
+                parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+              const country =
+                parts.length >= 2 ? parts[parts.length - 1] : null;
+              const label = country ? `${city}, ${country}` : city;
+              return (
+                <span className="inline-flex items-center gap-1 text-xs text-white/50">
+                  <MapPin className="w-3.5 h-3.5 shrink-0" />
+                  {label}
+                </span>
+              );
+            })()
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs text-white/50">
+              <Globe className="w-3.5 h-3.5 shrink-0" />
+              Remote
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProjectCardSkeleton() {
+  const skeletonClass = "bg-white/10 dark:bg-white/10";
+  return (
+    <div className="flex items-stretch gap-4 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 p-4">
+      <Skeleton className={cn("shrink-0 w-12 h-12 rounded-xl", skeletonClass)} />
+      <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className={cn("h-4 w-2/3 max-w-[200px] rounded", skeletonClass)} />
+        </div>
+        <div className="flex items-center gap-3">
+          <Skeleton className={cn("h-3 w-20 rounded", skeletonClass)} />
+          <Skeleton className={cn("h-3 w-24 rounded", skeletonClass)} />
+        </div>
+        <div className="space-y-1.5">
+          <Skeleton className={cn("h-3 w-full rounded", skeletonClass)} />
+          <Skeleton className={cn("h-3 w-full rounded", skeletonClass)} />
+          <Skeleton className={cn("h-3 w-4/5 rounded", skeletonClass)} />
+        </div>
+        <div className="flex flex-wrap gap-1">
+          <Skeleton className={cn("h-5 w-16 rounded-full", skeletonClass)} />
+          <Skeleton className={cn("h-5 w-20 rounded-full", skeletonClass)} />
+          <Skeleton className={cn("h-5 w-14 rounded-full", skeletonClass)} />
+        </div>
+        <div className="flex items-center gap-4 flex-wrap">
+          <Skeleton className={cn("h-5 w-20 rounded-md", skeletonClass)} />
+          <Skeleton className={cn("h-3 w-24 rounded", skeletonClass)} />
+          <Skeleton className={cn("h-3 w-16 rounded", skeletonClass)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const categories = [
+  "Photography",
+  "Video",
+  "Audio",
+  "Text",
+  "Survey",
+  "Location Data",
+  "Sensor Data",
+  "Other",
+];
+
+const dataTypes = [
+  "Images",
+  "Videos",
+  "Audio Files",
+  "Documents",
+  "GPS Data",
+  "Sensor Readings",
+  "Survey Responses",
+];
+
+interface CountrySelectProps {
+  countries: string[];
+  selected: string[];
+  onToggle: (country: string) => void;
+  onClear: () => void;
+}
+
+function CountrySelect({
+  countries,
+  selected,
+  onToggle,
+  onClear,
+}: CountrySelectProps) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+    if (open) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  const filtered = countries.filter((c) =>
+    c.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const label =
+    selected.length === 0
+      ? "All countries"
+      : selected.length === 1
+        ? selected[0]
+        : `${selected.length} countries`;
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "w-full flex items-center justify-between gap-2 h-9 px-3 rounded-md border text-sm transition-colors",
+          "bg-white/5 dark:bg-gray-800/50 border-white/10 text-white hover:bg-white/10 placeholder-white/40",
+          open && "border-cyan-500 ring-1 ring-cyan-500/30",
+        )}
+      >
+        <span
+          className={cn("truncate", selected.length === 0 && "text-white/50")}
+        >
+          {label}
+        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          <ChevronDown
+            className={cn(
+              "w-3.5 h-3.5 text-white/40 transition-transform",
+              open && "rotate-180",
+            )}
+          />
+        </div>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-md border border-white/10 bg-[#0B1020] shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-white/10">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-white/40" />
+              <input
+                autoFocus
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search country..."
+                className="w-full pl-7 pr-2 h-7 text-xs bg-white/5 rounded border-none outline-none text-white placeholder:text-white/40"
+              />
+            </div>
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="text-xs text-white/50 text-center py-3">
+                No results
+              </p>
+            ) : (
+              filtered.map((country) => {
+                const isSelected = selected.includes(country);
+                return (
+                  <button
+                    key={country}
+                    type="button"
+                    onClick={() => onToggle(country)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors",
+                      isSelected
+                        ? "bg-cyan-500/10 text-cyan-400"
+                        : "text-white/80 hover:bg-white/5",
+                    )}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      className="shrink-0 bg-transparent border-white/30 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500 pointer-events-none"
+                    />
+                    <MapPin className="w-3 h-3 shrink-0 text-white/50" />
+                    <span className="truncate">{country}</span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Projects() {
-  const { user, loading: authLoading } = useAuth()
-  const router = useRouter()
-  const [projects, setProjects] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showMobileFilters, setShowMobileFilters] = useState(false)
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [applying, setApplying] = useState(false)
-  const [showApplicationSuccessDialog, setShowApplicationSuccessDialog] = useState(false)
-  
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [showApplicationSuccessDialog, setShowApplicationSuccessDialog] =
+    useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
   // Filter states
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>([])
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([])
-  const [budgetRange, setBudgetRange] = useState<{ min: number; max: number }>({ min: 0, max: 100000 })
-  const [sortBy, setSortBy] = useState<'newest' | 'budget_high' | 'budget_low' | 'deadline'>('newest')
-  
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [budgetRange, setBudgetRange] = useState<{ min: number; max: number }>({
+    min: 0,
+    max: 100000,
+  });
+  const [sortBy, setSortBy] = useState<
+    "newest" | "budget_high" | "budget_low" | "deadline"
+  >("newest");
+
   // Expand/collapse filter sections
   const [expandedSections, setExpandedSections] = useState({
     category: true,
     dataTypes: true,
-    location: true,
     budget: true,
-  })
-
-  const categories = ['Photography', 'Video', 'Audio', 'Text', 'Survey', 'Location Data', 'Sensor Data', 'Other']
-  const dataTypes = ['Images', 'Videos', 'Audio Files', 'Documents', 'GPS Data', 'Sensor Readings', 'Survey Responses']
-  const locationTypes = ['Remote / Worldwide', 'United States', 'Europe', 'Asia', 'Africa', 'South America', 'Australia']
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Photography': return Camera
-      case 'Video': return Video
-      case 'Audio': return Mic
-      case 'Text': return FileText
-      case 'Survey': return BarChart3
-      case 'Location Data': return MapPinned
-      case 'Sensor Data': return Cpu
-      default: return MoreHorizontal
-    }
-  }
+  });
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        setLoading(true)
-        const { data, error: fetchError } = await getOpenProjects()
-        if (fetchError) throw fetchError
-        setProjects(data || [])
+        setLoading(true);
+        const { data, error: fetchError } = await getOpenProjects();
+        if (fetchError) throw fetchError;
+        setProjects(data || []);
       } catch (err: any) {
-        setError(err.message || 'Failed to load projects')
+        setError(err.message || "Failed to load projects");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchProjects()
-  }, [])
+    };
+    fetchProjects();
+  }, []);
 
-  const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }))
-  }
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [
+    searchQuery,
+    selectedCategories,
+    selectedDataTypes,
+    selectedCountries,
+    budgetRange.min,
+    budgetRange.max,
+    sortBy,
+  ]);
+
+  // Scroll-to-top button visibility
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const availableCountries = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          projects
+            .map((p) => {
+              const addr = p.location?.address;
+              if (!addr) return null;
+              const parts = addr
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              return parts.length >= 2 ? parts[parts.length - 1] : null;
+            })
+            .filter((c): c is string => c !== null),
+        ),
+      ).sort(),
+    [projects],
+  );
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    projects.forEach((p) => {
+      counts[p.category] = (counts[p.category] || 0) + 1;
+    });
+    return counts;
+  }, [projects]);
+
+  const dataTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    projects.forEach((p) => {
+      p.requirements?.data_types?.forEach((type) => {
+        dataTypes.forEach((dt) => {
+          if (type.toLowerCase().includes(dt.toLowerCase())) {
+            counts[dt] = (counts[dt] || 0) + 1;
+          }
+        });
+      });
+    });
+    return counts;
+  }, [projects]);
 
   const toggleCategory = (category: string) => {
-    setSelectedCategories(prev => 
-      prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category]
-    )
-  }
+    setSelectedCategories((prev) =>
+      prev.includes(category)
+        ? prev.filter((c) => c !== category)
+        : [...prev, category],
+    );
+  };
 
   const toggleDataType = (dataType: string) => {
-    setSelectedDataTypes(prev => 
-      prev.includes(dataType) ? prev.filter(d => d !== dataType) : [...prev, dataType]
-    )
-  }
+    setSelectedDataTypes((prev) =>
+      prev.includes(dataType)
+        ? prev.filter((d) => d !== dataType)
+        : [...prev, dataType],
+    );
+  };
 
-  const toggleLocation = (location: string) => {
-    setSelectedLocations(prev => 
-      prev.includes(location) ? prev.filter(l => l !== location) : [...prev, location]
-    )
-  }
+  const toggleCountry = (country: string) => {
+    setSelectedCountries((prev) =>
+      prev.includes(country)
+        ? prev.filter((c) => c !== country)
+        : [...prev, country],
+    );
+  };
 
   const clearAllFilters = () => {
-    setSelectedCategories([])
-    setSelectedDataTypes([])
-    setSelectedLocations([])
-    setBudgetRange({ min: 0, max: 100000 })
-    setSearchQuery('')
-  }
+    setSelectedCategories([]);
+    setSelectedDataTypes([]);
+    setSelectedCountries([]);
+    setBudgetRange({ min: 0, max: 100000 });
+    setSearchQuery("");
+  };
+
+  const hasActiveFilters =
+    selectedCategories.length > 0 ||
+    selectedDataTypes.length > 0 ||
+    selectedCountries.length > 0 ||
+    searchQuery.length > 0 ||
+    budgetRange.min > 0 ||
+    budgetRange.max < 100000;
+
+  const activeFiltersCount =
+    selectedCategories.length +
+    selectedDataTypes.length +
+    selectedCountries.length +
+    (budgetRange.min > 0 || budgetRange.max < 100000 ? 1 : 0) +
+    (searchQuery.length > 0 ? 1 : 0);
 
   const filteredProjects = projects
-    .filter(project => {
+    .filter((project) => {
       // Search filter
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch =
+        searchQuery === "" ||
         project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      
+        project.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
       // Category filter
-      const matchesCategory = selectedCategories.length === 0 || 
-        selectedCategories.includes(project.category)
-      
+      const matchesCategory =
+        selectedCategories.length === 0 ||
+        selectedCategories.includes(project.category);
+
+      // Data types filter
+      const matchesDataTypes =
+        selectedDataTypes.length === 0 ||
+        (project.requirements?.data_types &&
+          project.requirements.data_types.some((type) =>
+            selectedDataTypes.some((selected) =>
+              type.toLowerCase().includes(selected.toLowerCase()),
+            ),
+          ));
+
       // Budget filter
-      const matchesBudget = project.budget >= budgetRange.min && project.budget <= budgetRange.max
-      
-      // Location filter (simplified - checks if project has location or is worldwide)
-      const matchesLocation = selectedLocations.length === 0 || 
-        selectedLocations.includes('Remote / Worldwide') ||
-        (project.location?.address && selectedLocations.some(loc => 
-          project.location?.address?.toLowerCase().includes(loc.toLowerCase())
-        ))
-      
-      return matchesSearch && matchesCategory && matchesBudget && matchesLocation
+      const matchesBudget =
+        project.budget >= budgetRange.min && project.budget <= budgetRange.max;
+
+      // Country filter
+      const matchesCountry =
+        selectedCountries.length === 0 ||
+        (() => {
+          const addr = project.location?.address;
+          if (!addr) return false;
+          const parts = addr
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const country = parts.length >= 2 ? parts[parts.length - 1] : null;
+          return country !== null && selectedCountries.includes(country);
+        })();
+
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesDataTypes &&
+        matchesBudget &&
+        matchesCountry
+      );
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case 'budget_high': return b.budget - a.budget
-        case 'budget_low': return a.budget - b.budget
-        case 'deadline': 
-          if (!a.deadline) return 1
-          if (!b.deadline) return -1
-          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
-        default: return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        case "budget_high":
+          return b.budget - a.budget;
+        case "budget_low":
+          return a.budget - b.budget;
+        case "deadline":
+          if (!a.deadline) return 1;
+          if (!b.deadline) return -1;
+          return (
+            new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+          );
+        default:
+          return (
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
       }
-    })
+    });
+
+  const displayLimit = user ? visibleCount : 10;
+  const visibleProjects = useMemo(
+    () => filteredProjects.slice(0, displayLimit),
+    [filteredProjects, displayLimit],
+  );
+  const hasMoreJobs = filteredProjects.length > displayLimit;
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'No deadline'
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  }
-
-  const getTimeAgo = (dateString: string) => {
-    const now = new Date()
-    const date = new Date(dateString)
-    const diffMs = now.getTime() - date.getTime()
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-    
-    if (diffHours < 1) return 'Just now'
-    if (diffHours < 24) return `${diffHours}h ago`
-    if (diffDays < 7) return `${diffDays}d ago`
-    return formatDate(dateString)
-  }
+    if (!dateString) return "No deadline";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   const getDaysLeft = (deadline: string | null) => {
-    if (!deadline) return null
-    const now = new Date()
-    const deadlineDate = new Date(deadline)
-    const diffDays = Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    return diffDays
-  }
-
-  const activeFiltersCount = selectedCategories.length + selectedDataTypes.length + selectedLocations.length + 
-    (budgetRange.min > 0 || budgetRange.max < 100000 ? 1 : 0)
+    if (!deadline) return null;
+    const now = new Date();
+    const deadlineDate = new Date(deadline);
+    const diffDays = Math.ceil(
+      (deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+    );
+    return diffDays;
+  };
 
   const handleApplyClick = (project: Project) => {
-    setSelectedProject(project)
-    setSheetOpen(true)
-  }
-
-  const handleApplyToProject = async () => {
-    if (!user) {
-      router.push('/login?redirect=/projects')
-      return
-    }
-    
-    setApplying(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setApplying(false)
-    setSheetOpen(false)
-    // TODO: Implement actual project application logic
-    setShowApplicationSuccessDialog(true)
-  }
-
-  // Mock progress data for the selected project
-  const getProjectProgress = (project: Project) => {
-    const totalNeeded = project.max_collectors || 10
-    const current = Math.floor(Math.random() * totalNeeded * 0.7) // Mock current collectors
-    const submissions = Math.floor(Math.random() * 500) // Mock submissions
-    const validated = Math.floor(submissions * 0.8) // Mock validated
-    return { totalNeeded, current, submissions, validated }
-  }
+    setSelectedProject(project);
+    setSheetOpen(true);
+  };
 
   const FilterSidebar = () => (
-    <div className="space-y-4">
-      {/* Category Filter */}
-      <div className="rounded-xl border border-cyan-400/30 overflow-hidden">
-        <button 
-          onClick={() => toggleSection('category')}
-          className="w-full flex items-center justify-between p-4 hover:bg-cyan-400/5"
-        >
-          <span className="font-semibold text-white flex items-center gap-2">
-            <Briefcase className="w-4 h-4 text-cyan-400" />
-            Category
-          </span>
-          {expandedSections.category ? <ChevronUp className="w-4 h-4 text-cyan-400/50" /> : <ChevronDown className="w-4 h-4 text-cyan-400/50" />}
-        </button>
-        {expandedSections.category && (
-          <div className="px-4 pb-4 space-y-2">
-            {categories.map(category => (
-              <label key={category} className="flex items-center gap-3 cursor-pointer group">
-                <Checkbox 
-                  checked={selectedCategories.includes(category)}
-                  onCheckedChange={() => toggleCategory(category)}
-                  className="border-cyan-400/50 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
-                />
-                <span className="text-sm text-white/70 group-hover:text-cyan-400">{category}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
+    <Card className="bg-white/5 dark:bg-gray-800/50 border-white/10 border shadow-sm pt-6">
+      <CardHeader className="px-6 pb-0">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4" />
+            Filters
+          </CardTitle>
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearAllFilters}
+              className="text-xs text-cyan-400 hover:text-cyan-300 h-auto py-0.5 px-0 hover:underline"
+            >
+              Clear all
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="px-6 space-y-5">
+        {/* Category Filter */}
+        <div>
+          <button
+            onClick={() =>
+              setExpandedSections((prev) => ({
+                ...prev,
+                category: !prev.category,
+              }))
+            }
+            className="flex items-center justify-between w-full text-xs font-semibold text-white/70 uppercase tracking-wide mb-2"
+          >
+            <span>Category</span>
+            {expandedSections.category ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+          </button>
+          {expandedSections.category && (
+            <div className="space-y-1.5">
+              {categories.map((cat) => {
+                const Icon = CATEGORY_ICONS[cat] || MoreHorizontal;
+                const isSelected = selectedCategories.includes(cat);
+                const count = categoryCounts[cat] || 0;
+                return (
+                  <div key={cat} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`cat-${cat}`}
+                      checked={isSelected}
+                      onCheckedChange={() => toggleCategory(cat)}
+                      className="btn-gelatine border-cyan-400/50 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
+                    />
+                    <label
+                      htmlFor={`cat-${cat}`}
+                      className={cn(
+                        "text-sm cursor-pointer flex items-center gap-2 flex-1",
+                        isSelected
+                          ? "text-cyan-400 font-medium"
+                          : "text-white/70 hover:text-cyan-400",
+                      )}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <span className="flex-1">{cat}</span>
+                      {count > 0 && (
+                        <span
+                          className={cn(
+                            "ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full tabular-nums",
+                            isSelected
+                              ? "bg-cyan-500/20 text-cyan-400"
+                              : "bg-white/10 text-white/50",
+                          )}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-      {/* Data Types Filter */}
-      <div className="rounded-xl border border-cyan-400/30 overflow-hidden">
-        <button 
-          onClick={() => toggleSection('dataTypes')}
-          className="w-full flex items-center justify-between p-4 hover:bg-cyan-400/5"
-        >
-          <span className="font-semibold text-white flex items-center gap-2">
-            <FileText className="w-4 h-4 text-cyan-400" />
-            Data Types
-          </span>
-          {expandedSections.dataTypes ? <ChevronUp className="w-4 h-4 text-cyan-400/50" /> : <ChevronDown className="w-4 h-4 text-cyan-400/50" />}
-        </button>
-        {expandedSections.dataTypes && (
-          <div className="px-4 pb-4 space-y-2">
-            {dataTypes.map(dataType => (
-              <label key={dataType} className="flex items-center gap-3 cursor-pointer group">
-                <Checkbox 
-                  checked={selectedDataTypes.includes(dataType)}
-                  onCheckedChange={() => toggleDataType(dataType)}
-                  className="border-cyan-400/50 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
-                />
-                <span className="text-sm text-white/70 group-hover:text-cyan-400">{dataType}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
+        <div className="border-t border-white/10" />
 
-      {/* Location Filter */}
-      <div className="rounded-xl border border-cyan-400/30 overflow-hidden">
-        <button 
-          onClick={() => toggleSection('location')}
-          className="w-full flex items-center justify-between p-4 hover:bg-cyan-400/5"
-        >
-          <span className="font-semibold text-white flex items-center gap-2">
-            <Globe className="w-4 h-4 text-cyan-400" />
-            Location
-          </span>
-          {expandedSections.location ? <ChevronUp className="w-4 h-4 text-cyan-400/50" /> : <ChevronDown className="w-4 h-4 text-cyan-400/50" />}
-        </button>
-        {expandedSections.location && (
-          <div className="px-4 pb-4 space-y-2">
-            {locationTypes.map(location => (
-              <label key={location} className="flex items-center gap-3 cursor-pointer group">
-                <Checkbox 
-                  checked={selectedLocations.includes(location)}
-                  onCheckedChange={() => toggleLocation(location)}
-                  className="border-cyan-400/50 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
-                />
-                <span className="text-sm text-white/70 group-hover:text-cyan-400">{location}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
+        {/* Data Types Filter */}
+        <div>
+          <button
+            onClick={() =>
+              setExpandedSections((prev) => ({
+                ...prev,
+                dataTypes: !prev.dataTypes,
+              }))
+            }
+            className="flex items-center justify-between w-full text-xs font-semibold text-white/70 uppercase tracking-wide mb-2"
+          >
+            <span>Data Types</span>
+            {expandedSections.dataTypes ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+          </button>
+          {expandedSections.dataTypes && (
+            <div className="space-y-1.5">
+              {dataTypes.map((type) => {
+                const isSelected = selectedDataTypes.includes(type);
+                const count = dataTypeCounts[type] || 0;
+                return (
+                  <div key={type} className="flex items-center gap-2">
+                    <Checkbox
+                      id={`type-${type}`}
+                      checked={isSelected}
+                      onCheckedChange={() => toggleDataType(type)}
+                      className="btn-gelatine border-cyan-400/50 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-500"
+                    />
+                    <label
+                      htmlFor={`type-${type}`}
+                      className={cn(
+                        "text-sm cursor-pointer flex items-center flex-1",
+                        isSelected
+                          ? "text-cyan-400 font-medium"
+                          : "text-white/70 hover:text-cyan-400",
+                      )}
+                    >
+                      <span className="flex-1">{type}</span>
+                      {count > 0 && (
+                        <span
+                          className={cn(
+                            "ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full tabular-nums",
+                            isSelected
+                              ? "bg-cyan-500/20 text-cyan-400"
+                              : "bg-white/10 text-white/50",
+                          )}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
-      {/* Budget Filter */}
-      <div className="rounded-xl border border-cyan-400/30 overflow-hidden">
-        <button 
-          onClick={() => toggleSection('budget')}
-          className="w-full flex items-center justify-between p-4 hover:bg-cyan-400/5"
-        >
-          <span className="font-semibold text-white flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-cyan-400" />
-            Budget
-          </span>
-          {expandedSections.budget ? <ChevronUp className="w-4 h-4 text-cyan-400/50" /> : <ChevronDown className="w-4 h-4 text-cyan-400/50" />}
-        </button>
-        {expandedSections.budget && (
-          <div className="px-4 pb-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <label className="text-xs text-cyan-400/70 mb-1 block">Min</label>
-                <input
+        <div className="border-t border-white/10" />
+
+        {/* Country Filter */}
+        <div>
+          <label className="text-xs font-semibold text-white/70 uppercase tracking-wide mb-2 block">
+            Country
+          </label>
+          {availableCountries.length === 0 ? (
+            <p className="text-xs text-white/50 italic">
+              No location data available
+            </p>
+          ) : (
+            <CountrySelect
+              countries={availableCountries}
+              selected={selectedCountries}
+              onToggle={toggleCountry}
+              onClear={() => setSelectedCountries([])}
+            />
+          )}
+        </div>
+
+        <div className="border-t border-white/10" />
+
+        {/* Budget Range */}
+        <div>
+          <button
+            onClick={() =>
+              setExpandedSections((prev) => ({
+                ...prev,
+                budget: !prev.budget,
+              }))
+            }
+            className="flex items-center justify-between w-full text-xs font-semibold text-white/70 uppercase tracking-wide mb-2"
+          >
+            <span>Budget Range</span>
+            {expandedSections.budget ? (
+              <ChevronUp className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronDown className="w-3.5 h-3.5" />
+            )}
+          </button>
+          {expandedSections.budget && (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <Input
                   type="number"
-                  value={budgetRange.min}
-                  onChange={(e) => setBudgetRange(prev => ({ ...prev, min: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-cyan-400/30 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 bg-transparent"
-                  placeholder="0"
+                  placeholder="Min"
+                  value={budgetRange.min || ""}
+                  onChange={(e) =>
+                    setBudgetRange((prev) => ({
+                      ...prev,
+                      min: Number(e.target.value) || 0,
+                    }))
+                  }
+                  className="h-9 text-sm border-white/10 text-white bg-white/5 placeholder:text-white/40 rounded-md"
                 />
-              </div>
-              <span className="text-cyan-400/30 mt-5">—</span>
-              <div className="flex-1">
-                <label className="text-xs text-cyan-400/70 mb-1 block">Max</label>
-                <input
+                <Input
                   type="number"
-                  value={budgetRange.max}
-                  onChange={(e) => setBudgetRange(prev => ({ ...prev, max: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-cyan-400/30 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 bg-transparent"
-                  placeholder="100000"
+                  placeholder="Max"
+                  value={budgetRange.max === 100000 ? "" : budgetRange.max}
+                  onChange={(e) =>
+                    setBudgetRange((prev) => ({
+                      ...prev,
+                      max: Number(e.target.value) || 100000,
+                    }))
+                  }
+                  className="h-9 text-sm border-white/10 text-white bg-white/5 placeholder:text-white/40 rounded-md"
                 />
               </div>
             </div>
-          </div>
-        )}
-      </div>
-
-      {/* Clear Filters */}
-      {activeFiltersCount > 0 && (
-        <Button 
-          variant="outline" 
-          onClick={clearAllFilters}
-          className="w-full border-cyan-400/50 text-cyan-400 hover:text-white hover:bg-cyan-400/10"
-        >
-          <X className="w-4 h-4 mr-2" />
-          Clear All Filters ({activeFiltersCount})
-        </Button>
-      )}
-    </div>
-  )
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-[#28303E]">
       <Header />
-      
-      <PageHero 
+
+      <PageHero
         title="Find Projects"
         subtitle="and Start Earning"
         description={`Browse ${projects.length} open data collection projects and contribute quality data`}
-      />
+        rightContent={<JobsListWindow />}
+      >
+        <div className="flex flex-col md:flex-row gap-3 w-full pt-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search for projects by title, description, or keywords..."
+              className="w-full px-4 py-3.5 pl-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+            />
+          </div>
+          <Button
+            className="md:hidden bg-white/10 border border-white/20 text-white"
+            onClick={() => setShowMobileFilters(true)}
+          >
+            <Filter className="w-4 h-4 mr-2" />
+            Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+          </Button>
+        </div>
+      </PageHero>
 
       <main className="pb-20 pt-8">
-        {/* Search Bar */}
-        <div className="container mx-auto px-6 mb-6">
-          <div className="flex flex-col md:flex-row gap-3 max-w-3xl">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for projects by title, description, or keywords..."
-                className="w-full px-4 py-3.5 pl-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              />
-            </div>
-            <Button 
-              className="md:hidden bg-white/10 border border-white/20 text-white"
-              onClick={() => setShowMobileFilters(true)}
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
-            </Button>
-          </div>
-        </div>
         <div className="container mx-auto px-6">
           <div className="flex gap-6">
             {/* Sidebar Filters - Desktop */}
@@ -426,7 +1091,10 @@ export default function Projects() {
                 <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-[#0B1020] p-6 overflow-y-auto">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-bold text-white">Filters</h2>
-                    <button onClick={() => setShowMobileFilters(false)} className="text-white/60 hover:text-white">
+                    <button
+                      onClick={() => setShowMobileFilters(false)}
+                      className="text-white/60 hover:text-white"
+                    >
                       <X className="w-6 h-6" />
                     </button>
                   </div>
@@ -440,24 +1108,155 @@ export default function Projects() {
               {/* Sort and Results Count */}
               <div className="flex items-center justify-between mb-4">
                 <p className="text-white/60 text-sm">
-                  <span className="text-white font-semibold">{filteredProjects.length}</span> projects found
+                  {hasActiveFilters
+                    ? `${filteredProjects.length} result${filteredProjects.length !== 1 ? "s" : ""} found`
+                    : `${filteredProjects.length} project${filteredProjects.length !== 1 ? "s" : ""}`}
                 </p>
-                <select
+                <Select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as any)}
-                  className="px-3 py-2 bg-[#0f172a] border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-cyan-500 cursor-pointer"
+                  onValueChange={(v) => setSortBy(v as typeof sortBy)}
                 >
-                  <option value="newest" className="bg-[#0f172a] text-white">Newest First</option>
-                  <option value="budget_high" className="bg-[#0f172a] text-white">Budget: High to Low</option>
-                  <option value="budget_low" className="bg-[#0f172a] text-white">Budget: Low to High</option>
-                  <option value="deadline" className="bg-[#0f172a] text-white">Deadline: Soonest</option>
-                </select>
+                  <SelectTrigger className="!h-10 w-44 text-sm bg-[#0f172a] border border-white/10 rounded-lg text-white hover:bg-[#0f172a] focus:border-cyan-500 focus:ring-cyan-500/20">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#0f172a] text-white border-white/10 dark:border-white/10">
+                    <SelectItem
+                      value="newest"
+                      className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                    >
+                      Newest First
+                    </SelectItem>
+                    <SelectItem
+                      value="budget_high"
+                      className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                    >
+                      Budget: High → Low
+                    </SelectItem>
+                    <SelectItem
+                      value="budget_low"
+                      className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                    >
+                      Budget: Low → High
+                    </SelectItem>
+                    <SelectItem
+                      value="deadline"
+                      className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                    >
+                      Deadline: Soonest
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {/* Active filter chips */}
+              {hasActiveFilters && (
+                <div className="flex flex-wrap items-center gap-3 mb-4">
+                  {searchQuery && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-sm text-white">
+                      &ldquo;{searchQuery}&rdquo;
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="ml-1 text-white/60 hover:text-white"
+                        aria-label="Clear search"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  {selectedCategories.map((cat) => (
+                    <span
+                      key={cat}
+                      className="inline-flex items-center gap-1 rounded-full bg-cyan-500/20 px-3 py-1 text-sm text-cyan-300"
+                    >
+                      {cat}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedCategories((prev) =>
+                            prev.filter((c) => c !== cat),
+                          )
+                        }
+                        className="ml-1 text-cyan-400 hover:text-cyan-200"
+                        aria-label={`Remove ${cat} filter`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {selectedDataTypes.map((dt) => (
+                    <span
+                      key={dt}
+                      className="inline-flex items-center gap-1 rounded-full bg-purple-500/20 px-3 py-1 text-sm text-purple-300"
+                    >
+                      {dt}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedDataTypes((prev) =>
+                            prev.filter((d) => d !== dt),
+                          )
+                        }
+                        className="ml-1 text-purple-400 hover:text-purple-200"
+                        aria-label={`Remove ${dt} filter`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {selectedCountries.map((country) => (
+                    <span
+                      key={country}
+                      className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-3 py-1 text-sm text-blue-300"
+                    >
+                      {country}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedCountries((prev) =>
+                            prev.filter((c) => c !== country),
+                          )
+                        }
+                        className="ml-1 text-blue-400 hover:text-blue-200"
+                        aria-label={`Remove ${country} filter`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  {(budgetRange.min > 0 || budgetRange.max < 100000) && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-3 py-1 text-sm text-emerald-300">
+                      {budgetRange.min > 0 && budgetRange.max < 100000
+                        ? `$${budgetRange.min.toLocaleString()} – $${budgetRange.max.toLocaleString()}`
+                        : budgetRange.min > 0
+                          ? `>$${budgetRange.min.toLocaleString()}`
+                          : `<$${budgetRange.max.toLocaleString()}`}
+                      <button
+                        type="button"
+                        onClick={() => setBudgetRange({ min: 0, max: 100000 })}
+                        className="ml-1 text-emerald-400 hover:text-emerald-200"
+                        aria-label="Clear budget filter"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="text-sm text-white/60 hover:text-white underline underline-offset-2"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
 
               {/* Loading State */}
               {loading && (
-                <div className="flex items-center justify-center py-20">
-                  <Loader2 className="w-8 h-8 animate-spin text-cyan-500" />
+                <div className="space-y-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <ProjectCardSkeleton key={i} />
+                  ))}
                 </div>
               )}
 
@@ -475,105 +1274,63 @@ export default function Projects() {
                   {filteredProjects.length === 0 ? (
                     <div className="text-center py-20 bg-white/5 rounded-xl border border-white/10">
                       <FolderKanban className="w-16 h-16 text-white/20 mx-auto mb-4" />
-                      <p className="text-white/60 text-lg mb-2">No projects match your criteria</p>
-                      <p className="text-white/40 text-sm mb-4">Try adjusting your filters or search query</p>
-                      <Button onClick={clearAllFilters} className="bg-slate-700 border border-slate-600 text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]">
+                      <p className="text-white/60 text-lg mb-2">
+                        No projects match your criteria
+                      </p>
+                      <p className="text-white/40 text-sm mb-4">
+                        Try adjusting your filters or search query
+                      </p>
+                      <Button
+                        onClick={clearAllFilters}
+                        className="bg-slate-700 border border-slate-600 text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]"
+                      >
                         Clear Filters
                       </Button>
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {filteredProjects.map((project) => {
-                        const CategoryIcon = getCategoryIcon(project.category)
-                        const daysLeft = getDaysLeft(project.deadline)
-                        const isUrgent = daysLeft !== null && daysLeft <= 3
-                        
-                        return (
-                          <div
+                    <>
+                      <div className="space-y-4">
+                        {visibleProjects.map((project) => (
+                          <ProjectCard
                             key={project.id}
-                            className="group bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 p-5 hover:border-cyan-500/50 hover:bg-white/[0.07] transition-all duration-300"
+                            project={project}
+                            formatDate={formatDate}
+                            getDaysLeft={getDaysLeft}
+                            onApplyClick={handleApplyClick}
+                          />
+                        ))}
+                      </div>
+                      {hasMoreJobs && (
+                        <div className="mt-6 flex justify-center">
+                          <Button
+                            variant="outline"
+                            className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400/50"
+                            onClick={() => {
+                              if (user) {
+                                setVisibleCount((prev) => prev + 10);
+                              } else {
+                                router.push("/login?redirect=/projects");
+                              }
+                            }}
                           >
-                            {/* Top Row */}
-                            <div className="flex items-start justify-between gap-4 mb-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xs text-white/40">{getTimeAgo(project.created_at)}</span>
-                                  {isUrgent && (
-                                    <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]">
-                                      <Clock className="w-3 h-3 mr-1" />
-                                      Urgent
-                                    </Badge>
-                                  )}
-                                </div>
-                                <h3 className="text-lg font-semibold text-white group-hover:text-cyan-400 transition-colors line-clamp-1">
-                                  {project.title}
-                                </h3>
-                              </div>
-                              <div className="text-right flex-shrink-0">
-                                <p className="text-xl font-bold text-emerald-400">${project.budget.toLocaleString()}</p>
-                                <p className="text-xs text-white/40">Budget</p>
-                              </div>
-                            </div>
-
-                            {/* Description */}
-                            <p className="text-white/60 text-sm mb-4 line-clamp-2">
-                              {project.description}
-                            </p>
-
-                            {/* Tags Row */}
-                            <div className="flex flex-wrap gap-2 mb-4">
-                              <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-                                <CategoryIcon className="w-3 h-3 mr-1" />
-                                {project.category}
-                              </Badge>
-                              {project.requirements.data_types.slice(0, 3).map((type, idx) => (
-                                <Badge key={idx} variant="outline" className="border-cyan-400/30 text-cyan-300/80 text-xs">
-                                  {type}
-                                </Badge>
-                              ))}
-                              {project.requirements.data_types.length > 3 && (
-                                <Badge variant="outline" className="border-cyan-400/30 text-cyan-300/80 text-xs">
-                                  +{project.requirements.data_types.length - 3} more
-                                </Badge>
-                              )}
-                            </div>
-
-                            {/* Bottom Row */}
-                            <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                              <div className="flex items-center gap-4 text-sm text-white/50">
-                                <div className="flex items-center gap-1.5">
-                                  <Users className="w-4 h-4" />
-                                  <span>{project.max_collectors} collectors needed</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  <Calendar className="w-4 h-4" />
-                                  <span>Due {formatDate(project.deadline)}</span>
-                                </div>
-                                {project.location?.address ? (
-                                  <div className="flex items-center gap-1.5">
-                                    <MapPin className="w-4 h-4" />
-                                    <span className="truncate max-w-[150px]">{project.location.address.split(',')[0]}</span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-1.5">
-                                    <Globe className="w-4 h-4" />
-                                    <span>Remote</span>
-                                  </div>
-                                )}
-                              </div>
-                              <Button 
-                                size="sm" 
-                                className="bg-slate-700 border border-slate-600 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]"
-                                onClick={() => handleApplyClick(project)}
-                              >
-                                Apply Now
-                                <ArrowRight className="w-4 h-4 ml-1" />
-                              </Button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
+                            {user ? (
+                              <>
+                                View more
+                                <span className="ml-1.5 text-white/60">
+                                  ({filteredProjects.length - displayLimit}{" "}
+                                  more)
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <LogIn className="w-4 h-4 mr-2" />
+                                View more — Sign in to see more jobs
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -581,214 +1338,78 @@ export default function Projects() {
           </div>
 
           {/* CTA Section */}
-          <div className="mt-16 text-center">
-            <div className="bg-[#0F131A] rounded-2xl p-8 border border-white/10">
-              <h2 className="text-2xl font-bold text-white mb-3">Need data collected for your project?</h2>
-              <p className="text-white/60 mb-6 max-w-xl mx-auto">
-                Post your project and get access to our global network of verified data collectors.
-              </p>
-              <div className="flex items-center justify-center gap-4">
-                <Link href="/signup?role=requester">
-                  <Button size="lg" className="bg-slate-700 border border-slate-600 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]">
-                    Post a Project
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
+          <div className="mt-20 mb-4">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#141a24] to-[#0d1117]">
+              <div className="grid grid-cols-1 lg:grid-cols-2 min-h-[320px]">
+                {/* Left: content + CTA */}
+                <div className="relative flex flex-col justify-center p-8 sm:p-10 lg:p-12">
+                  <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-blue-500/8 blur-3xl pointer-events-none" />
+                  <div className="flex flex-col gap-8">
+                    <div className="flex flex-col gap-3">
+                      <p className="text-sm font-medium uppercase tracking-widest text-cyan-400/90">
+                        For project owners
+                      </p>
+                      <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+                        Need data collected for your project?
+                      </h2>
+                      <p className="text-white/60 text-base sm:text-lg max-w-xl leading-relaxed">
+                        Post your project and get access to our global network
+                        of verified data collectors.
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      <Link href="/signup?role=requester">
+                        <Button
+                          size="lg"
+                          className="group bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold border-0 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/30 transition-all duration-200 hover:scale-[1.02]"
+                        >
+                          Post a Project
+                          <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5" />
+                        </Button>
+                      </Link>
+                      <span className="text-sm text-white/40">
+                        Free to post · Pay only for results
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                {/* Right: Three.js wireframe scene */}
+                <div className="relative rounded-b-2xl lg:rounded-b-none lg:rounded-r-2xl overflow-hidden py-12">
+                  <CTASceneCanvas />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </main>
 
+      <Footer />
+
+      {/* Scroll to top */}
+      {showScrollTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="fixed bottom-8 right-8 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-cyan-500/90 text-white shadow-lg transition hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#28303E]"
+          aria-label="Scroll to top"
+        >
+          <ArrowUpToLine className="h-5 w-5" />
+        </button>
+      )}
+
       {/* Project Detail Sheet */}
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="right" className="w-full sm:max-w-xl bg-[#0B1020] border-white/10 overflow-y-auto p-0">
-          {selectedProject && (
-            <div className="flex flex-col h-full">
-              <SheetHeader className="border-b border-white/10 p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    {(() => {
-                      const CategoryIcon = getCategoryIcon(selectedProject.category)
-                      return <CategoryIcon className="w-7 h-7 text-cyan-400" />
-                    })()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <SheetTitle className="text-white text-xl leading-tight">
-                      {selectedProject.title}
-                    </SheetTitle>
-                    <SheetDescription className="text-white/50 mt-1.5 text-sm">
-                      Posted {getTimeAgo(selectedProject.created_at)}
-                    </SheetDescription>
-                  </div>
-                </div>
-              </SheetHeader>
-
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {/* Budget & Deadline */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                    <div className="flex items-center gap-2 text-white/50 text-xs mb-1">
-                      <DollarSign className="w-3.5 h-3.5" />
-                      Budget
-                    </div>
-                    <p className="text-2xl font-bold text-emerald-400">${selectedProject.budget.toLocaleString()}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                    <div className="flex items-center gap-2 text-white/50 text-xs mb-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      Deadline
-                    </div>
-                    <p className="text-lg font-semibold text-white">{formatDate(selectedProject.deadline)}</p>
-                    {getDaysLeft(selectedProject.deadline) !== null && (
-                      <p className={`text-xs ${getDaysLeft(selectedProject.deadline)! <= 7 ? 'text-orange-400' : 'text-white/50'}`}>
-                        {getDaysLeft(selectedProject.deadline)} days left
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Progress Section */}
-                {(() => {
-                  const progress = getProjectProgress(selectedProject)
-                  const progressPercent = (progress.current / progress.totalNeeded) * 100
-                  return (
-                    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                      <h4 className="text-white font-medium mb-3 flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-cyan-400" />
-                        Project Progress
-                      </h4>
-                      <div className="space-y-4">
-                        <div>
-                          <div className="flex items-center justify-between text-sm mb-2">
-                            <span className="text-white/60">Collectors</span>
-                            <span className="text-white font-medium">{progress.current} / {progress.totalNeeded}</span>
-                          </div>
-                          <Progress value={progressPercent} className="h-2 bg-white/10" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 pt-2">
-                          <div className="text-center">
-                            <p className="text-2xl font-bold text-white">{progress.submissions}</p>
-                            <p className="text-xs text-white/50">Total Submissions</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-2xl font-bold text-green-400">{progress.validated}</p>
-                            <p className="text-xs text-white/50">Validated</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })()}
-
-                {/* Description */}
-                <div>
-                  <h4 className="text-white font-medium mb-2">Description</h4>
-                  <p className="text-white/60 text-sm leading-relaxed">{selectedProject.description}</p>
-                </div>
-
-                {/* Requirements */}
-                <div>
-                  <h4 className="text-white font-medium mb-3">Requirements</h4>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-3">
-                      <Target className="w-4 h-4 text-cyan-400 mt-0.5" />
-                      <div>
-                        <p className="text-white text-sm">Data Types</p>
-                        <div className="flex flex-wrap gap-1.5 mt-1">
-                          {selectedProject.requirements.data_types.map((type, idx) => (
-                            <Badge key={idx} variant="outline" className="border-cyan-400/30 text-cyan-300/80 text-xs">
-                              {type}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Users className="w-4 h-4 text-cyan-400 mt-0.5" />
-                      <div>
-                        <p className="text-white text-sm">Collectors Needed</p>
-                        <p className="text-white/60 text-xs">{selectedProject.max_collectors} collectors</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-4 h-4 text-cyan-400 mt-0.5" />
-                      <div>
-                        <p className="text-white text-sm">Location</p>
-                        <p className="text-white/60 text-xs">
-                          {selectedProject.location?.address || 'Remote / Worldwide'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Earnings Estimate */}
-                <div className="bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl p-4 border border-cyan-500/20">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Coins className="w-4 h-4 text-cyan-400" />
-                    <h4 className="text-white font-medium">Estimated Earnings</h4>
-                  </div>
-                  <p className="text-2xl font-bold text-white">
-                    ${Math.floor(selectedProject.budget / (selectedProject.max_collectors || 10)).toLocaleString()}
-                    <span className="text-sm font-normal text-white/50"> per collector</span>
-                  </p>
-                  <p className="text-xs text-white/50 mt-1">Based on equal distribution among collectors</p>
-                </div>
-              </div>
-
-              {/* Footer Actions */}
-              <div className="sticky bottom-0 bg-[#0B1020] border-t border-white/10 p-6 mt-auto">
-                {!user && !authLoading ? (
-                  <div className="space-y-4">
-                    <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-4 flex items-start gap-4">
-                      <div className="w-10 h-10 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
-                        <AlertCircle className="w-5 h-5 text-orange-400" />
-                      </div>
-                      <div>
-                        <p className="text-orange-400 font-semibold">Sign in required</p>
-                        <p className="text-white/60 text-sm mt-0.5">You need to sign in to apply for this project</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <Link href="/login?redirect=/projects">
-                        <Button size="lg" className="w-full bg-slate-700 border border-slate-600 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] text-white">
-                          <LogIn className="w-4 h-4 mr-2" />
-                          Sign In
-                        </Button>
-                      </Link>
-                      <Link href="/signup?role=collector">
-                        <Button size="lg" className="w-full bg-white/10 border border-white/30 text-white hover:bg-white/20">
-                          Create Account
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                ) : (
-                  <Button 
-                    size="lg"
-                    className="w-full bg-slate-700 border border-slate-600 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]"
-                    onClick={handleApplyToProject}
-                    disabled={applying}
-                  >
-                    {applying ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Applying...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Apply to Project
-                      </>
-                    )}
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <ProjectDetailsSheet
+        project={selectedProject}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        slotsFilled={false}
+        onProposalSuccess={() => {
+          setSheetOpen(false);
+          setShowApplicationSuccessDialog(true);
+        }}
+        forceDarkMode
+      />
       <ConfirmationDialog
         open={showApplicationSuccessDialog}
         onOpenChange={setShowApplicationSuccessDialog}
@@ -797,9 +1418,9 @@ export default function Projects() {
         confirmText="OK"
         hideCancel
         onConfirm={async () => {
-          setShowApplicationSuccessDialog(false)
+          setShowApplicationSuccessDialog(false);
         }}
       />
     </div>
-  )
+  );
 }
