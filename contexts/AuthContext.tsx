@@ -8,6 +8,17 @@ import type { UserProfile, UserRole } from '@/types/user'
 
 const ROLE_CACHE_KEY = 'dw_user_role'
 
+function isAuthSessionMissingError(error: any): boolean {
+  const message = String(error?.message || '').toLowerCase()
+  const name = String(error?.name || '').toLowerCase()
+  const code = String(error?.code || '').toLowerCase()
+  return (
+    message.includes('auth session missing') ||
+    name.includes('authsessionmissingerror') ||
+    code === 'auth_session_missing'
+  )
+}
+
 function getCachedRole(): UserRole | null {
   if (typeof window === 'undefined') return null
   return (localStorage.getItem(ROLE_CACHE_KEY) as UserRole) || null
@@ -193,6 +204,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Keep session fresh proactively (some projects use short JWT lifetimes, e.g. ~5 minutes).
     const refreshSessionSafely = async () => {
       if (!isMounted) return
+      if (!lastUserIdRef.current) {
+        consecutiveRefreshFailures = 0
+        return
+      }
       const refreshWithTimeout = () =>
         Promise.race([
           supabase.auth.refreshSession(),
@@ -207,6 +222,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         consecutiveRefreshFailures = 0
         return
       } catch (error) {
+        if (isAuthSessionMissingError(error)) {
+          // No active session to refresh; this is expected after logout/session expiry.
+          consecutiveRefreshFailures = 0
+          if (isMounted) {
+            setUser(null)
+            setProfile(null)
+            setCachedRole(null)
+            persistRole(null)
+            lastUserIdRef.current = null
+          }
+          return
+        }
         console.warn('Session refresh attempt failed, retrying once...', error)
       }
 
@@ -217,6 +244,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error
         consecutiveRefreshFailures = 0
       } catch (error) {
+        if (isAuthSessionMissingError(error)) {
+          consecutiveRefreshFailures = 0
+          if (isMounted) {
+            setUser(null)
+            setProfile(null)
+            setCachedRole(null)
+            persistRole(null)
+            lastUserIdRef.current = null
+          }
+          return
+        }
         consecutiveRefreshFailures += 1
         console.error('Session refresh failed after retry:', error)
 
