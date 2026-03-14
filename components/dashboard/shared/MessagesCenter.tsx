@@ -299,8 +299,7 @@ export default function MessagesCenter() {
       collectorId: conversation.collectorId,
       requesterId: conversation.requesterId,
       senderId: user.id,
-      senderName:
-        profile?.full_name?.trim() || profile?.email || "Someone",
+      senderName: profile?.full_name?.trim() || profile?.email || "Someone",
     };
     void channel.send({
       type: "broadcast",
@@ -366,37 +365,41 @@ export default function MessagesCenter() {
 
     const channel = supabase
       .channel("project-conversation-typing")
-      .on("broadcast", { event: "typing" }, ({ payload }: { payload: unknown }) => {
-        const typingPayload = payload as TypingPayload;
-        if (!typingPayload || typingPayload.senderId === user.id) return;
-        const key = `${typingPayload.requestId}:${typingPayload.collectorId}`;
-        const conversation = conversationsRef.current.find(
-          (item) => conversationKey(item) === key,
-        );
-        if (!conversation) return;
-        if (typingPayload.senderId !== conversation.counterpartId) return;
+      .on(
+        "broadcast",
+        { event: "typing" },
+        ({ payload }: { payload: unknown }) => {
+          const typingPayload = payload as TypingPayload;
+          if (!typingPayload || typingPayload.senderId === user.id) return;
+          const key = `${typingPayload.requestId}:${typingPayload.collectorId}`;
+          const conversation = conversationsRef.current.find(
+            (item) => conversationKey(item) === key,
+          );
+          if (!conversation) return;
+          if (typingPayload.senderId !== conversation.counterpartId) return;
 
-        setTypingMap((prev) => ({
-          ...prev,
-          [key]:
-            typingPayload.senderName?.trim() ||
-            conversation.counterpartName ||
-            "Someone",
-        }));
-        scheduleTypingClear(key);
-      })
+          setTypingMap((prev) => ({
+            ...prev,
+            [key]:
+              typingPayload.senderName?.trim() ||
+              conversation.counterpartName ||
+              "Someone",
+          }));
+          scheduleTypingClear(key);
+        },
+      )
       .on(
         "broadcast",
         { event: "stop-typing" },
         ({ payload }: { payload: unknown }) => {
-        const typingPayload = payload as TypingPayload;
-        if (!typingPayload || typingPayload.senderId === user.id) return;
-        const key = `${typingPayload.requestId}:${typingPayload.collectorId}`;
-        const conversation = conversationsRef.current.find(
-          (item) => conversationKey(item) === key,
-        );
-        if (!conversation) return;
-        if (typingPayload.senderId !== conversation.counterpartId) return;
+          const typingPayload = payload as TypingPayload;
+          if (!typingPayload || typingPayload.senderId === user.id) return;
+          const key = `${typingPayload.requestId}:${typingPayload.collectorId}`;
+          const conversation = conversationsRef.current.find(
+            (item) => conversationKey(item) === key,
+          );
+          if (!conversation) return;
+          if (typingPayload.senderId !== conversation.counterpartId) return;
           clearTypingForKey(key);
         },
       )
@@ -473,8 +476,11 @@ export default function MessagesCenter() {
           setConversations((prev) => {
             let changed = false;
             const next = prev.map((conversation) => {
-              if (conversation.counterpartId !== updated.id) return conversation;
-              if (conversation.counterpartLastActiveAt === updated.last_active_at) {
+              if (conversation.counterpartId !== updated.id)
+                return conversation;
+              if (
+                conversation.counterpartLastActiveAt === updated.last_active_at
+              ) {
                 return conversation;
               }
               changed = true;
@@ -570,7 +576,11 @@ export default function MessagesCenter() {
             incoming.sender_id !== user.id &&
             selectedKeyRef.current !== key
           ) {
-            setToast({ title: "New message", message: "New message received", type: "success" });
+            setToast({
+              title: "New message",
+              message: "New message received",
+              type: "success",
+            });
           }
         },
       )
@@ -910,12 +920,7 @@ export default function MessagesCenter() {
         />
       ) : null}
       <div>
-        <div
-          className={cn(
-            "flex h-[calc(100dvh-114px)]",
-            role === "collector" ? "mr-0 ml-0 pt-4" : "mr-2 ml-2",
-          )}
-        >
+        <div className={cn("flex h-[calc(100dvh-114px)] pt-4")}>
           <aside className="hidden w-80 bg-white dark:bg-gray-800 rounded-2xl p-3 sm:flex sm:flex-col mr-6">
             <div className="mb-3 flex items-center justify-between gap-2 px-1">
               <div>

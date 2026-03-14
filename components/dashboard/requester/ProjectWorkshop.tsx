@@ -1,92 +1,216 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { getProjectById } from "@/lib/services/projectService";
-import {
-  getSubmissionsByProject,
-  getProjectStats,
-  getDataItemsBySubmission,
-  updateSubmissionStatus,
-} from "@/lib/services/submissionService";
-import { creditCollector } from "@/lib/services/walletService";
+import { getProjectStats } from "@/lib/services/submissionService";
+import { getProposalsByProject } from "@/lib/services/proposalService";
 import type { Project } from "@/types/project";
-import type {
-  SubmissionWithCollector,
-  DataItem,
-  ProjectStats,
-} from "@/types/submission";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import type { ProjectStats } from "@/types/submission";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  Tabs,
+  TabsContent,
+  TabsUnderlineList,
+  TabsUnderlineTrigger,
+} from "@/components/ui/tabs";
 import {
   ArrowLeft,
   FileCheck,
   FileX,
   Clock,
-  CheckCircle2,
-  XCircle,
   AlertCircle,
   Users,
   BarChart3,
-  ThumbsUp,
-  ThumbsDown,
-  Eye,
   Loader2,
   RefreshCw,
   TrendingUp,
   Calendar,
   DollarSign,
   Briefcase,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  Image as ImageIcon,
-  Film,
-  Music,
+  MapPin,
+  Ruler,
+  Camera,
+  Video,
+  Mic,
   FileText,
-  File,
+  ClipboardList,
+  LocateFixed,
+  Activity,
+  Package,
 } from "lucide-react";
+import { Photography1Svg } from "@/components/svg/photography/photography_1";
+import { Photography2Svg } from "@/components/svg/photography/photography_2";
+import { Photography3Svg } from "@/components/svg/photography/photography_3";
+import { Photography4Svg } from "@/components/svg/photography/photography_4";
+import { Photography5Svg } from "@/components/svg/photography/photography_5";
+import { Video1Svg } from "@/components/svg/video/video_1";
+import { Video2Svg } from "@/components/svg/video/video_2";
+import { Video3Svg } from "@/components/svg/video/video_3";
+import { Video4Svg } from "@/components/svg/video/video_4";
+import { Video5Svg } from "@/components/svg/video/video_5";
+import { Audio1Svg } from "@/components/svg/audio/audio_1";
+import { Audio2Svg } from "@/components/svg/audio/audio_2";
+import { Audio3Svg } from "@/components/svg/audio/audio_3";
+import { Audio4Svg } from "@/components/svg/audio/audio_4";
+import { Audio5Svg } from "@/components/svg/audio/audio_5";
+import { Text1Svg } from "@/components/svg/text/text_1";
+import { Text2Svg } from "@/components/svg/text/text_2";
+import { Text3Svg } from "@/components/svg/text/text_3";
+import { Text4Svg } from "@/components/svg/text/text_4";
+import { Text5Svg } from "@/components/svg/text/text_5";
+import { Survey1Svg } from "@/components/svg/survey/survey_1";
+import { Survey2Svg } from "@/components/svg/survey/survey_2";
+import { Survey3Svg } from "@/components/svg/survey/survey_3";
+import { Survey4Svg } from "@/components/svg/survey/survey_4";
+import { Survey5Svg } from "@/components/svg/survey/survey_5";
+import { Location1Svg } from "@/components/svg/location-data/location_1";
+import { Location2Svg } from "@/components/svg/location-data/location_2";
+import { Location3Svg } from "@/components/svg/location-data/location_3";
+import { Location4Svg } from "@/components/svg/location-data/location_4";
+import { Location5Svg } from "@/components/svg/location-data/location_5";
+import { Sensor1Svg } from "@/components/svg/sensor-data/sensor_1";
+import { Sensor2Svg } from "@/components/svg/sensor-data/sensor_2";
+import { Sensor3Svg } from "@/components/svg/sensor-data/sensor_3";
+import { Sensor4Svg } from "@/components/svg/sensor-data/sensor_4";
+import { Sensor5Svg } from "@/components/svg/sensor-data/sensor_5";
+import { Other1Svg } from "@/components/svg/other/other_1";
+import { Other2Svg } from "@/components/svg/other/other_2";
+import { cn } from "@/lib/utils";
 import ToastNotification from "@/components/ui/toast-notification";
 import ProjectProposals from "./ProjectProposals";
+import ProjectSubmissions from "./ProjectSubmissions";
+import { Skeleton } from "@/components/ui/skeleton";
 
-function getFileIcon(fileType: string) {
-  switch (fileType) {
-    case "image":
-      return <ImageIcon className="w-3.5 h-3.5 text-blue-400" />;
-    case "video":
-      return <Film className="w-3.5 h-3.5 text-purple-400" />;
-    case "audio":
-      return <Music className="w-3.5 h-3.5 text-green-400" />;
-    case "document":
-      return <FileText className="w-3.5 h-3.5 text-red-400" />;
-    default:
-      return <File className="w-3.5 h-3.5 text-gray-400" />;
+const PHOTOGRAPHY_SVGS = [
+  Photography1Svg,
+  Photography2Svg,
+  Photography3Svg,
+  Photography4Svg,
+  Photography5Svg,
+] as const;
+const VIDEO_SVGS = [
+  Video1Svg,
+  Video2Svg,
+  Video3Svg,
+  Video4Svg,
+  Video5Svg,
+] as const;
+const AUDIO_SVGS = [
+  Audio1Svg,
+  Audio2Svg,
+  Audio3Svg,
+  Audio4Svg,
+  Audio5Svg,
+] as const;
+const TEXT_SVGS = [Text1Svg, Text2Svg, Text3Svg, Text4Svg, Text5Svg] as const;
+const SURVEY_SVGS = [
+  Survey1Svg,
+  Survey2Svg,
+  Survey3Svg,
+  Survey4Svg,
+  Survey5Svg,
+] as const;
+const LOCATION_SVGS = [
+  Location1Svg,
+  Location2Svg,
+  Location3Svg,
+  Location4Svg,
+  Location5Svg,
+] as const;
+const SENSOR_SVGS = [
+  Sensor1Svg,
+  Sensor2Svg,
+  Sensor3Svg,
+  Sensor4Svg,
+  Sensor5Svg,
+] as const;
+const OTHER_SVGS = [Other1Svg, Other2Svg] as const;
+
+const CATEGORY_META: Record<
+  string,
+  { icon: React.ReactNode; accent: string; bg: string }
+> = {
+  Photography: {
+    icon: <Camera className="w-4 h-4" />,
+    accent: "#10b981",
+    bg: "bg-emerald-500/10",
+  },
+  Video: {
+    icon: <Video className="w-4 h-4" />,
+    accent: "#0ea5e9",
+    bg: "bg-sky-500/10",
+  },
+  Audio: {
+    icon: <Mic className="w-4 h-4" />,
+    accent: "#a855f7",
+    bg: "bg-purple-500/10",
+  },
+  Text: {
+    icon: <FileText className="w-4 h-4" />,
+    accent: "#f59e0b",
+    bg: "bg-amber-500/10",
+  },
+  Survey: {
+    icon: <ClipboardList className="w-4 h-4" />,
+    accent: "#22c55e",
+    bg: "bg-green-500/10",
+  },
+  "Location Data": {
+    icon: <LocateFixed className="w-4 h-4" />,
+    accent: "#14b8a6",
+    bg: "bg-teal-500/10",
+  },
+  "Sensor Data": {
+    icon: <Activity className="w-4 h-4" />,
+    accent: "#f97316",
+    bg: "bg-orange-500/10",
+  },
+  Other: {
+    icon: <Package className="w-4 h-4" />,
+    accent: "#06b6d4",
+    bg: "bg-cyan-500/10",
+  },
+};
+const DEFAULT_CATEGORY_META = CATEGORY_META["Other"];
+
+function getProjectIconIndex(projectId: string, count: number): number {
+  let hash = 0;
+  for (let i = 0; i < projectId.length; i++) {
+    hash = (hash * 31 + projectId.charCodeAt(i)) >>> 0;
   }
+  return hash % count;
 }
 
-function formatFileSize(bytes: number | null): string {
-  if (!bytes || bytes === 0) return "-";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+function getSvgForProject(projectId: string, category: string) {
+  const pool =
+    category === "Photography"
+      ? PHOTOGRAPHY_SVGS
+      : category === "Video"
+        ? VIDEO_SVGS
+        : category === "Audio"
+          ? AUDIO_SVGS
+          : category === "Text"
+            ? TEXT_SVGS
+            : category === "Survey"
+              ? SURVEY_SVGS
+              : category === "Location Data"
+                ? LOCATION_SVGS
+                : category === "Sensor Data"
+                  ? SENSOR_SVGS
+                  : OTHER_SVGS;
+  return pool[getProjectIconIndex(projectId, pool.length)];
+}
+
+function formatDateSheet(dateString: string | null) {
+  if (!dateString) return "No deadline";
+  return new Date(dateString).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 interface ProjectWorkshopProps {
@@ -94,58 +218,18 @@ interface ProjectWorkshopProps {
 }
 
 export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
-  const { user } = useAuth();
   const [project, setProject] = useState<Project | null>(null);
-  const [submissions, setSubmissions] = useState<SubmissionWithCollector[]>([]);
   const [stats, setStats] = useState<ProjectStats | null>(null);
+  const [pendingProposalsCount, setPendingProposalsCount] = useState<number>(0);
+  const [pendingSubmissionsCount, setPendingSubmissionsCount] =
+    useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [processingId, setProcessingId] = useState<string | null>(null);
-  const [expandedCollector, setExpandedCollector] = useState<string | null>(null);
-  const [expandedSubmission, setExpandedSubmission] = useState<string | null>(null);
-  const [dataItemsMap, setDataItemsMap] = useState<Record<string, DataItem[]>>({});
-  const [loadingItems, setLoadingItems] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ title?: string; message: string; type: "success" | "error" } | null>(null);
-
-  const toggleCollector = (collectorId: string) => {
-    setExpandedCollector((prev) => (prev === collectorId ? null : collectorId));
-    setExpandedSubmission(null);
-  };
-
-  const toggleSubmissionFiles = async (submissionId: string) => {
-    if (expandedSubmission === submissionId) {
-      setExpandedSubmission(null);
-      return;
-    }
-    setExpandedSubmission(submissionId);
-    if (!dataItemsMap[submissionId]) {
-      try {
-        setLoadingItems(submissionId);
-        const { data, error: itemsError } = await getDataItemsBySubmission(submissionId);
-        if (itemsError) throw itemsError;
-        setDataItemsMap((prev) => ({ ...prev, [submissionId]: data || [] }));
-      } catch (err: any) {
-        console.error("Error fetching data items:", err);
-      } finally {
-        setLoadingItems(null);
-      }
-    }
-  };
-
-  const groupByCollector = (subs: SubmissionWithCollector[]) => {
-    const groups: Record<string, { collector: SubmissionWithCollector["collector"]; submissions: SubmissionWithCollector[] }> = {};
-    for (const sub of subs) {
-      const cid = sub.collector_id;
-      if (!groups[cid]) {
-        groups[cid] = { collector: sub.collector, submissions: [] };
-      }
-      groups[cid].submissions.push(sub);
-    }
-    return Object.entries(groups).map(([collectorId, group]) => ({
-      collectorId,
-      ...group,
-    }));
-  };
+  const [toast, setToast] = useState<{
+    title?: string;
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
 
   const fetchData = async () => {
     if (!projectId) return;
@@ -154,22 +238,25 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
       setLoading(true);
       setError("");
 
-      // Fetch project, submissions, and stats in parallel
-      const [projectResult, submissionsResult, statsResult] = await Promise.all(
-        [
-          getProjectById(projectId),
-          getSubmissionsByProject(projectId),
-          getProjectStats(projectId),
-        ]
-      );
+      const [projectResult, statsResult, proposalsResult] = await Promise.all([
+        getProjectById(projectId),
+        getProjectStats(projectId),
+        getProposalsByProject(projectId),
+      ]);
 
       if (projectResult.error) throw projectResult.error;
-      if (submissionsResult.error) throw submissionsResult.error;
       if (statsResult.error) throw statsResult.error;
 
       setProject(projectResult.data);
-      setSubmissions(submissionsResult.data || []);
       setStats(statsResult.data);
+      const proposals = proposalsResult.error
+        ? []
+        : (proposalsResult.data ?? []);
+      setPendingProposalsCount(
+        proposals.filter(
+          (p) => p.status !== "accepted" && p.status !== "rejected",
+        ).length,
+      );
     } catch (err: any) {
       setError(err.message || "Failed to load workshop data");
       console.error("Error fetching workshop data:", err);
@@ -183,127 +270,76 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const handleValidate = async (submissionId: string, approve: boolean) => {
-    if (!user) return;
-
-    try {
-      setProcessingId(submissionId);
-      const status = approve ? "validated" : "rejected";
-      const score = approve ? 100 : 0;
-
-      const { error: updateError } = await updateSubmissionStatus(
-        submissionId,
-        status,
-        user.id,
-        score
-      );
-
-      if (updateError) throw updateError;
-
-      if (approve && project) {
-        const submission = submissions.find((s) => s.id === submissionId);
-        if (submission) {
-          const { error: txError } = await creditCollector(
-            user.id,
-            submission.collector_id,
-            submissionId,
-            project.budget
-          );
-          if (txError) {
-            setToast({
-              title: "Payment failed",
-              message: txError.message,
-              type: "error",
-            });
-            setProcessingId(null);
-            return;
-          }
-        }
-      }
-
-      setToast({
-        title: approve ? "Submission approved" : "Submission rejected",
-        message: approve
-          ? "Submission approved and collector paid!"
-          : "Submission rejected.",
-        type: "success",
-      });
-
-      await fetchData();
-    } catch (err: any) {
-      console.error("Error updating submission:", err);
-      setToast({
-        title: "Update failed",
-        message: err.message || "Failed to update submission status.",
-        type: "error",
-      });
-    } finally {
-      setProcessingId(null);
-    }
-  };
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "N/A";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch {
-      return "Invalid date";
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pending":
-        return (
-          <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-600 text-[9px] px-1.5 py-0">
-            <Clock className="w-2.5 h-2.5 mr-0.5" />
-            Pending
-          </Badge>
-        );
-      case "validated":
-        return (
-          <Badge variant="secondary" className="bg-green-500/20 text-green-600 text-[9px] px-1.5 py-0">
-            <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
-            Validated
-          </Badge>
-        );
-      case "rejected":
-        return (
-          <Badge variant="secondary" className="bg-red-500/20 text-red-600 text-[9px] px-1.5 py-0">
-            <XCircle className="w-2.5 h-2.5 mr-0.5" />
-            Rejected
-          </Badge>
-        );
-      case "disputed":
-        return (
-          <Badge variant="secondary" className="bg-orange-500/20 text-orange-600 text-[9px] px-1.5 py-0">
-            <AlertCircle className="w-2.5 h-2.5 mr-0.5" />
-            Disputed
-          </Badge>
-        );
-      default:
-        return <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{status}</Badge>;
-    }
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      <div className="space-y-3 py-4">
+        {/* Header skeleton */}
+        <div className="flex flex-wrap items-center justify-between gap-2 px-0 pt-2 pb-4">
+          <div className="flex items-start gap-3">
+            <Skeleton className="shrink-0 w-12 h-12 rounded-xl" />
+            <div className="space-y-2 pt-0.5">
+              <Skeleton className="h-6 w-44 rounded-md" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-20 rounded-md" />
+                <Skeleton className="h-5 w-16 rounded-md" />
+              </div>
+            </div>
+          </div>
+          <Skeleton className="h-7 w-16 rounded-md" />
+        </div>
+
+        {/* Card + tabs skeleton */}
+        <div className="rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800/50 border border-border/40">
+          {/* Tab bar */}
+          <div className="flex gap-6 px-5 pt-2 border-b border-gray-200 dark:border-gray-800">
+            <Skeleton className="h-8 w-20 rounded-md mb-2" />
+            <Skeleton className="h-8 w-20 rounded-md mb-2" />
+          </div>
+
+          {/* Content */}
+          <div className="p-5 space-y-5">
+            {/* Description block */}
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-20 rounded" />
+              <Skeleton className="h-4 w-full rounded" />
+              <Skeleton className="h-4 w-5/6 rounded" />
+              <Skeleton className="h-4 w-4/6 rounded" />
+            </div>
+
+            {/* Chips row */}
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-9 w-28 rounded-full" />
+              <Skeleton className="h-9 w-32 rounded-full" />
+              <Skeleton className="h-9 w-20 rounded-full" />
+            </div>
+
+            {/* Data types */}
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-32 rounded" />
+              <div className="flex flex-wrap gap-1.5">
+                <Skeleton className="h-9 w-24 rounded-full" />
+                <Skeleton className="h-9 w-20 rounded-full" />
+                <Skeleton className="h-9 w-28 rounded-full" />
+              </div>
+            </div>
+
+            {/* Formats */}
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-28 rounded" />
+              <div className="flex flex-wrap gap-1.5">
+                <Skeleton className="h-9 w-16 rounded-full" />
+                <Skeleton className="h-9 w-20 rounded-full" />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="p-4">
+      <div className="py-4">
         <Card className="dark:bg-gray-800/50 border-none">
           <CardContent className="py-6 px-4">
             <div className="text-center py-6">
@@ -312,7 +348,11 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
               <p className="text-[11px] text-muted-foreground mb-3">
                 The project doesn&apos;t exist or you don&apos;t have access.
               </p>
-              <Button size="sm" className="h-7 text-xs" onClick={() => window.history.back()}>
+              <Button
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => window.history.back()}
+              >
                 <ArrowLeft className="w-3 h-3 mr-1" />
                 Go Back
               </Button>
@@ -327,12 +367,12 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
     ? Math.round(
         ((stats.validated_submissions + stats.rejected_submissions) /
           Math.max(stats.total_submissions, 1)) *
-          100
+          100,
       )
     : 0;
 
   return (
-    <div className="space-y-3 p-4">
+    <div className="space-y-3 py-4">
       {toast && (
         <ToastNotification
           title={toast.title}
@@ -345,22 +385,96 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mb-1 h-6 text-[10px] px-2"
-            onClick={() => window.history.back()}
-          >
-            <ArrowLeft className="w-3 h-3 mr-1" />
-            Back
-          </Button>
-          <h1 className="text-lg font-semibold tracking-tight">{project.title}</h1>
-          <p className="text-[11px] text-muted-foreground">Project Workshop</p>
+          <div className="px-0 pt-2 pb-4">
+            <div className="flex items-start gap-3 min-w-0">
+              <div
+                className={cn(
+                  "shrink-0 w-12 h-12 rounded-xl flex items-center justify-center mt-0.5",
+                  (CATEGORY_META[project.category] || DEFAULT_CATEGORY_META).bg,
+                )}
+                style={{
+                  color: (
+                    CATEGORY_META[project.category] || DEFAULT_CATEGORY_META
+                  ).accent,
+                }}
+              >
+                <span className="w-8 h-8 flex items-center justify-center">
+                  {(() => {
+                    const catMeta =
+                      CATEGORY_META[project.category] || DEFAULT_CATEGORY_META;
+                    const SvgComp = getSvgForProject(
+                      project.id,
+                      project.category,
+                    );
+                    return <SvgComp color={catMeta.accent} />;
+                  })()}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-xl font-bold text-foreground leading-tight">
+                  {project.title}
+                </h2>
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md",
+                      (CATEGORY_META[project.category] || DEFAULT_CATEGORY_META)
+                        .bg,
+                    )}
+                    style={{
+                      color: (
+                        CATEGORY_META[project.category] || DEFAULT_CATEGORY_META
+                      ).accent,
+                    }}
+                  >
+                    {(CATEGORY_META[project.category] || DEFAULT_CATEGORY_META)
+                      .icon && (
+                      <span className="scale-75 origin-center">
+                        {
+                          (
+                            CATEGORY_META[project.category] ||
+                            DEFAULT_CATEGORY_META
+                          ).icon
+                        }
+                      </span>
+                    )}
+                    {project.category}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "capitalize gap-1.5",
+                      project.status === "completed"
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : project.status === "cancelled"
+                          ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
+                          : project.status === "paused"
+                            ? "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                            : "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "size-1.5 rounded-full",
+                        project.status === "completed"
+                          ? "bg-emerald-500"
+                          : project.status === "cancelled"
+                            ? "bg-red-500"
+                            : project.status === "paused"
+                              ? "bg-amber-500"
+                              : "bg-blue-500",
+                      )}
+                    />
+                    {project.status}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <Button onClick={fetchData} variant="outline" size="sm" className="h-7 text-xs px-2">
-          <RefreshCw className="w-3 h-3 mr-1" />
-          Refresh
-        </Button>
+        <span className="text-xl font-semibold text-foreground">
+          ${project.budget.toFixed(2)}
+        </span>
       </div>
 
       {error && (
@@ -373,494 +487,174 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
         </Card>
       )}
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2">
-        <Card className="dark:bg-gray-800/50 border-none">
-          <CardContent className="py-2.5 px-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</p>
-                <p className="text-lg font-bold">
-                  {stats?.total_submissions || 0}
-                </p>
-              </div>
-              <div className="w-7 h-7 rounded-md bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Project Info & Proposals Tabs — same structure as ProjectDetailsSheet */}
+      <Card className="overflow-hidden bg-white dark:bg-gray-800/50 border-none">
+        <CardContent className="p-0">
+          <Tabs
+            defaultValue="project-info"
+            className="w-full flex-1 flex flex-col"
+          >
+            <TabsUnderlineList className="border-b border-gray-200 dark:border-gray-800 px-5 pt-2">
+              <TabsUnderlineTrigger value="project-info">
+                Project Info
+              </TabsUnderlineTrigger>
+              <TabsUnderlineTrigger value="proposals" className="gap-1.5">
+                Proposals
+                {pendingProposalsCount > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="gelatine-auto rounded-full h-5 min-w-5 px-1.5 text-[10px] font-semibold tabular-nums bg-primary text-primary-foreground border-0"
+                  >
+                    {pendingProposalsCount}
+                  </Badge>
+                )}
+              </TabsUnderlineTrigger>
+              <TabsUnderlineTrigger value="submissions" className="gap-1.5">
+                Submissions
+                {pendingSubmissionsCount > 0 && (
+                  <Badge
+                    variant="secondary"
+                    className="gelatine-auto rounded-full h-5 min-w-5 px-1.5 text-[10px] font-semibold tabular-nums bg-amber-500 text-white border-0"
+                  >
+                    {pendingSubmissionsCount}
+                  </Badge>
+                )}
+              </TabsUnderlineTrigger>
+            </TabsUnderlineList>
 
-        <Card className="dark:bg-gray-800/50 border-none">
-          <CardContent className="py-2.5 px-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Pending</p>
-                <p className="text-lg font-bold text-yellow-600">
-                  {stats?.pending_submissions || 0}
-                </p>
-              </div>
-              <div className="w-7 h-7 rounded-md bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                <Clock className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <TabsContent value="project-info" className="flex-1 p-5 mt-0">
+              {/* Layout: main content left, action buttons column right (wireframe structure) */}
+              <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+                {/* Left: project info content */}
+                <div className="flex-1 min-w-0 space-y-5">
+                  {/* Description */}
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      Description
+                    </p>
+                    <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                      {project.description}
+                    </p>
+                  </div>
 
-        <Card className="dark:bg-gray-800/50 border-none">
-          <CardContent className="py-2.5 px-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Validated</p>
-                <p className="text-lg font-bold text-green-600">
-                  {stats?.validated_submissions || 0}
-                </p>
-              </div>
-              <div className="w-7 h-7 rounded-md bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <FileCheck className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  {/* Feature chips + data types + formats at bottom */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge
+                      variant="outline"
+                      className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
+                    >
+                      <Users className="w-6 h-6" />
+                      {project.max_collectors}{" "}
+                      {project.max_collectors === 1
+                        ? "collector"
+                        : "collectors"}
+                    </Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
+                    >
+                      <Calendar className="w-5 h-5" />
+                      {formatDateSheet(project.deadline)}
+                    </Badge>
+                    {typeof project.location?.radius_km === "number" && (
+                      <Badge
+                        variant="outline"
+                        className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
+                      >
+                        <Ruler className="w-5 h-5" />
+                        {`${project.location.radius_km} km`}
+                      </Badge>
+                    )}
+                  </div>
 
-        <Card className="dark:bg-gray-800/50 border-none">
-          <CardContent className="py-2.5 px-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Rejected</p>
-                <p className="text-lg font-bold text-red-600">
-                  {stats?.rejected_submissions || 0}
-                </p>
-              </div>
-              <div className="w-7 h-7 rounded-md bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <FileX className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  {/* Data types */}
+                  {project.requirements?.data_types?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                        Required Data Types
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {project.requirements.data_types.map((type, idx) => (
+                          <Badge
+                            key={`${type}-${idx}`}
+                            variant="secondary"
+                            className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
+                          >
+                            {type}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-        <Card className="dark:bg-gray-800/50 border-none">
-          <CardContent className="py-2.5 px-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Avg Score</p>
-                <p className="text-lg font-bold text-cyan-600">
-                  {stats?.average_validation_score != null
-                    ? `${stats.average_validation_score}%`
-                    : "N/A"}
-                </p>
-              </div>
-              <div className="w-7 h-7 rounded-md bg-cyan-100 dark:bg-cyan-900/30 flex items-center justify-center">
-                <BarChart3 className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                  {/* Formats */}
+                  {project.requirements?.formats?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                        Preferred Formats
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {project.requirements.formats.map((format, idx) => (
+                          <Badge
+                            key={`${format}-${idx}`}
+                            variant="outline"
+                            className="text-sm px-4 py-2 border-none text-muted-foreground bg-gray-100 dark:bg-gray-800 rounded-full [&>svg]:size-4"
+                          >
+                            {format}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-      {/* Progress Card */}
-      <Card className="dark:bg-gray-800/50 border-none">
-        <CardHeader className="py-2 px-4">
-          <CardTitle className="text-xs font-semibold flex items-center gap-1">
-            <TrendingUp className="w-3.5 h-3.5" />
-            Project Progress
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="py-2 px-4">
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-muted-foreground">Review Completion</span>
-              <span className="font-semibold">{completionRate}%</span>
-            </div>
-            <Progress value={completionRate} className="h-1.5" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-1">
-              <div className="text-center">
-                <p className="text-base font-bold text-green-600">
-                  {stats?.validated_submissions || 0}
-                </p>
-                <p className="text-[9px] text-muted-foreground">Approved</p>
-              </div>
-              <div className="text-center">
-                <p className="text-base font-bold text-yellow-600">
-                  {stats?.pending_submissions || 0}
-                </p>
-                <p className="text-[9px] text-muted-foreground">Pending</p>
-              </div>
-              <div className="text-center">
-                <p className="text-base font-bold text-red-600">
-                  {stats?.rejected_submissions || 0}
-                </p>
-                <p className="text-[9px] text-muted-foreground">Rejected</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Project Info */}
-      <Card className="dark:bg-gray-800/50 border-none">
-        <CardHeader className="py-2 px-4">
-          <CardTitle className="text-xs font-semibold">Project Details</CardTitle>
-        </CardHeader>
-        <CardContent className="py-2 px-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="flex items-center gap-1.5 text-[11px]">
-              <DollarSign className="w-3 h-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Budget:</span>
-              <span className="font-semibold">${project.budget.toFixed(2)}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-[11px]">
-              <Calendar className="w-3 h-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Deadline:</span>
-              <span className="font-semibold">{formatDate(project.deadline)}</span>
-            </div>
-            <div className="flex items-center gap-1.5 text-[11px]">
-              <Users className="w-3 h-3 text-muted-foreground" />
-              <span className="text-muted-foreground">Max Collectors:</span>
-              <span className="font-semibold">{project.max_collectors}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Submissions Tabs */}
-      <Tabs defaultValue="proposals" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 mb-2 h-8">
-          <TabsTrigger value="proposals" className="text-[10px] h-7">
-            <Briefcase className="w-3 h-3 mr-1" />
-            Proposals
-          </TabsTrigger>
-          <TabsTrigger value="all" className="text-[10px] h-7">
-            All ({stats?.total_submissions || 0})
-          </TabsTrigger>
-          <TabsTrigger value="pending" className="text-[10px] h-7">
-            Pending ({stats?.pending_submissions || 0})
-          </TabsTrigger>
-          <TabsTrigger value="validated" className="text-[10px] h-7">
-            Validated ({stats?.validated_submissions || 0})
-          </TabsTrigger>
-          <TabsTrigger value="rejected" className="text-[10px] h-7">
-            Rejected ({stats?.rejected_submissions || 0})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="proposals" className="space-y-2">
-          <ProjectProposals projectId={projectId} />
-        </TabsContent>
-
-        {["all", "pending", "validated", "rejected"].map((tabValue) => {
-          const filtered = submissions.filter(
-            (s) => tabValue === "all" || s.status === tabValue
-          );
-          const collectorGroups = groupByCollector(filtered);
-
-          return (
-            <TabsContent key={tabValue} value={tabValue}>
-              {filtered.length === 0 ? (
-                <Card className="dark:bg-gray-800/50 border-none">
-                  <CardContent className="py-6 px-4">
-                    <div className="text-center py-4">
-                      <Users className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-50" />
-                      <h3 className="text-sm font-semibold mb-1">
-                        {submissions.length === 0
-                          ? "No submissions yet"
-                          : `No ${tabValue} submissions`}
-                      </h3>
-                      <p className="text-[11px] text-muted-foreground">
-                        Submissions from collectors will appear here
+                  {/* Specifications */}
+                  {project.requirements?.specifications && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                        Additional Specifications
+                      </p>
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                        {project.requirements.specifications}
                       </p>
                     </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-2">
-                  {collectorGroups.map((group) => {
-                    const isCollectorExpanded = expandedCollector === group.collectorId;
-                    const pendingCount = group.submissions.filter((s) => s.status === "pending").length;
-                    const validatedCount = group.submissions.filter((s) => s.status === "validated").length;
-                    const rejectedCount = group.submissions.filter((s) => s.status === "rejected").length;
-
-                    return (
-                      <Card key={group.collectorId} className="dark:bg-gray-800/50 border-none overflow-hidden">
-                        {/* Collector Header Row */}
-                        <div
-                          className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-100/50 dark:hover:bg-gray-700/30 transition-colors"
-                          onClick={() => toggleCollector(group.collectorId)}
-                        >
-                          <div className="text-muted-foreground">
-                            {isCollectorExpanded ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                          </div>
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={group.collector?.avatar_url || ""} />
-                            <AvatarFallback className="bg-cyan-500 text-white text-xs">
-                              {group.collector?.full_name?.charAt(0) ||
-                                group.collector?.email?.charAt(0) ||
-                                "U"}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold leading-tight">
-                              {group.collector?.full_name || group.collector?.email || "Unknown"}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {group.collector?.rating != null && (
-                                <span className="text-[10px] text-muted-foreground">
-                                  Rating: {group.collector.rating.toFixed(1)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
-                              {group.submissions.length} submission{group.submissions.length !== 1 ? "s" : ""}
-                            </Badge>
-                            {pendingCount > 0 && (
-                              <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-600 text-[9px] px-1.5 py-0">
-                                {pendingCount} pending
-                              </Badge>
-                            )}
-                            {validatedCount > 0 && (
-                              <Badge variant="secondary" className="bg-green-500/20 text-green-600 text-[9px] px-1.5 py-0">
-                                {validatedCount} approved
-                              </Badge>
-                            )}
-                            {rejectedCount > 0 && (
-                              <Badge variant="secondary" className="bg-red-500/20 text-red-600 text-[9px] px-1.5 py-0">
-                                {rejectedCount} rejected
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Expanded: Submissions table for this collector */}
-                        {isCollectorExpanded && (
-                          <div className="border-t border-gray-200 dark:border-gray-700/50 overflow-x-auto">
-                            <Table>
-                              <TableHeader>
-                                <TableRow className="bg-gray-50 dark:bg-gray-800/30">
-                                  <TableHead className="w-[32px] pl-4"></TableHead>
-                                  <TableHead className="text-[11px]">Submitted</TableHead>
-                                  <TableHead className="text-[11px]">Status</TableHead>
-                                  <TableHead className="text-[11px]">Score</TableHead>
-                                  <TableHead className="text-[11px]">Notes</TableHead>
-                                  <TableHead className="text-[11px] text-right pr-4">Actions</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {group.submissions.map((submission) => {
-                                  const isSubExpanded = expandedSubmission === submission.id;
-                                  const items = dataItemsMap[submission.id];
-                                  const isLoadingFiles = loadingItems === submission.id;
-                                  const notes = (submission.metadata as any)?.notes || "-";
-
-                                  return (
-                                    <React.Fragment key={submission.id}>
-                                      <TableRow
-                                        className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/20"
-                                        onClick={() => toggleSubmissionFiles(submission.id)}
-                                      >
-                                        <TableCell className="pl-4">
-                                          {isSubExpanded ? (
-                                            <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" />
-                                          ) : (
-                                            <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                                          )}
-                                        </TableCell>
-                                        <TableCell className="text-[11px] text-muted-foreground">
-                                          {formatDate(submission.submitted_at)}
-                                        </TableCell>
-                                        <TableCell>{getStatusBadge(submission.status)}</TableCell>
-                                        <TableCell className="text-[11px]">
-                                          {submission.validation_score !== null
-                                            ? `${submission.validation_score}%`
-                                            : "-"}
-                                        </TableCell>
-                                        <TableCell className="text-[11px] text-muted-foreground max-w-[150px] truncate">
-                                          {notes}
-                                        </TableCell>
-                                        <TableCell className="text-right pr-4">
-                                          {submission.status === "pending" && submission.agent_validated && (
-                                            <div className="flex flex-wrap gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-                                              <Button
-                                                size="sm"
-                                                className="h-6 text-[10px] px-2 bg-green-600 hover:bg-green-700"
-                                                onClick={() => handleValidate(submission.id, true)}
-                                                disabled={processingId === submission.id}
-                                              >
-                                                {processingId === submission.id ? (
-                                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                                ) : (
-                                                  <ThumbsUp className="w-3 h-3 mr-1" />
-                                                )}
-                                                Approve
-                                              </Button>
-                                              <Button
-                                                size="sm"
-                                                variant="destructive"
-                                                className="h-6 text-[10px] px-2"
-                                                onClick={() => handleValidate(submission.id, false)}
-                                                disabled={processingId === submission.id}
-                                              >
-                                                {processingId === submission.id ? (
-                                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                                ) : (
-                                                  <ThumbsDown className="w-3 h-3 mr-1" />
-                                                )}
-                                                Reject
-                                              </Button>
-                                            </div>
-                                          )}
-                                          {submission.status === "pending" && !submission.agent_validated && (
-                                            <Badge variant="secondary" className="text-[9px] bg-yellow-500/15 text-yellow-600">
-                                              <Clock className="w-3 h-3 mr-0.5" />
-                                              Awaiting Validation
-                                            </Badge>
-                                          )}
-                                          {submission.status !== "pending" && (
-                                            <Badge variant="outline" className="text-[9px]">
-                                              {submission.status === "validated" ? "Approved" : "Rejected"}
-                                            </Badge>
-                                          )}
-                                        </TableCell>
-                                      </TableRow>
-
-                                      {/* Expanded: Files for this submission */}
-                                      {isSubExpanded && (
-                                        <TableRow>
-                                          <TableCell colSpan={6} className="p-0">
-                                            <div className="bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-t border-gray-200 dark:border-gray-700/50">
-                                              <p className="text-[11px] font-semibold mb-2 flex items-center gap-1">
-                                                <Eye className="w-3 h-3" />
-                                                Uploaded Files
-                                              </p>
-                                              {isLoadingFiles ? (
-                                                <div className="flex items-center gap-2 py-3">
-                                                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                                                  <span className="text-[11px] text-muted-foreground">
-                                                    Loading files...
-                                                  </span>
-                                                </div>
-                                              ) : !items || items.length === 0 ? (
-                                                <p className="text-[11px] text-muted-foreground py-2">
-                                                  No files found for this submission.
-                                                </p>
-                                              ) : (
-                                                <div className="rounded-md border border-gray-200 dark:border-gray-700/50 overflow-x-auto">
-                                                  <Table>
-                                                    <TableHeader>
-                                                      <TableRow className="bg-gray-100 dark:bg-gray-800/50">
-                                                        <TableHead className="text-[10px] h-7">Preview</TableHead>
-                                                        <TableHead className="text-[10px] h-7">File Name</TableHead>
-                                                        <TableHead className="text-[10px] h-7">Type</TableHead>
-                                                        <TableHead className="text-[10px] h-7">Visibility</TableHead>
-                                                        <TableHead className="text-[10px] h-7">Price</TableHead>
-                                                        <TableHead className="text-[10px] h-7">Size</TableHead>
-                                                        <TableHead className="text-[10px] h-7">Uploaded</TableHead>
-                                                        <TableHead className="text-[10px] h-7 w-[60px]"></TableHead>
-                                                      </TableRow>
-                                                    </TableHeader>
-                                                    <TableBody>
-                                                      {items.map((item) => (
-                                                        <TableRow key={item.id} className="border-gray-200 dark:border-gray-700/50">
-                                                          <TableCell className="py-1.5">
-                                                            {item.file_type === "image" ? (
-                                                              <a
-                                                                href={item.file_url}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                              >
-                                                                <img
-                                                                  src={item.file_url}
-                                                                  alt={item.file_name}
-                                                                  className="w-10 h-10 rounded object-cover border border-gray-200 dark:border-gray-600 hover:opacity-80 transition-opacity"
-                                                                />
-                                                              </a>
-                                                            ) : (
-                                                              <div className="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center">
-                                                                {getFileIcon(item.file_type)}
-                                                              </div>
-                                                            )}
-                                                          </TableCell>
-                                                          <TableCell className="text-[11px] font-medium max-w-[180px] truncate">
-                                                            {item.file_name}
-                                                          </TableCell>
-                                                          <TableCell>
-                                                            <Badge variant="outline" className="text-[9px] px-1 py-0 capitalize">
-                                                              {item.file_type}
-                                                            </Badge>
-                                                          </TableCell>
-                                                          <TableCell>
-                                                            {item.visibility ? (
-                                                              <Badge
-                                                                variant="outline"
-                                                                className={
-                                                                  item.visibility === "public"
-                                                                    ? "text-[9px] px-1 py-0 border-green-500/40 text-green-600"
-                                                                    : "text-[9px] px-1 py-0 border-orange-500/40 text-orange-600"
-                                                                }
-                                                              >
-                                                                {item.visibility}
-                                                              </Badge>
-                                                            ) : (
-                                                              <span className="text-[10px] text-muted-foreground">Not set</span>
-                                                            )}
-                                                          </TableCell>
-                                                          <TableCell className="text-[11px]">
-                                                            {typeof item.price === "number" ? (
-                                                              <span className="font-medium">${item.price.toFixed(2)}</span>
-                                                            ) : (
-                                                              <span className="text-muted-foreground">-</span>
-                                                            )}
-                                                          </TableCell>
-                                                          <TableCell className="text-[11px] text-muted-foreground">
-                                                            {formatFileSize(item.file_size)}
-                                                          </TableCell>
-                                                          <TableCell className="text-[11px] text-muted-foreground">
-                                                            {new Date(item.created_at).toLocaleString()}
-                                                          </TableCell>
-                                                          <TableCell>
-                                                            <a
-                                                              href={item.file_url}
-                                                              target="_blank"
-                                                              rel="noopener noreferrer"
-                                                              onClick={(e) => e.stopPropagation()}
-                                                              className="inline-flex items-center gap-1 text-[11px] text-cyan-500 hover:text-cyan-400 transition-colors font-medium"
-                                                            >
-                                                              <ExternalLink className="w-3 h-3" />
-                                                              View
-                                                            </a>
-                                                          </TableCell>
-                                                        </TableRow>
-                                                      ))}
-                                                    </TableBody>
-                                                  </Table>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </TableCell>
-                                        </TableRow>
-                                      )}
-                                    </React.Fragment>
-                                  );
-                                })}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
-                      </Card>
-                    );
-                  })}
+                  )}
                 </div>
-              )}
+
+                {/* Right: action buttons column (wireframe) */}
+                <div className="shrink-0 flex flex-col gap-3 lg:w-[180px]">
+                  <Button className="h-12 rounded-xl w-full">
+                    Edit Project
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="h-12 rounded-xl w-full bg-gray-100 dark:bg-gray-800/50 border-none hover:bg-gray-200 dark:hover:bg-gray-700/50"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
             </TabsContent>
-          );
-        })}
-      </Tabs>
+
+            <TabsContent
+              value="proposals"
+              className="mt-3 space-y-2 flex-1 p-5 pt-0"
+            >
+              <ProjectProposals
+                projectId={projectId}
+                project={project}
+                onPendingCountChange={setPendingProposalsCount}
+              />
+            </TabsContent>
+
+            <TabsContent value="submissions" className="mt-3 flex-1 p-5 pt-0">
+              <ProjectSubmissions
+                projectId={projectId}
+                onPendingCountChange={setPendingSubmissionsCount}
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardSidebar from "./DashboardSidebar";
 import DashboardHeader from "./DashboardHeader";
 import CollectorHeader from "@/components/dashboard/collector/CollectorHeader";
+import RequesterHeader from "@/components/dashboard/requester/RequesterHeader";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface DashboardLayoutProps {
@@ -37,7 +38,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  // Default layout: sidebar + header + main
+  // Requester layout: same as collector — sticky header with nav, no sidebar
+  if (role === "requester") {
+    return (
+      <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900">
+        <div className="sticky top-0 z-20 px-2 pt-2 md:px-4 md:pt-4 bg-[#F4F5FA] dark:bg-gray-900 pb-2">
+          <RequesterHeader />
+        </div>
+        <main className="px-2 pb-4 md:px-4 md:pb-6">{children}</main>
+      </div>
+    );
+  }
+
+  // Default layout: sidebar + header + main (admin, agent, etc.)
   return (
     <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900 p-2 md:py-4 md:pl-4">
       <div className="w-full h-[calc(100dvh-2rem)] mx-auto rounded-xl overflow-hidden flex gap-0 md:gap-4">

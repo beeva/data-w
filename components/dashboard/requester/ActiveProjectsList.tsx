@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -9,6 +9,7 @@ import {
   updateProjectStatus,
 } from "@/lib/services/projectService";
 import { getSubmissionsByProject } from "@/lib/services/submissionService";
+import { getProposalsByProject } from "@/lib/services/proposalService";
 import type { Project, ProjectStatus } from "@/types/project";
 import EditProjectDialog from "./EditProjectDialog";
 import CompleteProjectDialog from "./CompleteProjectDialog";
@@ -16,28 +17,210 @@ import CreateProjectDialog from "./CreateProjectDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
-  Calendar,
-  DollarSign,
-  MapPin,
-  Users,
+  Tabs,
+  TabsContent,
+  TabsUnderlineList,
+  TabsUnderlineTrigger,
+} from "@/components/ui/tabs";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
   Clock,
   CheckCircle2,
   XCircle,
-  Loader2,
-  Wrench,
-  Pencil,
-  TrendingUp,
   Pause,
   Play,
   Plus,
   FolderKanban,
-  RefreshCw,
+  FileText,
+  Camera,
+  Video,
+  Mic,
+  ClipboardList,
+  LocateFixed,
+  Activity,
+  Package,
+  Users,
+  MapPin,
 } from "lucide-react";
+import { Photography1Svg } from "@/components/svg/photography/photography_1";
+import { Photography2Svg } from "@/components/svg/photography/photography_2";
+import { Photography3Svg } from "@/components/svg/photography/photography_3";
+import { Photography4Svg } from "@/components/svg/photography/photography_4";
+import { Photography5Svg } from "@/components/svg/photography/photography_5";
+import { Video1Svg } from "@/components/svg/video/video_1";
+import { Video2Svg } from "@/components/svg/video/video_2";
+import { Video3Svg } from "@/components/svg/video/video_3";
+import { Video4Svg } from "@/components/svg/video/video_4";
+import { Video5Svg } from "@/components/svg/video/video_5";
+import { Audio1Svg } from "@/components/svg/audio/audio_1";
+import { Audio2Svg } from "@/components/svg/audio/audio_2";
+import { Audio3Svg } from "@/components/svg/audio/audio_3";
+import { Audio4Svg } from "@/components/svg/audio/audio_4";
+import { Audio5Svg } from "@/components/svg/audio/audio_5";
+import { Text1Svg } from "@/components/svg/text/text_1";
+import { Text2Svg } from "@/components/svg/text/text_2";
+import { Text3Svg } from "@/components/svg/text/text_3";
+import { Text4Svg } from "@/components/svg/text/text_4";
+import { Text5Svg } from "@/components/svg/text/text_5";
+import { Survey1Svg } from "@/components/svg/survey/survey_1";
+import { Survey2Svg } from "@/components/svg/survey/survey_2";
+import { Survey3Svg } from "@/components/svg/survey/survey_3";
+import { Survey4Svg } from "@/components/svg/survey/survey_4";
+import { Survey5Svg } from "@/components/svg/survey/survey_5";
+import { Location1Svg } from "@/components/svg/location-data/location_1";
+import { Location2Svg } from "@/components/svg/location-data/location_2";
+import { Location3Svg } from "@/components/svg/location-data/location_3";
+import { Location4Svg } from "@/components/svg/location-data/location_4";
+import { Location5Svg } from "@/components/svg/location-data/location_5";
+import { Sensor1Svg } from "@/components/svg/sensor-data/sensor_1";
+import { Sensor2Svg } from "@/components/svg/sensor-data/sensor_2";
+import { Sensor3Svg } from "@/components/svg/sensor-data/sensor_3";
+import { Sensor4Svg } from "@/components/svg/sensor-data/sensor_4";
+import { Sensor5Svg } from "@/components/svg/sensor-data/sensor_5";
+import { Other1Svg } from "@/components/svg/other/other_1";
+import { Other2Svg } from "@/components/svg/other/other_2";
+import { EmptyDataSvg } from "@/components/svg/EmptyDataSvg";
 import { cn, getCategoryColor } from "@/lib/utils";
+
+const PHOTOGRAPHY_SVGS = [
+  Photography1Svg,
+  Photography2Svg,
+  Photography3Svg,
+  Photography4Svg,
+  Photography5Svg,
+] as const;
+const VIDEO_SVGS = [
+  Video1Svg,
+  Video2Svg,
+  Video3Svg,
+  Video4Svg,
+  Video5Svg,
+] as const;
+const AUDIO_SVGS = [
+  Audio1Svg,
+  Audio2Svg,
+  Audio3Svg,
+  Audio4Svg,
+  Audio5Svg,
+] as const;
+const TEXT_SVGS = [Text1Svg, Text2Svg, Text3Svg, Text4Svg, Text5Svg] as const;
+const SURVEY_SVGS = [
+  Survey1Svg,
+  Survey2Svg,
+  Survey3Svg,
+  Survey4Svg,
+  Survey5Svg,
+] as const;
+const LOCATION_SVGS = [
+  Location1Svg,
+  Location2Svg,
+  Location3Svg,
+  Location4Svg,
+  Location5Svg,
+] as const;
+const SENSOR_SVGS = [
+  Sensor1Svg,
+  Sensor2Svg,
+  Sensor3Svg,
+  Sensor4Svg,
+  Sensor5Svg,
+] as const;
+const OTHER_SVGS = [Other1Svg, Other2Svg] as const;
+
+function AnimatedCount({
+  value,
+  duration = 700,
+}: {
+  value: number;
+  duration?: number;
+}) {
+  const [display, setDisplay] = useState(value);
+  const prevRef = useRef(value);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const start = prevRef.current;
+    const diff = value - start;
+    if (diff === 0) return;
+
+    prevRef.current = value;
+    const startTime = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(Math.round(start + diff * eased));
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [value, duration]);
+
+  return <>{display}</>;
+}
+
+function getProjectIconIndex(projectId: string, count: number): number {
+  let hash = 0;
+  for (let i = 0; i < projectId.length; i++) {
+    hash = (hash * 31 + projectId.charCodeAt(i)) >>> 0;
+  }
+  return hash % count;
+}
+
+const CATEGORY_META: Record<
+  string,
+  { icon: React.ReactNode; accent: string; bg: string }
+> = {
+  Photography: {
+    icon: <Camera className="w-4 h-4" />,
+    accent: "#10b981",
+    bg: "bg-emerald-500/10",
+  },
+  Video: {
+    icon: <Video className="w-4 h-4" />,
+    accent: "#0ea5e9",
+    bg: "bg-sky-500/10",
+  },
+  Audio: {
+    icon: <Mic className="w-4 h-4" />,
+    accent: "#a855f7",
+    bg: "bg-purple-500/10",
+  },
+  Text: {
+    icon: <FileText className="w-4 h-4" />,
+    accent: "#f59e0b",
+    bg: "bg-amber-500/10",
+  },
+  Survey: {
+    icon: <ClipboardList className="w-4 h-4" />,
+    accent: "#22c55e",
+    bg: "bg-green-500/10",
+  },
+  "Location Data": {
+    icon: <LocateFixed className="w-4 h-4" />,
+    accent: "#14b8a6",
+    bg: "bg-teal-500/10",
+  },
+  "Sensor Data": {
+    icon: <Activity className="w-4 h-4" />,
+    accent: "#f97316",
+    bg: "bg-orange-500/10",
+  },
+  Other: {
+    icon: <Package className="w-4 h-4" />,
+    accent: "#06b6d4",
+    bg: "bg-cyan-500/10",
+  },
+};
+const DEFAULT_CATEGORY_META = CATEGORY_META["Other"];
 
 export default function ActiveProjectsList() {
   const { user, loading: authLoading } = useAuth();
@@ -47,20 +230,29 @@ export default function ActiveProjectsList() {
   const [error, setError] = useState("");
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [pendingCancelProjectId, setPendingCancelProjectId] = useState<string | null>(null);
-  const [pendingCompleteProject, setPendingCompleteProject] = useState<Project | null>(null);
+  const [pendingCancelProjectId, setPendingCancelProjectId] = useState<
+    string | null
+  >(null);
+  const [pendingCompleteProject, setPendingCompleteProject] =
+    useState<Project | null>(null);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
-  const [projectStats, setProjectStats] = useState<Record<string, {
-    totalTarget: number;
-    totalSubmissions: number;
-    validated: number;
-    pending: number;
-    rejected: number;
-    progress: number;
-    spent: number;
-    pendingPayment: number;
-  }>>({});
-
+  const [projectStats, setProjectStats] = useState<
+    Record<
+      string,
+      {
+        totalTarget: number;
+        totalSubmissions: number;
+        validated: number;
+        pending: number;
+        rejected: number;
+        progress: number;
+        spent: number;
+        pendingPayment: number;
+        proposalCount: number;
+        pendingProposals: number;
+      }
+    >
+  >({});
   const userId = user?.id;
 
   const fetchProjects = async () => {
@@ -68,7 +260,7 @@ export default function ActiveProjectsList() {
       setLoading(false);
       return;
     }
-    
+
     setLoading(true);
     setError("");
 
@@ -104,24 +296,44 @@ export default function ActiveProjectsList() {
     if (projects.length === 0) return;
 
     const fetchAllStats = async () => {
-      const statsMap: Record<string, typeof projectStats[string]> = {};
+      const statsMap: Record<string, (typeof projectStats)[string]> = {};
 
       await Promise.all(
         projects.map(async (project) => {
           try {
-            const { data } = await getSubmissionsByProject(project.id);
-            const submissions = data || [];
+            const [{ data: submissionsData }, { data: proposalsData }] =
+              await Promise.all([
+                getSubmissionsByProject(project.id),
+                getProposalsByProject(project.id),
+              ]);
 
-            const validated = submissions.filter((s) => s.status === "validated").length;
-            const pending = submissions.filter((s) => s.status === "pending").length;
-            const rejected = submissions.filter((s) => s.status === "rejected").length;
+            const submissions = submissionsData || [];
+            const proposals = proposalsData || [];
+
+            const validated = submissions.filter(
+              (s) => s.status === "validated",
+            ).length;
+            const pending = submissions.filter(
+              (s) => s.status === "pending",
+            ).length;
+            const rejected = submissions.filter(
+              (s) => s.status === "rejected",
+            ).length;
             const totalSubmissions = submissions.length;
             const totalTarget = Math.max(project.max_collectors * 10, 1);
-            const progress = Math.min(Math.round((validated / totalTarget) * 100), 100);
+            const progress = Math.min(
+              Math.round((validated / totalTarget) * 100),
+              100,
+            );
 
             const perUnit = project.budget / totalTarget;
             const spent = validated * perUnit;
             const pendingPayment = pending * perUnit;
+
+            const proposalCount = proposals.length;
+            const pendingProposals = proposals.filter(
+              (p) => p.status !== "accepted" && p.status !== "rejected",
+            ).length;
 
             statsMap[project.id] = {
               totalTarget,
@@ -132,9 +344,10 @@ export default function ActiveProjectsList() {
               progress,
               spent: Math.round(spent * 100) / 100,
               pendingPayment: Math.round(pendingPayment * 100) / 100,
+              proposalCount,
+              pendingProposals,
             };
           } catch {
-            // If fetch fails for a project, use zero stats
             statsMap[project.id] = {
               totalTarget: project.max_collectors * 10,
               totalSubmissions: 0,
@@ -144,9 +357,11 @@ export default function ActiveProjectsList() {
               progress: 0,
               spent: 0,
               pendingPayment: 0,
+              proposalCount: 0,
+              pendingProposals: 0,
             };
           }
-        })
+        }),
       );
 
       setProjectStats(statsMap);
@@ -161,14 +376,18 @@ export default function ActiveProjectsList() {
     try {
       setError("");
 
-      const { data, error } = await updateProjectStatus(projectId, user.id, "paused" as ProjectStatus);
+      const { data, error } = await updateProjectStatus(
+        projectId,
+        user.id,
+        "paused" as ProjectStatus,
+      );
       if (error) {
         throw error;
       }
 
       if (data) {
         setProjects((prev) =>
-          prev.map((p) => (p.id === projectId ? (data as Project) : p))
+          prev.map((p) => (p.id === projectId ? (data as Project) : p)),
         );
       }
     } catch (err: any) {
@@ -186,7 +405,7 @@ export default function ActiveProjectsList() {
       const { data, error } = await updateProjectStatus(
         projectId,
         user.id,
-        "open" as ProjectStatus
+        "open" as ProjectStatus,
       );
       if (error) {
         throw error;
@@ -194,7 +413,7 @@ export default function ActiveProjectsList() {
 
       if (data) {
         setProjects((prev) =>
-          prev.map((p) => (p.id === projectId ? (data as Project) : p))
+          prev.map((p) => (p.id === projectId ? (data as Project) : p)),
         );
       }
     } catch (err: any) {
@@ -218,7 +437,7 @@ export default function ActiveProjectsList() {
         pendingCompleteProject.id,
         user.id,
         rating,
-        feedback
+        feedback,
       );
       if (error) {
         throw error;
@@ -227,8 +446,8 @@ export default function ActiveProjectsList() {
       if (data) {
         setProjects((prev) =>
           prev.map((p) =>
-            p.id === pendingCompleteProject.id ? (data as Project) : p
-          )
+            p.id === pendingCompleteProject.id ? (data as Project) : p,
+          ),
         );
       }
       setPendingCompleteProject(null);
@@ -253,7 +472,7 @@ export default function ActiveProjectsList() {
       const { data, error } = await updateProjectStatus(
         pendingCancelProjectId,
         user.id,
-        "cancelled" as ProjectStatus
+        "cancelled" as ProjectStatus,
       );
       if (error) {
         throw error;
@@ -261,7 +480,9 @@ export default function ActiveProjectsList() {
 
       if (data) {
         setProjects((prev) =>
-          prev.map((p) => (p.id === pendingCancelProjectId ? (data as Project) : p))
+          prev.map((p) =>
+            p.id === pendingCancelProjectId ? (data as Project) : p,
+          ),
         );
       }
     } catch (err: any) {
@@ -274,34 +495,38 @@ export default function ActiveProjectsList() {
     switch (status) {
       case "open":
         return (
-          <Badge className="bg-blue-500 hover:bg-blue-600 text-white text-[9px] px-1.5 py-0">
-            <Clock className="w-2.5 h-2.5 mr-0.5" />
+          <Badge className="bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-0 text-[10px] font-medium px-2 py-0.5">
+            <Clock className="w-3 h-3 mr-1" />
             Active
           </Badge>
         );
       case "paused":
         return (
-          <Badge className="bg-yellow-500 hover:bg-yellow-600 text-white text-[9px] px-1.5 py-0">
-            <Pause className="w-2.5 h-2.5 mr-0.5" />
+          <Badge className="bg-amber-500/15 text-amber-700 dark:text-amber-300 border-0 text-[10px] font-medium px-2 py-0.5">
+            <Pause className="w-3 h-3 mr-1" />
             Paused
           </Badge>
         );
       case "completed":
         return (
-          <Badge className="bg-gray-500 hover:bg-gray-600 text-white text-[9px] px-1.5 py-0">
-            <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
+          <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-0 text-[10px] font-medium px-2 py-0.5">
+            <CheckCircle2 className="w-3 h-3 mr-1" />
             Completed
           </Badge>
         );
       case "cancelled":
         return (
-          <Badge className="bg-red-500 hover:bg-red-600 text-white text-[9px] px-1.5 py-0">
-            <XCircle className="w-2.5 h-2.5 mr-0.5" />
+          <Badge className="bg-rose-500/15 text-rose-700 dark:text-rose-300 border-0 text-[10px] font-medium px-2 py-0.5">
+            <XCircle className="w-3 h-3 mr-1" />
             Cancelled
           </Badge>
         );
       default:
-        return <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{status}</Badge>;
+        return (
+          <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+            {status}
+          </Badge>
+        );
     }
   };
 
@@ -320,48 +545,164 @@ export default function ActiveProjectsList() {
   };
 
   const getProjectProgress = (project: Project) => {
-    return projectStats[project.id] || {
-      totalTarget: project.max_collectors * 10,
-      totalSubmissions: 0,
-      validated: 0,
-      pending: 0,
-      rejected: 0,
-      progress: 0,
-      spent: 0,
-      pendingPayment: 0,
-    };
+    return (
+      projectStats[project.id] || {
+        totalTarget: project.max_collectors * 10,
+        totalSubmissions: 0,
+        validated: 0,
+        pending: 0,
+        rejected: 0,
+        progress: 0,
+        spent: 0,
+        pendingPayment: 0,
+        proposalCount: 0,
+        pendingProposals: 0,
+      }
+    );
   };
 
   // Filter projects by status
-  const activeProjects = projects.filter(p => p.status === "open");
-  const pausedProjects = projects.filter(p => (p.status as string) === "paused");
-  const completedProjects = projects.filter(p => p.status === "completed");
-  const cancelledProjects = projects.filter(p => p.status === "cancelled");
+  const activeProjects = projects.filter((p) => p.status === "open");
+  const pausedProjects = projects.filter(
+    (p) => (p.status as string) === "paused",
+  );
+  const completedProjects = projects.filter((p) => p.status === "completed");
+  const cancelledProjects = projects.filter((p) => p.status === "cancelled");
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      <div className="space-y-6 py-4 md:py-6">
+        {/* Header skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-28 rounded-md" />
+            <Skeleton className="h-4 w-72 max-w-full rounded-md" />
+          </div>
+          <Skeleton className="h-10 w-32 rounded-xl shrink-0" />
+        </div>
+
+        {/* Stats cards skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Card
+              key={i}
+              className="bg-white dark:bg-gray-800/50 border-none shadow-md"
+            >
+              <CardContent className="px-4">
+                <div className="flex items-end justify-between">
+                  <div className="space-y-2 min-w-0">
+                    <Skeleton className="h-2.5 w-12 rounded" />
+                    <Skeleton className="h-8 w-10 rounded-md" />
+                    <Skeleton className="h-2.5 w-20 rounded mt-1" />
+                  </div>
+                  <Skeleton className="w-12 h-12 rounded-lg shrink-0" />
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Tabbed list skeleton */}
+        <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 shadow-sm overflow-hidden pt-3">
+          {/* Tab bar */}
+          <div className="flex gap-1 px-4 md:px-6 border-b border-gray-200 dark:border-gray-800">
+            {[88, 72, 96, 80].map((w, i) => (
+              <Skeleton
+                key={i}
+                className="h-10 rounded-none rounded-t-md"
+                style={{ width: w }}
+              />
+            ))}
+          </div>
+          {/* Project rows */}
+          <div className="p-4 md:p-6 space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="flex items-stretch gap-4 rounded-xl bg-white dark:bg-gray-800 p-4"
+              >
+                {/* Category icon */}
+                <Skeleton className="w-12 h-12 rounded-xl shrink-0 mt-0.5" />
+
+                {/* Main content */}
+                <div className="flex-1 min-w-0 space-y-2.5">
+                  {/* Title + status badge */}
+                  <div className="flex items-center gap-2">
+                    <Skeleton className="h-4 w-44 max-w-[60%] rounded" />
+                    <Skeleton className="h-5 w-14 rounded-full" />
+                  </div>
+                  {/* Price · Deadline */}
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-3 w-16 rounded" />
+                    <Skeleton className="h-3 w-3 rounded-full" />
+                    <Skeleton className="h-3 w-24 rounded" />
+                  </div>
+                  {/* Category chip + meta chips */}
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <Skeleton className="h-5 w-20 rounded-md" />
+                    <Skeleton className="h-3 w-20 rounded" />
+                    <Skeleton className="h-3 w-16 rounded" />
+                    <Skeleton className="h-3 w-24 rounded" />
+                  </div>
+                </div>
+
+                {/* Right: progress circle + created */}
+                <div className="shrink-0 flex flex-col items-end justify-between gap-2 pl-1">
+                  <Skeleton className="w-11 h-11 rounded-full shrink-0" />
+                  <Skeleton className="h-3 w-24 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
-  const renderProjectCard = (project: Project, showPauseResume: "pause" | "resume" | "none" = "none") => {
+  const renderProjectCard = (
+    project: Project,
+    showPauseResume: "pause" | "resume" | "none" = "none",
+  ) => {
     const stats = getProjectProgress(project);
     const isPaused = (project.status as string) === "paused";
     const isCompleted = project.status === "completed";
     const isCancelled = project.status === "cancelled";
+    const progressPct = isCompleted ? 100 : stats.progress;
+    const circumference = 2 * Math.PI * 18;
+    const strokeDashoffset =
+      circumference - (progressPct / 100) * circumference;
+
+    const catMeta = CATEGORY_META[project.category] || DEFAULT_CATEGORY_META;
+    const svgPool =
+      project.category === "Photography"
+        ? PHOTOGRAPHY_SVGS
+        : project.category === "Video"
+          ? VIDEO_SVGS
+          : project.category === "Audio"
+            ? AUDIO_SVGS
+            : project.category === "Text"
+              ? TEXT_SVGS
+              : project.category === "Survey"
+                ? SURVEY_SVGS
+                : project.category === "Location Data"
+                  ? LOCATION_SVGS
+                  : project.category === "Sensor Data"
+                    ? SENSOR_SVGS
+                    : OTHER_SVGS;
+    const SvgIcon = svgPool[getProjectIconIndex(project.id, svgPool.length)];
 
     return (
-      <Card
+      <div
         key={project.id}
         className={cn(
-          "border-none hover:shadow-md transition-shadow",
+          "group relative flex items-stretch gap-4 rounded-xl border border-transparent p-4 transition-all",
           !isCancelled && "cursor-pointer",
-          isPaused && "bg-yellow-50 dark:bg-yellow-900/10",
-          isCompleted && "bg-gray-50 dark:bg-gray-800/30",
-          isCancelled && "bg-red-50 dark:bg-red-900/10 opacity-70",
-          !isPaused && !isCompleted && !isCancelled && "dark:bg-gray-800/50"
+          "bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm",
+          isPaused &&
+            "bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30",
+          isCompleted && "bg-muted/40 dark:bg-muted/20",
+          isCancelled &&
+            "bg-rose-50/50 dark:bg-rose-950/20 border-rose-200/50 dark:border-rose-800/30 opacity-80",
         )}
         onClick={() => {
           if (!isCancelled) {
@@ -369,174 +710,185 @@ export default function ActiveProjectsList() {
           }
         }}
       >
-        <CardContent className="py-2.5 px-3">
-          {/* Header Row */}
-          <div className="flex flex-col sm:flex-row items-start justify-between gap-2 mb-1.5">
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
-                <span className={cn("text-sm font-semibold truncate", isCancelled && "line-through")}>{project.title}</span>
-                {getStatusBadge(project.status as string)}
-                <Badge className={cn("text-[8px] px-1 py-0", getCategoryColor(project.category))}>{project.category}</Badge>
-              </div>
-              <p className="text-[10px] text-muted-foreground line-clamp-1">{project.description}</p>
-            </div>
-            <div className="flex flex-wrap gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-              {showPauseResume === "pause" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-[10px] px-2 border-yellow-500 text-yellow-600 hover:bg-yellow-50"
-                  onClick={() => handlePauseProject(project.id)}
-                  title="Pause Project"
-                >
-                  <Pause className="w-3 h-3 mr-1" />
-                  Pause
-                </Button>
+        {/* Category icon — same as FindProjects */}
+        <div
+          className={cn(
+            "shrink-0 w-12 h-12 rounded-xl flex items-center justify-center mt-0.5",
+            catMeta.bg,
+          )}
+          style={{ color: catMeta.accent }}
+        >
+          <span className="w-8 h-8 flex items-center justify-center">
+            <SvgIcon color={catMeta.accent} />
+          </span>
+        </div>
+
+        {/* Main content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            <h3
+              className={cn(
+                "text-base font-semibold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate",
+                isCancelled && "line-through text-muted-foreground",
               )}
-              {showPauseResume === "resume" && (
-                <Button
-                  size="sm"
-                  className="h-6 text-[10px] px-2 bg-green-500 hover:bg-green-600 text-white"
-                  onClick={() => handleResumeProject(project.id)}
-                >
-                  <Play className="w-3 h-3 mr-1" />
-                  Resume
-                </Button>
-              )}
-              {!isCancelled && !isCompleted && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-[10px] px-2 border-green-500 text-green-600 hover:bg-green-50"
-                  onClick={() => handleCompleteProject(project)}
-                  title="Complete Project"
-                >
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Complete
-                </Button>
-              )}
-              {!isCancelled && !isCompleted && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-[10px] px-2 border-red-500 text-red-600 hover:bg-red-50"
-                  onClick={() => handleCancelProject(project.id)}
-                  title="Cancel Project"
-                >
-                  <XCircle className="w-3 h-3 mr-1" />
-                  Cancel
-                </Button>
-              )}
-              {!isCancelled && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-[10px] px-2"
-                  onClick={() => router.push(`/dashboard/projects/${project.id}/workshop`)}
-                >
-                  <Wrench className="w-3 h-3 mr-1" />
-                  Workshop
-                </Button>
-              )}
-              {(project.status === "open" || isPaused) && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-6 text-[10px] px-2"
-                  onClick={() => {
-                    setEditingProject(project);
-                    setShowEditDialog(true);
-                  }}
-                >
-                  <Pencil className="w-3 h-3 mr-1" />
-                  Edit
-                </Button>
-              )}
-            </div>
+            >
+              {project.title}
+            </h3>
+            {stats.pendingProposals > 0 && !isCancelled && !isCompleted && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full transition-colors bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <span className="relative flex h-1.5 w-1.5 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                </span>
+                <span className="tabular-nums">
+                  <AnimatedCount value={stats.pendingProposals} />
+                </span>
+                {stats.pendingProposals === 1 ? "new proposal" : "new proposals"}
+              </span>
+            )}
           </div>
 
-          {/* Progress & Stats Row */}
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
+            <span className="inline-flex items-center gap-1 text-xs">
+              <span className="text-muted-foreground">Price:</span>
+              <span className="font-semibold text-muted-foreground">
+                ${project.budget.toFixed(2)}
+              </span>
+            </span>
+            <span className="text-muted-foreground/30 text-xs">·</span>
+            <span className="inline-flex items-center gap-1 text-xs">
+              <span className="text-muted-foreground">Deadline:</span>
+              <span className="font-medium text-muted-foreground">
+                {formatDate(project.deadline)}
+              </span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-4 flex-wrap">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-md",
+                catMeta.bg,
+              )}
+              style={{ color: catMeta.accent }}
+            >
+              {catMeta.icon && (
+                <span className="scale-75 origin-center">{catMeta.icon}</span>
+              )}
+              {project.category}
+            </span>
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Users className="w-3.5 h-3.5" />
+              {project.max_collectors} collector
+              {project.max_collectors !== 1 ? "s" : ""}
+            </span>
+
+            {project.location?.address &&
+              (() => {
+                const parts = project.location.address
+                  .split(",")
+                  .map((s: string) => s.trim())
+                  .filter(Boolean);
+                const city =
+                  parts.length >= 2 ? parts[parts.length - 2] : parts[0];
+                const country =
+                  parts.length >= 2 ? parts[parts.length - 1] : null;
+                const label = country ? `${city}, ${country}` : city;
+                return (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    {label}
+                  </span>
+                );
+              })()}
+          </div>
+        </div>
+
+        {/* Right: progress + created time */}
+        <div className="shrink-0 flex flex-col items-end justify-between gap-2 pl-1">
           {!isCancelled && (
-            <div className="flex items-center gap-3 bg-white/50 dark:bg-gray-700/30 rounded px-2 py-1.5">
-              {/* Progress Bar */}
-              <div className="flex items-center gap-2 min-w-[120px]">
-                <TrendingUp className="w-3.5 h-3.5 text-cyan-500 flex-shrink-0" />
-                <Progress value={isCompleted ? 100 : stats.progress} className="h-1.5 flex-1" />
-                <span className="text-[10px] font-semibold text-cyan-600 w-8">{isCompleted ? 100 : stats.progress}%</span>
-              </div>
-              
-              <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
-              
-              {/* Submission Stats */}
-              <div className="flex items-center gap-2 text-[10px]">
-                <span className="text-muted-foreground">Submissions:</span>
-                <span className="font-semibold">{stats.totalSubmissions}</span>
-                <span className="text-green-600">✓{stats.validated}</span>
-                <span className="text-yellow-600">⏳{stats.pending}</span>
-                <span className="text-red-600">✗{stats.rejected}</span>
-              </div>
-              
-              <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
-              
-              {/* Billing Stats */}
-              <div className="flex items-center gap-2 text-[10px]">
-                <span className="text-muted-foreground">Billing:</span>
-                <span className="text-green-600 font-semibold">${stats.spent} paid</span>
-                <span className="text-yellow-600">${stats.pendingPayment} due</span>
-              </div>
+            <div className="relative w-11 h-11 shrink-0">
+              <svg
+                className="w-11 h-11 -rotate-90"
+                viewBox="0 0 44 44"
+                aria-hidden
+              >
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  className="text-muted/40"
+                />
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  className="text-primary transition-all duration-300"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold tabular-nums text-foreground">
+                {progressPct}%
+              </span>
             </div>
           )}
-
-          {/* Footer Row */}
-          <div className="flex items-center justify-between mt-1.5 text-[10px] text-muted-foreground">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <DollarSign className="w-3 h-3" />
-                <span className="font-semibold text-foreground">${project.budget.toFixed(0)}</span>
-                <span>budget</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Users className="w-3 h-3" />
-                <span>{project.max_collectors} collectors</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                <span>{formatDate(project.deadline)}</span>
-              </div>
-              {project.location?.address && (
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  <span className="truncate max-w-[150px]">{project.location.address}</span>
-                </div>
-              )}
-            </div>
-            <span>Created: {formatDate(project.created_at)}</span>
-          </div>
-        </CardContent>
-      </Card>
+          <span className="text-xs text-muted-foreground text-right">
+            Created {formatDate(project.created_at)}
+          </span>
+        </div>
+      </div>
     );
   };
 
   const renderEmptyState = (type: string) => {
     const configs = {
-      active: { icon: FolderKanban, message: "No active projects", showCreate: true },
-      paused: { icon: Pause, message: "No paused projects", showCreate: false },
-      completed: { icon: CheckCircle2, message: "No completed projects yet", showCreate: false },
-      cancelled: { icon: XCircle, message: "No cancelled projects", showCreate: false },
+      active: {
+        message: "No active projects yet",
+        detail: "Create a project to start collecting data.",
+        showCreate: true,
+      },
+      paused: {
+        message: "No paused projects",
+        detail: "Paused projects will appear here.",
+        showCreate: false,
+      },
+      completed: {
+        message: "No completed projects yet",
+        detail: "Completed projects will show here.",
+        showCreate: false,
+      },
+      cancelled: {
+        message: "No cancelled projects",
+        detail: "Cancelled projects will appear here.",
+        showCreate: false,
+      },
     };
     const config = configs[type as keyof typeof configs];
 
     return (
-      <div className="text-center py-8">
-        <config.icon className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-50" />
-        <p className="text-xs text-muted-foreground mb-2">{config.message}</p>
+      <div className="flex flex-col items-center justify-center py-16 gap-3">
+        <div className="w-24 h-24">
+          <EmptyDataSvg />
+        </div>
+        <h3 className="text-base font-semibold text-foreground">
+          {config.message}
+        </h3>
+        <p className="text-sm text-muted-foreground">{config.detail}</p>
         {config.showCreate && (
-          <Button 
-            size="sm" 
-            className="h-7 text-xs"
+          <Button
+            size="sm"
+            className="mt-1 gap-2"
             onClick={() => setCreateProjectOpen(true)}
           >
-            <Plus className="w-3 h-3 mr-1" />
+            <Plus className="w-4 h-4" />
             Create Project
           </Button>
         )}
@@ -545,133 +897,187 @@ export default function ActiveProjectsList() {
   };
 
   return (
-    <div className="space-y-3 p-2">
+    <div className="space-y-6 py-4 md:py-6">
       <CreateProjectDialog
         open={createProjectOpen}
         onOpenChange={setCreateProjectOpen}
         onSuccess={fetchProjects}
       />
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Projects</h1>
-          <p className="text-xs text-muted-foreground">Manage all your data collection projects</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Projects
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage and track your data collection projects
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={fetchProjects} variant="outline" size="sm" className="h-7 text-xs px-2">
-            <RefreshCw className="w-3 h-3 mr-1" />
-            Refresh
-          </Button>
-          <Button 
-            size="sm" 
-            className="h-7 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
-            onClick={() => setCreateProjectOpen(true)}
-          >
-            <Plus className="w-3 h-3 mr-1" />
-            New Project
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          className="btn-gelatine gap-2 h-10 px-4 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-teal-500 dark:from-cyan-600 dark:to-teal-600 text-white hover:opacity-90 transition-opacity shadow-sm"
+          onClick={() => setCreateProjectOpen(true)}
+        >
+          <Plus className="w-4 h-4" />
+          New Project
+        </Button>
       </div>
 
       {error && (
-        <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-600 dark:text-red-400 text-xs">
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           {error}
         </div>
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <Card className="dark:bg-gray-800/50 border-none">
-          <CardContent className="py-2 px-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[9px] text-muted-foreground uppercase">Active</p>
-                <p className="text-lg font-bold text-cyan-600">{activeProjects.length}</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-white dark:bg-gray-800/50 border-none shadow-md">
+          <CardContent className="px-4">
+            <div className="flex items-end justify-between">
+              <div className="space-y-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  Active
+                </p>
+                <p className="text-2xl font-bold tabular-nums">
+                  {activeProjects.length}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Active projects
+                </p>
               </div>
-              <FolderKanban className="w-5 h-5 text-cyan-500 opacity-50" />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-cyan-500/10">
+                <FolderKanban className="w-6 h-6 text-cyan-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="dark:bg-gray-800/50 border-none">
-          <CardContent className="py-2 px-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[9px] text-muted-foreground uppercase">Paused</p>
-                <p className="text-lg font-bold text-yellow-600">{pausedProjects.length}</p>
+        <Card className="bg-white dark:bg-gray-800/50 border-none shadow-md">
+          <CardContent className="px-4">
+            <div className="flex items-end justify-between">
+              <div className="space-y-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  Paused
+                </p>
+                <p className="text-2xl font-bold tabular-nums">
+                  {pausedProjects.length}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Paused projects
+                </p>
               </div>
-              <Pause className="w-5 h-5 text-yellow-500 opacity-50" />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-yellow-500/10">
+                <Pause className="w-6 h-6 text-yellow-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="dark:bg-gray-800/50 border-none">
-          <CardContent className="py-2 px-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[9px] text-muted-foreground uppercase">Completed</p>
-                <p className="text-lg font-bold text-green-600">{completedProjects.length}</p>
+        <Card className="bg-white dark:bg-gray-800/50 border-none shadow-md">
+          <CardContent className="px-4">
+            <div className="flex items-end justify-between">
+              <div className="space-y-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  Completed
+                </p>
+                <p className="text-2xl font-bold tabular-nums">
+                  {completedProjects.length}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Completed projects
+                </p>
               </div>
-              <CheckCircle2 className="w-5 h-5 text-green-500 opacity-50" />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-green-500/10">
+                <CheckCircle2 className="w-6 h-6 text-green-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card className="dark:bg-gray-800/50 border-none">
-          <CardContent className="py-2 px-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[9px] text-muted-foreground uppercase">Cancelled</p>
-                <p className="text-lg font-bold text-red-600">{cancelledProjects.length}</p>
+        <Card className="bg-white dark:bg-gray-800/50 border-none shadow-md">
+          <CardContent className="px-4">
+            <div className="flex items-end justify-between">
+              <div className="space-y-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                  Cancelled
+                </p>
+                <p className="text-2xl font-bold tabular-nums">
+                  {cancelledProjects.length}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Cancelled projects
+                </p>
               </div>
-              <XCircle className="w-5 h-5 text-red-500 opacity-50" />
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center shrink-0 bg-red-500/10">
+                <XCircle className="w-6 h-6 text-red-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Tabbed Projects List */}
-      <Card className="dark:bg-gray-800/50 border-none">
-        <CardContent className="py-3 px-3">
-          <Tabs defaultValue="active" className="w-full">
-            <TabsList className="h-8 w-full grid grid-cols-2 sm:grid-cols-4 mb-3">
-              <TabsTrigger value="active" className="text-xs h-7 data-[state=active]:bg-cyan-500 data-[state=active]:text-white">
-                Active ({activeProjects.length})
-              </TabsTrigger>
-              <TabsTrigger value="paused" className="text-xs h-7 data-[state=active]:bg-yellow-500 data-[state=active]:text-white">
-                Paused ({pausedProjects.length})
-              </TabsTrigger>
-              <TabsTrigger value="completed" className="text-xs h-7 data-[state=active]:bg-gray-500 data-[state=active]:text-white">
-                Completed ({completedProjects.length})
-              </TabsTrigger>
-              <TabsTrigger value="cancelled" className="text-xs h-7 data-[state=active]:bg-red-500 data-[state=active]:text-white">
-                Cancelled ({cancelledProjects.length})
-              </TabsTrigger>
-            </TabsList>
+      <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 shadow-sm overflow-hidden pt-3">
+        <Tabs defaultValue="active" className="w-full">
+          <TabsUnderlineList className="px-4 md:px-6 border-b border-gray-200 dark:border-gray-800">
+            <TabsUnderlineTrigger
+              value="active"
+              className="data-[state=active]:border-cyan-500 data-[state=active]:text-cyan-600 dark:data-[state=active]:border-cyan-400 dark:data-[state=active]:text-cyan-400"
+            >
+              Active ({activeProjects.length})
+            </TabsUnderlineTrigger>
+            <TabsUnderlineTrigger
+              value="paused"
+              className="data-[state=active]:border-amber-500 data-[state=active]:text-amber-600 dark:data-[state=active]:border-amber-400 dark:data-[state=active]:text-amber-400"
+            >
+              Paused ({pausedProjects.length})
+            </TabsUnderlineTrigger>
+            <TabsUnderlineTrigger
+              value="completed"
+              className="data-[state=active]:border-emerald-500 data-[state=active]:text-emerald-600 dark:data-[state=active]:border-emerald-400 dark:data-[state=active]:text-emerald-400"
+            >
+              Completed ({completedProjects.length})
+            </TabsUnderlineTrigger>
+            <TabsUnderlineTrigger
+              value="cancelled"
+              className="data-[state=active]:border-rose-500 data-[state=active]:text-rose-600 dark:data-[state=active]:border-rose-400 dark:data-[state=active]:text-rose-400"
+            >
+              Cancelled ({cancelledProjects.length})
+            </TabsUnderlineTrigger>
+          </TabsUnderlineList>
 
-            <TabsContent value="active" className="mt-0 space-y-2">
-              {activeProjects.length === 0 ? renderEmptyState("active") : (
-                activeProjects.map((project) => renderProjectCard(project, "pause"))
-              )}
+          <div className="p-4 md:p-6">
+            <TabsContent value="active" className="mt-0 space-y-4">
+              {activeProjects.length === 0
+                ? renderEmptyState("active")
+                : activeProjects.map((project) =>
+                    renderProjectCard(project, "pause"),
+                  )}
             </TabsContent>
 
-            <TabsContent value="paused" className="mt-0 space-y-2">
-              {pausedProjects.length === 0 ? renderEmptyState("paused") : (
-                pausedProjects.map((project) => renderProjectCard(project, "resume"))
-              )}
+            <TabsContent value="paused" className="mt-0 space-y-4">
+              {pausedProjects.length === 0
+                ? renderEmptyState("paused")
+                : pausedProjects.map((project) =>
+                    renderProjectCard(project, "resume"),
+                  )}
             </TabsContent>
 
-            <TabsContent value="completed" className="mt-0 space-y-2">
-              {completedProjects.length === 0 ? renderEmptyState("completed") : (
-                completedProjects.map((project) => renderProjectCard(project, "none"))
-              )}
+            <TabsContent value="completed" className="mt-0 space-y-4">
+              {completedProjects.length === 0
+                ? renderEmptyState("completed")
+                : completedProjects.map((project) =>
+                    renderProjectCard(project, "none"),
+                  )}
             </TabsContent>
 
-            <TabsContent value="cancelled" className="mt-0 space-y-2">
-              {cancelledProjects.length === 0 ? renderEmptyState("cancelled") : (
-                cancelledProjects.map((project) => renderProjectCard(project, "none"))
-              )}
+            <TabsContent value="cancelled" className="mt-0 space-y-4">
+              {cancelledProjects.length === 0
+                ? renderEmptyState("cancelled")
+                : cancelledProjects.map((project) =>
+                    renderProjectCard(project, "none"),
+                  )}
             </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+          </div>
+        </Tabs>
+      </div>
 
       {/* Edit Project Dialog */}
       {editingProject && (

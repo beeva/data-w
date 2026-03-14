@@ -369,12 +369,7 @@ export default function BillingContent() {
 
   if (loading) {
     return (
-      <div
-        className={cn(
-          "min-h-screen pt-2",
-          role !== "collector" && "ml-2 mr-2 pt-0",
-        )}
-      >
+      <div className={cn("min-h-screen pt-2")}>
         {/* Page Header */}
         <div className="mb-6 flex items-start justify-between">
           <div className="space-y-2">
@@ -554,12 +549,7 @@ export default function BillingContent() {
   }
 
   return (
-    <div
-      className={cn(
-        "min-h-screen pt-2",
-        role !== "collector" && "ml-2 mr-2 pt-0",
-      )}
-    >
+    <div className={cn("min-h-screen pt-2")}>
       {/* Page Header */}
       <div className="mb-6 flex items-start justify-between">
         <div>

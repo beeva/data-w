@@ -506,12 +506,7 @@ export default function WalletContent() {
 
   if (loading) {
     return (
-      <div
-        className={cn(
-          "space-y-6 pt-2",
-          role !== "collector" && "ml-2 mr-2 pt-0",
-        )}
-      >
+      <div className={cn("space-y-6 pt-2")}>
         {/* Header skeleton */}
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -647,10 +642,7 @@ export default function WalletContent() {
   if (error) {
     return (
       <div
-        className={cn(
-          "flex flex-col items-center justify-center h-64 gap-3",
-          role !== "collector" && "ml-2 mr-2",
-        )}
+        className={cn("flex flex-col items-center justify-center h-64 gap-3")}
       >
         <AlertCircle className="w-8 h-8 text-red-500" />
         <p className="text-sm text-muted-foreground">{error}</p>
@@ -662,9 +654,7 @@ export default function WalletContent() {
   }
 
   return (
-    <div
-      className={cn("space-y-6 pt-2", role !== "collector" && "ml-2 mr-2 pt-0")}
-    >
+    <div className={cn("space-y-6 pt-2")}>
       {/* ── Page Header ── */}
       <div className="flex items-center justify-between">
         <div>
