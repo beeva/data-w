@@ -258,6 +258,21 @@ export default function SubmitProposalDialog({
         return !!(formData.address && formData.city && formData.country);
       case "dataTypes":
         return formData.data_types.length > 0;
+      case "equipment":
+        return formData.equipment.length > 0;
+      case "experience":
+        return !!(
+          formData.experience_years.trim() || formData.languages.length > 0
+        );
+      case "availability":
+        return !!formData.availability;
+      case "budget":
+        return (
+          formData.proposed_budget.trim().length > 0 &&
+          Number(formData.proposed_budget) > 0
+        );
+      case "notes":
+        return !!(formData.notes.trim() || formData.message.trim());
       default:
         return true;
     }
@@ -658,8 +673,8 @@ export default function SubmitProposalDialog({
                           What equipment do you have available?
                         </p>
                         <p className="text-sm text-black dark:text-white/60">
-                          Optional. Select any equipment you can use for data
-                          collection.
+                          Select at least one equipment type you can use for
+                          data collection.
                         </p>
                       </div>
                       {formData.equipment.length > 0 && (
@@ -718,8 +733,8 @@ export default function SubmitProposalDialog({
                           Tell us about your experience.
                         </p>
                         <p className="text-sm text-black dark:text-white/60">
-                          Optional. Share your years of experience and the
-                          languages you speak.
+                          Add your years of experience or select at least one
+                          language you speak.
                         </p>
                       </div>
                       <div className="space-y-3 max-w-xs">
@@ -789,8 +804,8 @@ export default function SubmitProposalDialog({
                           What is your availability?
                         </p>
                         <p className="text-sm text-black dark:text-white/60">
-                          Optional. Let the requester know when you&apos;re
-                          available to work.
+                          Choose your availability so the requester can plan
+                          with you.
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-3">
@@ -805,9 +820,6 @@ export default function SubmitProposalDialog({
                                   ...prev,
                                   availability: opt.value,
                                 }));
-                                setStepIndex((i) =>
-                                  Math.min(i + 1, TOTAL_STEPS - 1),
-                                );
                               }}
                               className={cn(
                                 "btn-gelatine flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium transition-all border",
@@ -832,8 +844,7 @@ export default function SubmitProposalDialog({
                           What is your proposed budget?
                         </p>
                         <p className="text-sm text-black dark:text-white/60">
-                          Optional. Leave empty to accept the project&apos;s
-                          budget.
+                          Enter your proposed budget to continue.
                         </p>
                       </div>
                       <div className="space-y-6">
@@ -895,8 +906,7 @@ export default function SubmitProposalDialog({
                           Anything else to add?
                         </p>
                         <p className="text-sm text-black dark:text-white/60">
-                          Optional. Add notes about your capabilities or a
-                          personal message to the requester.
+                          Add notes, a message, or both before submitting.
                         </p>
                       </div>
                       <div className="space-y-5 max-w-lg">
