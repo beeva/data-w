@@ -11,7 +11,7 @@ import {
 import { getSubmissionsByProject } from "@/lib/services/submissionService";
 import { getProposalsByProject } from "@/lib/services/proposalService";
 import type { Project, ProjectStatus } from "@/types/project";
-import EditProjectDialog from "./EditProjectDialog";
+import EditProjectDialog from "@/components/dashboard/requester/EditProjectDialog";
 import CompleteProjectDialog from "./CompleteProjectDialog";
 import CreateProjectDialog from "./CreateProjectDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -843,6 +843,51 @@ export default function ActiveProjectsList() {
           <span className="text-xs text-muted-foreground text-right">
             Created {formatDate(project.created_at)}
           </span>
+          {!isCompleted && !isCancelled && showPauseResume !== "none" && (
+            <div
+              className="flex items-center gap-1.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-[11px] border-emerald-200 text-emerald-600 hover:text-emerald-700 hover:border-emerald-300 dark:border-emerald-900/50 dark:text-emerald-300 dark:hover:text-emerald-200"
+                onClick={() => handleCompleteProject(project)}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                Complete
+              </Button>
+              {showPauseResume === "pause" ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2.5 text-[11px] bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                  onClick={() => handlePauseProject(project.id)}
+                >
+                  <Pause className="w-3.5 h-3.5 mr-1" />
+                  Pause
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  className="h-7 px-2.5 text-[11px]"
+                  onClick={() => handleResumeProject(project.id)}
+                >
+                  <Play className="w-3.5 h-3.5 mr-1" />
+                  Resume
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2.5 text-[11px] border-rose-200 text-rose-600 hover:text-rose-700 hover:border-rose-300 dark:border-rose-900/50 dark:text-rose-300 dark:hover:text-rose-200"
+                onClick={() => handleCancelProject(project.id)}
+              >
+                <XCircle className="w-3.5 h-3.5 mr-1" />
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     );
