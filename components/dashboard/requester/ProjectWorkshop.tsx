@@ -82,6 +82,7 @@ import { cn } from "@/lib/utils";
 import ToastNotification from "@/components/ui/toast-notification";
 import ProjectProposals from "./ProjectProposals";
 import ProjectSubmissions from "./ProjectSubmissions";
+import EditProjectDialog from "./EditProjectDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const PHOTOGRAPHY_SVGS = [
@@ -230,6 +231,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [editProjectOpen, setEditProjectOpen] = useState(false);
 
   const fetchData = async () => {
     if (!projectId) return;
@@ -382,6 +384,19 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
           onClose={() => setToast(null)}
         />
       )}
+      <EditProjectDialog
+        project={project}
+        open={editProjectOpen}
+        onOpenChange={setEditProjectOpen}
+        onSuccess={async () => {
+          await fetchData();
+          setToast({
+            title: "Project updated",
+            message: "Your project changes were saved successfully.",
+            type: "success",
+          });
+        }}
+      />
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
@@ -622,7 +637,10 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
 
                 {/* Right: action buttons column (wireframe) */}
                 <div className="shrink-0 flex flex-col gap-3 lg:w-[180px]">
-                  <Button className="h-12 rounded-xl w-full">
+                  <Button
+                    className="h-12 rounded-xl w-full"
+                    onClick={() => setEditProjectOpen(true)}
+                  >
                     Edit Project
                   </Button>
                   <Button
