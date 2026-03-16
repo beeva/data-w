@@ -14,6 +14,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -51,6 +52,30 @@ export default function Login() {
       setError(err.message || "An error occurred during login");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError("");
+    setGoogleLoading(true);
+
+    try {
+      if (typeof window === "undefined") return;
+
+      const nextPath = encodeURIComponent("/dashboard/home?toast=signin-success");
+      const redirectTo = `${window.location.origin}/auth/callback?next=${nextPath}`;
+
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+        },
+      });
+
+      if (oauthError) throw oauthError;
+    } catch (err: any) {
+      setError(err.message || "Failed to continue with Google");
+      setGoogleLoading(false);
     }
   };
 
@@ -144,6 +169,42 @@ export default function Login() {
                     <span>{error}</span>
                   </div>
                 )}
+
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading || googleLoading}
+                  className="w-full mb-5 py-3 px-4 rounded-xl bg-white border border-slate-300 text-slate-800 font-medium text-sm hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-900/15 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm inline-flex items-center justify-center gap-2"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+                    <path
+                      fill="#EA4335"
+                      d="M12 10.2v3.9h5.5c-.24 1.27-.96 2.34-2.04 3.06l3.3 2.56c1.93-1.78 3.04-4.39 3.04-7.5 0-.72-.06-1.42-.19-2.1H12z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 22c2.76 0 5.07-.91 6.76-2.47l-3.3-2.56c-.91.61-2.08.97-3.46.97-2.66 0-4.91-1.79-5.72-4.2l-3.4 2.63C4.56 19.78 8.02 22 12 22z"
+                    />
+                    <path
+                      fill="#4A90E2"
+                      d="M6.28 13.74a5.98 5.98 0 010-3.48l-3.4-2.63a10 10 0 000 8.74l3.4-2.63z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M12 6.06c1.5 0 2.84.52 3.9 1.53l2.93-2.93C17.06 2.99 14.75 2 12 2 8.02 2 4.56 4.22 2.88 7.63l3.4 2.63c.81-2.41 3.06-4.2 5.72-4.2z"
+                    />
+                  </svg>
+                  {googleLoading ? "Redirecting to Google..." : "Continue with Google"}
+                </button>
+
+                <div className="relative mb-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-slate-50 px-2 text-slate-500">or</span>
+                  </div>
+                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                   <div>
@@ -240,7 +301,7 @@ export default function Login() {
 
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || googleLoading}
                     className="w-full mt-3 py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm"
                   >
                     {loading ? (
