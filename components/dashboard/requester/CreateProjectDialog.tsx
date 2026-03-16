@@ -149,7 +149,6 @@ export interface CreateProjectDialogProps {
 const STEP_ORDER = [
   "title",
   "description",
-  "dataSuggestions",
   "category",
   "budget",
   "dataTypes",
@@ -394,8 +393,6 @@ export default function CreateProjectDialog({
         return !!formData.title.trim();
       case "description":
         return !!formData.description.trim();
-      case "dataSuggestions":
-        return true;
       case "category":
         return !!formData.category;
       case "budget":
@@ -683,7 +680,7 @@ export default function CreateProjectDialog({
         <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogContent
             showCloseButton={false}
-            className="sm:max-w-4xl h-[80vh] overflow-hidden rounded-2xl border-0 bg-transparent shadow-none flex flex-col p-0 gap-0"
+            className="w-[96vw] sm:max-w-6xl h-[80vh] overflow-hidden rounded-2xl border-0 bg-transparent shadow-none flex flex-col p-0 gap-0"
             onInteractOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
@@ -721,18 +718,22 @@ export default function CreateProjectDialog({
             </DialogHeader>
 
             {/* Main content */}
-            <div className="flex-1 min-h-0 overflow-y-auto bg-white dark:bg-[#0a0a0a] px-6 py-8  [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
+            <div className="flex-1 min-h-0 overflow-hidden bg-white dark:bg-[#0a0a0a] px-6 py-8">
               {phase === "form" && (
-                <div className="flex flex-col justify-center min-h-full">
-                  {error && (
-                    <div className="mb-6 p-3 bg-red-500/10 dark:bg-red-900/20 border border-red-500 dark:border-red-800 rounded-xl text-red-500 dark:text-red-400 text-sm">
-                      <TriangleAlert
-                        className="h-4 w-4 inline-block mr-2"
-                        strokeWidth={3}
-                      />
-                      {error}
-                    </div>
-                  )}
+                <div
+                  className="h-full min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6"
+                >
+                  <div className="h-full min-h-0 overflow-y-auto lg:pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
+                    <div className="flex flex-col justify-center min-h-full">
+                      {error && (
+                        <div className="mb-6 p-3 bg-red-500/10 dark:bg-red-900/20 border border-red-500 dark:border-red-800 rounded-xl text-red-500 dark:text-red-400 text-sm">
+                          <TriangleAlert
+                            className="h-4 w-4 inline-block mr-2"
+                            strokeWidth={3}
+                          />
+                          {error}
+                        </div>
+                      )}
 
                   {/* Step 1 — Title */}
                   {currentStepId === "title" && (
@@ -799,35 +800,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 3 — Data Suggestions */}
-                  {currentStepId === "dataSuggestions" && (
-                    <div className="space-y-6 pl-4 min-h-[50vh]">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          Data suggestions
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Browse similar projects and budget suggestions. You
-                          can apply a suggested budget or continue to the next
-                          step.
-                        </p>
-                      </div>
-                      <div className="overflow-hidden bg-white dark:bg-[#0a0a0a] min-h-[400px]">
-                        <DataSuggestionsPanel
-                          title={formData.title}
-                          description={formData.description}
-                          onBudgetSelect={(budget) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              budget: budget.toFixed(2),
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 4 — Category (single select, chip UI) */}
+                  {/* Step 3 — Category (single select, chip UI) */}
                   {currentStepId === "category" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -882,7 +855,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 5 — Budget & Timeline */}
+                  {/* Step 4 — Budget & Timeline */}
                   {currentStepId === "budget" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -1213,7 +1186,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 6 — Data Types */}
+                  {/* Step 5 — Data Types */}
                   {currentStepId === "dataTypes" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -1294,7 +1267,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 7 — Formats */}
+                  {/* Step 6 — Formats */}
                   {currentStepId === "formats" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -1353,7 +1326,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 8 — Specifications */}
+                  {/* Step 7 — Specifications */}
                   {currentStepId === "specifications" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -1384,7 +1357,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 9 — Location */}
+                  {/* Step 8 — Location */}
                   {currentStepId === "location" && (
                     <div className="space-y-8 pl-4 mb-24">
                       <div className="space-y-2">
@@ -1438,6 +1411,33 @@ export default function CreateProjectDialog({
                       </div>
                     </div>
                   )}
+                    </div>
+                  </div>
+                  <aside className="hidden lg:block h-full min-h-0">
+                    <div className="h-full overflow-y-auto overflow-x-hidden rounded-2xl border border-gray-200 dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#0f0f0f] p-4">
+                      <div className="mb-3">
+                        <p className="text-sm font-semibold text-black dark:text-white">
+                          Data suggestions
+                        </p>
+                        <p className="text-xs text-black dark:text-white/60 mt-1">
+                          Similar projects and budget ideas stay visible while
+                          {isEditMode
+                            ? " editing your project."
+                            : " creating your project."}
+                        </p>
+                      </div>
+                      <DataSuggestionsPanel
+                        title={formData.title}
+                        description={formData.description}
+                        onBudgetSelect={(budget) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            budget: budget.toFixed(2),
+                          }))
+                        }
+                      />
+                    </div>
+                  </aside>
                 </div>
               )}
 
