@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { getProjectById } from "@/lib/services/projectService";
 import { getProjectStats } from "@/lib/services/submissionService";
 import { getProposalsByProject } from "@/lib/services/proposalService";
@@ -219,6 +220,7 @@ interface ProjectWorkshopProps {
 }
 
 export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
+  const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [pendingProposalsCount, setPendingProposalsCount] = useState<number>(0);
@@ -646,6 +648,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
                   <Button
                     variant="outline"
                     className="h-12 rounded-xl w-full bg-gray-100 dark:bg-gray-800/50 border-none hover:bg-gray-200 dark:hover:bg-gray-700/50"
+                    onClick={() => router.push("/dashboard/projects/active")}
                   >
                     Cancel
                   </Button>
