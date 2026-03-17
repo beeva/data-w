@@ -48,22 +48,42 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=oauth_exchange_failed", requestUrl.origin));
   }
 
-  const profileUpdates: { role?: string; full_name?: string } = {};
-  if (selectedRole && ALLOWED_ROLES.has(selectedRole)) {
-    profileUpdates.role = selectedRole;
-  }
-  if (fullName && fullName.trim().length > 0) {
-    profileUpdates.full_name = fullName.trim();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.redirect(new URL("/login?error=oauth_user_unavailable", requestUrl.origin));
   }
 
-  if (Object.keys(profileUpdates).length > 0) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  const metadata = (user.user_metadata || {}) as Record<string, unknown>;
+  const metadataRole = typeof metadata.role === "string" ? metadata.role : null;
+  const resolvedRole =
+    selectedRole && ALLOWED_ROLES.has(selectedRole)
+      ? selectedRole
+      : metadataRole && ALLOWED_ROLES.has(metadataRole)
+        ? metadataRole
+        : "collector";
 
-    if (user) {
-      await supabase.from("profiles").update(profileUpdates).eq("id", user.id);
-    }
+  const resolvedFullName =
+    (fullName && fullName.trim()) ||
+    (typeof metadata.full_name === "string" && metadata.full_name.trim()) ||
+    (typeof metadata.name === "string" && metadata.name.trim()) ||
+    null;
+
+  const { error: profileUpsertError } = await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      email: user.email || "",
+      role: resolvedRole,
+      full_name: resolvedFullName,
+    },
+    { onConflict: "id" }
+  );
+
+  if (profileUpsertError) {
+    return NextResponse.redirect(new URL("/login?error=profile_upsert_failed", requestUrl.origin));
   }
 
   return response;
