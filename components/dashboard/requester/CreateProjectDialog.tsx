@@ -673,14 +673,47 @@ export default function CreateProjectDialog({
           document.body,
         );
 
+  const floatingSuggestionsPanel =
+    typeof document === "undefined" || !open || showCongratsOverlay || phase !== "form"
+      ? null
+      : createPortal(
+          <aside className="hidden xl:block fixed right-0 top-[7vh] z-[60] w-1/2 h-[86vh] border-l border-gray-200 dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#0f0f0f] p-6 overflow-y-auto">
+            <div className="h-full min-h-0 flex flex-col">
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-black dark:text-white">
+                  Data suggestions
+                </p>
+                <p className="text-xs text-black dark:text-white/60 mt-1">
+                  Similar projects and budget ideas while
+                  {isEditMode ? " editing your project." : " creating your project."}
+                </p>
+              </div>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <DataSuggestionsPanel
+                  title={formData.title}
+                  description={formData.description}
+                  onBudgetSelect={(budget) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      budget: budget.toFixed(2),
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          </aside>,
+          document.body,
+        );
+
   return (
     <>
       {congratsOverlay}
+      {floatingSuggestionsPanel}
       {!showCongratsOverlay && (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
           <DialogContent
             showCloseButton={false}
-            className="w-[96vw] sm:max-w-6xl h-[80vh] overflow-hidden rounded-2xl border-0 bg-transparent shadow-none flex flex-col p-0 gap-0"
+            className="w-[96vw] sm:max-w-6xl h-[80vh] overflow-hidden rounded-2xl border-0 bg-transparent shadow-none flex flex-col p-0 gap-0 xl:left-0 xl:top-[7vh] xl:translate-x-0 xl:translate-y-0 xl:w-1/2 xl:max-w-none xl:h-[86vh] xl:rounded-r-2xl xl:rounded-l-none xl:border-r xl:border-gray-200 dark:xl:border-[#2a2a2a]"
             onInteractOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
@@ -720,9 +753,7 @@ export default function CreateProjectDialog({
             {/* Main content */}
             <div className="flex-1 min-h-0 overflow-hidden bg-white dark:bg-[#0a0a0a] px-6 py-8">
               {phase === "form" && (
-                <div
-                  className="h-full min-h-0 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6"
-                >
+                <div className="h-full min-h-0">
                   <div className="h-full min-h-0 overflow-y-auto lg:pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
                     <div className="flex flex-col justify-center min-h-full">
                       {error && (
@@ -1411,34 +1442,9 @@ export default function CreateProjectDialog({
                       </div>
                     </div>
                   )}
+                </div>
                     </div>
                   </div>
-                  <aside className="hidden lg:block h-full min-h-0">
-                    <div className="h-full overflow-y-auto overflow-x-hidden rounded-2xl border border-gray-200 dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#0f0f0f] p-4">
-                      <div className="mb-3">
-                        <p className="text-sm font-semibold text-black dark:text-white">
-                          Data suggestions
-                        </p>
-                        <p className="text-xs text-black dark:text-white/60 mt-1">
-                          Similar projects and budget ideas stay visible while
-                          {isEditMode
-                            ? " editing your project."
-                            : " creating your project."}
-                        </p>
-                      </div>
-                      <DataSuggestionsPanel
-                        title={formData.title}
-                        description={formData.description}
-                        onBudgetSelect={(budget) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            budget: budget.toFixed(2),
-                          }))
-                        }
-                      />
-                    </div>
-                  </aside>
-                </div>
               )}
 
               {/* Processing phase */}
