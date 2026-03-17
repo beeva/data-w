@@ -70,6 +70,7 @@ import {
   MessageSquare,
   Settings,
   TrendingUp,
+  Plus,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -635,8 +636,9 @@ export default function RequesterDashboard() {
             <Button
               onClick={() => setCreateProjectOpen(true)}
               size="sm"
-              className="btn-gelatine h-9 text-xs rounded-lg"
+              className="btn-gelatine gap-2 h-10 px-4 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-teal-500 dark:from-cyan-600 dark:to-teal-600 text-white hover:opacity-90 transition-opacity shadow-sm"
             >
+              <Plus className="w-4 h-4" />
               New Project
             </Button>
           </div>
