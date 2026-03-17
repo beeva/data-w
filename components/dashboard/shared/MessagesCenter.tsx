@@ -222,6 +222,7 @@ export default function MessagesCenter() {
   const role = profile?.role || "";
   const isMessagingRole =
     role === "requester" || role === "collector" || role === "agent";
+  const isRequesterRole = role === "requester";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -267,6 +268,28 @@ export default function MessagesCenter() {
       null,
     [conversations, selectedKey],
   );
+  const timelineMessages = useMemo(() => {
+    if (!selectedConversation) return [] as ProjectMessage[];
+
+    const fallbackText =
+      role === "requester"
+        ? selectedConversation.proposalMessage
+        : selectedConversation.projectDescription;
+
+    if (!fallbackText) return messages;
+
+    const contextMessage: ProjectMessage = {
+      id: `context-${selectedConversation.requestId}-${selectedConversation.collectorId}`,
+      request_id: selectedConversation.requestId,
+      requester_id: selectedConversation.requesterId,
+      collector_id: selectedConversation.collectorId,
+      sender_id: selectedConversation.counterpartId,
+      message: fallbackText,
+      created_at: selectedConversation.assignedAt,
+    };
+
+    return [contextMessage, ...messages];
+  }, [selectedConversation, messages, role]);
 
   const clearTypingForKey = (key: string) => {
     setTypingMap((prev) => {
@@ -1049,6 +1072,9 @@ export default function MessagesCenter() {
                           </div>
                           <p className="truncate text-[11px] text-muted-foreground w-48">
                             {conversation.lastMessage?.message ||
+                              (isRequesterRole
+                                ? conversation.proposalMessage
+                                : conversation.projectDescription) ||
                               conversation.projectTitle}
                           </p>
                           <p className="truncate text-[10px] text-muted-foreground/80">
@@ -1137,12 +1163,14 @@ export default function MessagesCenter() {
                               </div>
                             ))}
                           </div>
-                        ) : messages.length === 0 ? (
-                          <p className="py-8 text-center text-sm text-muted-foreground">
-                            No messages yet. Start the conversation.
-                          </p>
+                        ) : timelineMessages.length === 0 ? (
+                          <div className="py-8 text-center space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                              No messages yet. Start the conversation.
+                            </p>
+                          </div>
                         ) : (
-                          messages.map((message, index) => {
+                          timelineMessages.map((message, index) => {
                             const mine = message.sender_id === user?.id;
                             const selectedPresence = presenceMeta(
                               getPresenceState(
@@ -1150,7 +1178,7 @@ export default function MessagesCenter() {
                                 presenceTick,
                               ),
                             );
-                            const previous = messages[index - 1];
+                            const previous = timelineMessages[index - 1];
                             const showDateDivider =
                               !previous ||
                               new Date(previous.created_at).toDateString() !==

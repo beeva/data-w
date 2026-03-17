@@ -16,6 +16,8 @@ export interface ChatConversation {
   collectorId: string;
   requesterId: string;
   projectTitle: string;
+  projectDescription: string | null;
+  proposalMessage: string | null;
   counterpartId: string;
   counterpartName: string;
   counterpartAvatar: string | null;
@@ -31,6 +33,7 @@ type AssignmentRow = {
   id: string;
   request_id: string;
   collector_id: string;
+  proposal_id: string | null;
   status: string;
   assigned_at: string;
 };
@@ -39,6 +42,7 @@ type RequestRow = {
   id: string;
   requester_id: string;
   title: string | null;
+  description: string | null;
 };
 
 type RequestIdRow = {
@@ -60,6 +64,19 @@ type ProfileRow = {
   last_active_at?: string | null;
 };
 
+type ProfileLastActiveRow = {
+  last_active_at: string | null;
+};
+
+type ProposalSnippetRow = {
+  id: string;
+  request_id: string;
+  collector_id: string;
+  message: string | null;
+  submitted_at: string | null;
+  created_at: string;
+};
+
 export async function getUserConversations(
   userId: string,
   role: string
@@ -67,7 +84,7 @@ export async function getUserConversations(
   try {
     const assignmentsQuery = supabase
       .from("collector_assignments")
-      .select("id, request_id, collector_id, status, assigned_at")
+      .select("id, request_id, collector_id, proposal_id, status, assigned_at")
       .in("status", ["active", "completed"]);
 
     let assignmentsData: AssignmentRow[] | null = null;
@@ -113,7 +130,10 @@ export async function getUserConversations(
 
     const [{ data: requestsData, error: requestsError }, { data: collectorProfilesData, error: collectorsError }] =
       await Promise.all([
-        supabase.from("requests").select("id, requester_id, title").in("id", requestIds),
+        supabase
+          .from("requests")
+          .select("id, requester_id, title, description")
+          .in("id", requestIds),
         supabase
           .from("profiles")
           .select("id, full_name, avatar_url, email, location, last_active_at")
@@ -149,6 +169,27 @@ export async function getUserConversations(
     const profilesById = new Map(
       [...collectorProfiles, ...requesterProfiles].map((row) => [row.id, row])
     );
+
+    const { data: proposalsData, error: proposalsError } = await supabase
+      .from("proposals")
+      .select("id, request_id, collector_id, message, submitted_at, created_at")
+      .in("request_id", requestIds)
+      .in("collector_id", collectorIds)
+      .order("submitted_at", { ascending: false });
+
+    if (proposalsError) {
+      return { data: null, error: new Error(proposalsError.message) };
+    }
+
+    const proposalRows = (proposalsData ?? []) as ProposalSnippetRow[];
+    const proposalById = new Map(proposalRows.map((row) => [row.id, row]));
+    const latestProposalByConversation = new Map<string, ProposalSnippetRow>();
+    proposalRows.forEach((proposal) => {
+      const key = `${proposal.request_id}:${proposal.collector_id}`;
+      if (!latestProposalByConversation.has(key)) {
+        latestProposalByConversation.set(key, proposal);
+      }
+    });
 
     const { data: messagesData, error: messagesError } = await supabase
       .from("project_messages")
@@ -204,6 +245,10 @@ export async function getUserConversations(
         const collectorId = assignment.collector_id;
         const requesterId = request.requester_id;
         const conversationKey = `${assignment.request_id}:${collectorId}`;
+        const assignmentProposal =
+          assignment.proposal_id && proposalById.has(assignment.proposal_id)
+            ? proposalById.get(assignment.proposal_id)!
+            : latestProposalByConversation.get(conversationKey);
         const isWorkerRole = role === "collector" || role === "agent";
         const counterpartId = isWorkerRole ? requesterId : collectorId;
         const counterpartProfile = profilesById.get(counterpartId);
@@ -224,6 +269,8 @@ export async function getUserConversations(
           collectorId,
           requesterId,
           projectTitle: request.title || "Untitled project",
+          projectDescription: request.description?.trim() || null,
+          proposalMessage: assignmentProposal?.message?.trim() || null,
           counterpartId,
           counterpartName,
           counterpartAvatar: counterpartProfile?.avatar_url || null,
@@ -347,6 +394,103 @@ export async function sendConversationMessage(input: {
     return {
       data: null,
       error: err instanceof Error ? err : new Error("Failed to send message"),
+    };
+  }
+}
+
+export async function getUnreadMessagesCount(
+  userId: string,
+  role: string
+): Promise<{ count: number; error: Error | null }> {
+  try {
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("last_active_at")
+      .eq("id", userId)
+      .single();
+
+    if (profileError) {
+      return { count: 0, error: new Error(profileError.message) };
+    }
+
+    const lastSeenAt = (profileData as ProfileLastActiveRow | null)?.last_active_at;
+
+    const assignmentsQuery = supabase
+      .from("collector_assignments")
+      .select("request_id, collector_id, status")
+      .in("status", ["active", "completed"]);
+
+    type AssignmentLite = {
+      request_id: string;
+      collector_id: string;
+      status: string;
+    };
+
+    let assignmentsData: AssignmentLite[] | null = null;
+    let assignmentsError: { message: string } | null = null;
+
+    if (role === "collector" || role === "agent") {
+      const result = await assignmentsQuery.eq("collector_id", userId);
+      assignmentsData = result.data as AssignmentLite[] | null;
+      assignmentsError = result.error;
+    } else {
+      const { data: requestRows, error: requestsLookupError } = await supabase
+        .from("requests")
+        .select("id")
+        .eq("requester_id", userId);
+
+      if (requestsLookupError) {
+        return { count: 0, error: new Error(requestsLookupError.message) };
+      }
+
+      const requesterProjectIds = ((requestRows || []) as RequestIdRow[]).map(
+        (row) => row.id
+      );
+      if (requesterProjectIds.length === 0) {
+        return { count: 0, error: null };
+      }
+
+      const result = await assignmentsQuery.in("request_id", requesterProjectIds);
+      assignmentsData = result.data as AssignmentLite[] | null;
+      assignmentsError = result.error;
+    }
+
+    if (assignmentsError) {
+      return { count: 0, error: new Error(assignmentsError.message) };
+    }
+
+    const assignments = assignmentsData ?? [];
+    if (assignments.length === 0) {
+      return { count: 0, error: null };
+    }
+
+    const requestIds = Array.from(new Set(assignments.map((a) => a.request_id)));
+    let query = supabase
+      .from("project_messages")
+      .select("id", { count: "exact", head: true })
+      .in("request_id", requestIds)
+      .neq("sender_id", userId);
+
+    if (role === "collector" || role === "agent") {
+      query = query.eq("collector_id", userId);
+    } else {
+      query = query.eq("requester_id", userId);
+    }
+
+    if (lastSeenAt) {
+      query = query.gt("created_at", lastSeenAt);
+    }
+
+    const { count, error } = await query;
+    if (error) {
+      return { count: 0, error: new Error(error.message) };
+    }
+
+    return { count: count || 0, error: null };
+  } catch (err) {
+    return {
+      count: 0,
+      error: err instanceof Error ? err : new Error("Failed to load unread messages count"),
     };
   }
 }
