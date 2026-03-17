@@ -73,7 +73,7 @@ export async function getUserConversations(
     let assignmentsData: AssignmentRow[] | null = null;
     let assignmentsError: { message: string } | null = null;
 
-    if (role === "collector") {
+    if (role === "collector" || role === "agent") {
       const result = await assignmentsQuery.eq("collector_id", userId);
       assignmentsData = result.data as AssignmentRow[] | null;
       assignmentsError = result.error;
@@ -204,7 +204,8 @@ export async function getUserConversations(
         const collectorId = assignment.collector_id;
         const requesterId = request.requester_id;
         const conversationKey = `${assignment.request_id}:${collectorId}`;
-        const counterpartId = role === "collector" ? requesterId : collectorId;
+        const isWorkerRole = role === "collector" || role === "agent";
+        const counterpartId = isWorkerRole ? requesterId : collectorId;
         const counterpartProfile = profilesById.get(counterpartId);
         const counterpartName =
           counterpartProfile?.full_name?.trim() ||

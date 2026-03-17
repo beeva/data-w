@@ -220,7 +220,8 @@ export default function MessagesCenter() {
   const isDark = theme === "dark";
 
   const role = profile?.role || "";
-  const isMessagingRole = role === "requester" || role === "collector";
+  const isMessagingRole =
+    role === "requester" || role === "collector" || role === "agent";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
