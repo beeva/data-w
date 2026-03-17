@@ -24,6 +24,7 @@ import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import ToastNotification from "@/components/ui/toast-notification";
+import PhoneTwoFactorAuth from "@/components/dashboard/shared/PhoneTwoFactorAuth";
 import { cn } from "@/lib/utils";
 import {
   User,
@@ -721,6 +722,9 @@ export default function AccountSettings() {
                       </Button>
                     </div>
                   </form>
+
+                  <Separator className="my-4" />
+                  <PhoneTwoFactorAuth defaultPhone={profile?.phone || ""} />
                 </CardContent>
               </Card>
             )}
