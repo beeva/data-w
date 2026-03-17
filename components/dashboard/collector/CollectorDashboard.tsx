@@ -774,6 +774,8 @@ export default function CollectorDashboard() {
 
   const displayName =
     profile?.full_name || user?.email?.split("@")[0] || "User";
+  const isAgentView = profile?.role === "agent";
+  const roleBadgeLabel = isAgentView ? "Agent" : "Collector";
   const initials = (
     profile?.full_name?.charAt(0) ||
     user?.email?.charAt(0) ||
@@ -982,7 +984,7 @@ export default function CollectorDashboard() {
                     {displayName}
                   </h2>
                   <Badge className="text-[10px] capitalize bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 border-0">
-                    Collector
+                    {roleBadgeLabel}
                   </Badge>
 
                   {profile?.location?.address ? (
@@ -1116,7 +1118,7 @@ export default function CollectorDashboard() {
                 },
                 {
                   icon: BookOpen,
-                  label: "Collector Guide",
+                  label: isAgentView ? "Agent Guide" : "Collector Guide",
                   href: "/docs/collector",
                 },
                 {
