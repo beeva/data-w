@@ -219,6 +219,23 @@ export async function createSubmission(
   metadata?: SubmissionMetadata | null
 ): Promise<{ data: Submission | null; error: Error | null }> {
   try {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", collectorId)
+      .single();
+
+    if (profileError || !profile) {
+      return { data: null, error: new Error("Profile not found") };
+    }
+
+    if (profile.role !== "collector") {
+      return {
+        data: null,
+        error: new Error("Only collectors can submit project data."),
+      };
+    }
+
     const { data: request, error: requestError } = await supabase
       .from("requests")
       .select("status")

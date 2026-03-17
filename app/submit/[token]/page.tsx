@@ -69,6 +69,7 @@ import {
   Lock,
   ShieldCheck,
   Inbox,
+  Copy,
 } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
 import { cn } from "@/lib/utils";
@@ -350,7 +351,7 @@ function StarRating({
 export default function SubmitPage() {
   const params = useParams();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const token = params.token as string;
 
   const [assignment, setAssignment] = useState<CollectorAssignment | null>(
@@ -383,6 +384,7 @@ export default function SubmitPage() {
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const userId = user?.id;
+  const isAgentUser = profile?.role === "agent";
 
   useEffect(() => {
     if (authLoading) return;
@@ -683,6 +685,68 @@ export default function SubmitPage() {
             >
               Go to Dashboard
             </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (isAgentUser) {
+    return (
+      <DashboardLayout>
+        {toast && (
+          <ToastNotification
+            title={toast.title}
+            message={toast.message}
+            type={toast.type}
+            duration={5000}
+            onClose={() => setToast(null)}
+          />
+        )}
+        <div className="flex items-center justify-center min-h-[500px] p-4">
+          <div className="w-full max-w-xl rounded-2xl border border-amber-500/30 dark:border-amber-500/50 bg-amber-500/10 dark:bg-amber-500/15 p-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Agent submissions are disabled
+                </h2>
+                <p className="text-sm text-foreground/80 mt-1 leading-relaxed">
+                  Your proposal was accepted, so you can receive the submission
+                  link, but only collector accounts can upload/submit data.
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-lg border border-border bg-background px-3 py-2 flex items-center justify-between gap-3">
+              <span className="text-xs font-mono text-muted-foreground truncate">
+                {assignment.submission_link}
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 shrink-0"
+                onClick={() => {
+                  navigator.clipboard.writeText(assignment.submission_link);
+                  setToast({
+                    title: "Link copied",
+                    message: "Submission link copied to clipboard.",
+                    type: "success",
+                  });
+                }}
+              >
+                <Copy className="w-3.5 h-3.5 mr-1.5" />
+                Copy
+              </Button>
+            </div>
+            <div className="mt-4">
+              <Button
+                onClick={() => router.push("/dashboard/home")}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Back to Dashboard
+              </Button>
+            </div>
           </div>
         </div>
       </DashboardLayout>
