@@ -158,6 +158,7 @@ export async function getProposalsByProject(
           id,
           email,
           full_name,
+          role,
           avatar_url,
           rating,
           bio,

@@ -219,6 +219,23 @@ export async function createSubmission(
   metadata?: SubmissionMetadata | null
 ): Promise<{ data: Submission | null; error: Error | null }> {
   try {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", collectorId)
+      .single();
+
+    if (profileError || !profile) {
+      return { data: null, error: new Error("Profile not found") };
+    }
+
+    if (profile.role !== "collector") {
+      return {
+        data: null,
+        error: new Error("Only collectors can submit project data."),
+      };
+    }
+
     const { data: request, error: requestError } = await supabase
       .from("requests")
       .select("status")
@@ -265,6 +282,89 @@ export async function createSubmission(
       data: null,
       error:
         err instanceof Error ? err : new Error("Failed to create submission"),
+    };
+  }
+}
+
+type SubmissionFileForValidation = {
+  id: string;
+  file_url: string;
+  file_type: string;
+  file_name: string;
+  file_size: number | null;
+  mime_type: string | null;
+};
+
+export interface AiValidationFileResult {
+  id: string;
+  file_name: string;
+  is_ai_generated: boolean;
+  confidence: number;
+  reasons: string[];
+}
+
+export interface AiValidationResult {
+  has_ai_content: boolean;
+  overall_pass: boolean;
+  files: AiValidationFileResult[];
+}
+
+/**
+ * Run AI verification for a submission and persist automatic validation result.
+ * - pass => marks submission as agent_validated
+ * - fail => auto-rejects submission
+ */
+export async function autoValidateSubmissionWithAi(
+  submissionId: string
+): Promise<{ data: AiValidationResult | null; error: Error | null }> {
+  try {
+    const { data: files, error: filesError } = await supabase
+      .from("data_items")
+      .select("id,file_url,file_type,file_name,file_size,mime_type")
+      .eq("submission_id", submissionId)
+      .order("created_at", { ascending: true });
+
+    if (filesError) {
+      return { data: null, error: new Error(filesError.message) };
+    }
+
+    const payloadFiles = (files || []) as SubmissionFileForValidation[];
+    if (payloadFiles.length === 0) {
+      return { data: null, error: new Error("No files found for validation") };
+    }
+
+    const res = await fetch("/api/validate-ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files: payloadFiles }),
+    });
+
+    if (!res.ok) {
+      return { data: null, error: new Error("AI validation request failed") };
+    }
+
+    const aiResult = (await res.json()) as AiValidationResult;
+
+    const { error: persistError } = await supabase.rpc(
+      "auto_validate_submission",
+      {
+        p_submission_id: submissionId,
+        p_passed: aiResult.overall_pass,
+      }
+    );
+
+    if (persistError) {
+      return { data: null, error: new Error(persistError.message) };
+    }
+
+    return { data: aiResult, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to auto-validate submission"),
     };
   }
 }

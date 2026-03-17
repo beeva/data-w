@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { getProjectById } from "@/lib/services/projectService";
 import { getProjectStats } from "@/lib/services/submissionService";
 import { getProposalsByProject } from "@/lib/services/proposalService";
@@ -82,6 +83,7 @@ import { cn } from "@/lib/utils";
 import ToastNotification from "@/components/ui/toast-notification";
 import ProjectProposals from "./ProjectProposals";
 import ProjectSubmissions from "./ProjectSubmissions";
+import EditProjectDialog from "./EditProjectDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const PHOTOGRAPHY_SVGS = [
@@ -218,6 +220,7 @@ interface ProjectWorkshopProps {
 }
 
 export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
+  const router = useRouter();
   const [project, setProject] = useState<Project | null>(null);
   const [stats, setStats] = useState<ProjectStats | null>(null);
   const [pendingProposalsCount, setPendingProposalsCount] = useState<number>(0);
@@ -230,6 +233,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
     message: string;
     type: "success" | "error";
   } | null>(null);
+  const [editProjectOpen, setEditProjectOpen] = useState(false);
 
   const fetchData = async () => {
     if (!projectId) return;
@@ -382,6 +386,19 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
           onClose={() => setToast(null)}
         />
       )}
+      <EditProjectDialog
+        project={project}
+        open={editProjectOpen}
+        onOpenChange={setEditProjectOpen}
+        onSuccess={async () => {
+          await fetchData();
+          setToast({
+            title: "Project updated",
+            message: "Your project changes were saved successfully.",
+            type: "success",
+          });
+        }}
+      />
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
@@ -622,12 +639,16 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
 
                 {/* Right: action buttons column (wireframe) */}
                 <div className="shrink-0 flex flex-col gap-3 lg:w-[180px]">
-                  <Button className="h-12 rounded-xl w-full">
+                  <Button
+                    className="h-12 rounded-xl w-full"
+                    onClick={() => setEditProjectOpen(true)}
+                  >
                     Edit Project
                   </Button>
                   <Button
                     variant="outline"
                     className="h-12 rounded-xl w-full bg-gray-100 dark:bg-gray-800/50 border-none hover:bg-gray-200 dark:hover:bg-gray-700/50"
+                    onClick={() => router.push("/dashboard/projects/active")}
                   >
                     Cancel
                   </Button>

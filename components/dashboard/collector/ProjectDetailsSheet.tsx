@@ -291,7 +291,7 @@ export default function ProjectDetailsSheet({
           const [requesterFeedbackRes, collectorFeedbackRes] =
             await Promise.all([
               getRequesterFeedbackByProjects(historyProjectIds),
-              getCollectorFeedbackByProjects(historyProjectIds, user.id),
+              getCollectorFeedbackByProjects(historyProjectIds),
             ]);
           if (mounted) {
             setRequesterFeedbackByProject(requesterFeedbackRes.data || {});
@@ -703,8 +703,6 @@ export default function ProjectDetailsSheet({
                     collectorFeedbackByProject[historyProject.id] ?? null;
                   const requesterFb =
                     requesterFeedbackByProject[historyProject.id] ?? null;
-                  const hasFeedback =
-                    collectorFb !== null || requesterFb !== null;
                   return (
                     <div
                       key={historyProject.id}
@@ -784,23 +782,10 @@ export default function ProjectDetailsSheet({
                         </div>
                       </div>
 
-                      {/* Feedback section — only when at least one feedback exists */}
-                      {hasFeedback && (
-                        <div className="border-t border-border divide-y divide-border">
-                          {collectorFb && (
-                            <FeedbackBlock
-                              label="Collector"
-                              feedback={collectorFb}
-                            />
-                          )}
-                          {requesterFb && (
-                            <FeedbackBlock
-                              label="Requester"
-                              feedback={requesterFb}
-                            />
-                          )}
-                        </div>
-                      )}
+                      <div className="border-t border-border divide-y divide-border">
+                        <FeedbackBlock label="Collector" feedback={collectorFb} />
+                        <FeedbackBlock label="Requester" feedback={requesterFb} />
+                      </div>
                     </div>
                   );
                 })

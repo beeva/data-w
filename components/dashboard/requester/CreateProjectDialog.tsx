@@ -3,9 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { createProject } from "@/lib/services/projectService";
+import { createProject, updateProject } from "@/lib/services/projectService";
 import { deductProjectBudget } from "@/lib/services/walletService";
-import type { ProjectFormData } from "@/types/project";
+import type { Project, ProjectFormData } from "@/types/project";
 import {
   Dialog,
   DialogContent,
@@ -142,12 +142,13 @@ export interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  mode?: "create" | "edit";
+  project?: Project;
 }
 
 const STEP_ORDER = [
   "title",
   "description",
-  "dataSuggestions",
   "category",
   "budget",
   "dataTypes",
@@ -305,6 +306,8 @@ export default function CreateProjectDialog({
   open,
   onOpenChange,
   onSuccess,
+  mode = "create",
+  project,
 }: CreateProjectDialogProps) {
   const { user, profile } = useAuth();
   const [stepIndex, setStepIndex] = useState(0);
@@ -352,6 +355,27 @@ export default function CreateProjectDialog({
   const isFirstStep = stepIndex === 0;
   const isLastStep = stepIndex === TOTAL_STEPS - 1;
   const progressPercent = ((stepIndex + 1) / TOTAL_STEPS) * 100;
+  const isEditMode = mode === "edit";
+
+  function getInitialFormDataForProject(editProject: Project): ProjectFormData {
+    return {
+      title: editProject.title || "",
+      description: editProject.description || "",
+      category: editProject.category || "",
+      budget: editProject.budget?.toString() || "",
+      deadline: editProject.deadline
+        ? new Date(editProject.deadline).toISOString().split("T")[0]
+        : "",
+      max_collectors: editProject.max_collectors?.toString() || "1",
+      data_types: editProject.requirements?.data_types || [],
+      formats: editProject.requirements?.formats || [],
+      specifications: editProject.requirements?.specifications || "",
+      location_address: editProject.location?.address || "",
+      location_lat: editProject.location?.lat?.toString() || "",
+      location_lng: editProject.location?.lng?.toString() || "",
+      radius_km: editProject.location?.radius_km?.toString() || "5",
+    };
+  }
 
   function toggleItem(field: "data_types" | "formats", value: string) {
     setFormData((prev) => ({
@@ -369,8 +393,6 @@ export default function CreateProjectDialog({
         return !!formData.title.trim();
       case "description":
         return !!formData.description.trim();
-      case "dataSuggestions":
-        return true;
       case "category":
         return !!formData.category;
       case "budget":
@@ -410,11 +432,19 @@ export default function CreateProjectDialog({
   async function handleSubmit() {
     setError("");
     if (!user || !profile) {
-      setError("You must be logged in to create a project");
+      setError(
+        isEditMode
+          ? "You must be logged in to edit this project"
+          : "You must be logged in to create a project",
+      );
       return;
     }
     if (profile.role !== "requester" && profile.role !== "admin") {
-      setError("Only requesters can create projects");
+      setError(
+        isEditMode
+          ? "Only requesters can edit projects"
+          : "Only requesters can create projects",
+      );
       return;
     }
     if (!formData.location_address) {
@@ -425,14 +455,6 @@ export default function CreateProjectDialog({
     setPhase("processing");
     try {
       const budgetAmount = parseFloat(formData.budget);
-
-      const { error: budgetError } = await deductProjectBudget(
-        user.id,
-        budgetAmount,
-      );
-      if (budgetError) {
-        throw budgetError;
-      }
 
       const requirements = {
         data_types: formData.data_types,
@@ -455,24 +477,55 @@ export default function CreateProjectDialog({
           }
         : null;
 
-      const { error: createError } = await createProject(user.id, {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-        budget: budgetAmount,
-        deadline: formData.deadline || null,
-        max_collectors: parseInt(formData.max_collectors),
-        location,
-        requirements,
-      });
+      if (isEditMode) {
+        if (!project) {
+          throw new Error("Project not found");
+        }
+        const { error: editError } = await updateProject(project.id, user.id, {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          budget: budgetAmount,
+          deadline: formData.deadline || null,
+          max_collectors: parseInt(formData.max_collectors),
+          location,
+          requirements,
+        });
+        if (editError) throw editError;
+      } else {
+        const { error: budgetError } = await deductProjectBudget(
+          user.id,
+          budgetAmount,
+        );
+        if (budgetError) {
+          throw budgetError;
+        }
 
-      if (createError) throw createError;
+        const { error: createError } = await createProject(user.id, {
+          title: formData.title,
+          description: formData.description,
+          category: formData.category,
+          budget: budgetAmount,
+          deadline: formData.deadline || null,
+          max_collectors: parseInt(formData.max_collectors),
+          location,
+          requirements,
+        });
+
+        if (createError) throw createError;
+      }
 
       setPhase("completed");
       setShowCongratsOverlay(true);
     } catch (err: unknown) {
       setPhase("form");
-      setError(err instanceof Error ? err.message : "Failed to create project");
+      setError(
+        err instanceof Error
+          ? err.message
+          : isEditMode
+            ? "Failed to update project"
+            : "Failed to create project",
+      );
     }
   }
 
@@ -481,7 +534,9 @@ export default function CreateProjectDialog({
     setPhase("form");
     setError("");
     setShowCongratsOverlay(false);
-    setFormData(initialFormData);
+    setFormData(
+      isEditMode && project ? getInitialFormDataForProject(project) : initialFormData,
+    );
   }
 
   function handleOpenChange(next: boolean) {
@@ -495,6 +550,19 @@ export default function CreateProjectDialog({
     resetForm();
     onSuccess?.();
   }
+
+  useEffect(() => {
+    if (!open) return;
+    if (isEditMode && project) {
+      setFormData(getInitialFormDataForProject(project));
+    } else if (!isEditMode) {
+      setFormData(initialFormData);
+    }
+    setStepIndex(0);
+    setPhase("form");
+    setError("");
+    setShowCongratsOverlay(false);
+  }, [open, isEditMode, project]);
 
   useEffect(() => {
     if (phase !== "processing") return;
@@ -581,14 +649,16 @@ export default function CreateProjectDialog({
                   />
                 </div>
                 <p className="text-xl sm:text-2xl font-semibold text-white">
-                  Project Created! 🎉
+                  {isEditMode ? "Project Updated! 🎉" : "Project Created! 🎉"}
                 </p>
                 <p className="text-sm sm:text-base text-white/70 max-w-md mx-auto">
                   Your project{" "}
                   <span className="font-semibold text-white">
                     {formData.title}
                   </span>{" "}
-                  has been created successfully.
+                  {isEditMode
+                    ? "has been updated successfully."
+                    : "has been created successfully."}
                 </p>
                 <Button
                   type="button"
@@ -603,14 +673,47 @@ export default function CreateProjectDialog({
           document.body,
         );
 
+  const floatingSuggestionsPanel =
+    typeof document === "undefined" || !open || showCongratsOverlay || phase !== "form"
+      ? null
+      : createPortal(
+          <aside className="hidden xl:block fixed right-0 top-[7vh] z-[60] w-1/2 h-[86vh] border-l border-gray-200 dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#0f0f0f] p-6 overflow-y-auto">
+            <div className="h-full min-h-0 flex flex-col">
+              <div className="mb-3">
+                <p className="text-sm font-semibold text-black dark:text-white">
+                  Data suggestions
+                </p>
+                <p className="text-xs text-black dark:text-white/60 mt-1">
+                  Similar projects and budget ideas while
+                  {isEditMode ? " editing your project." : " creating your project."}
+                </p>
+              </div>
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <DataSuggestionsPanel
+                  title={formData.title}
+                  description={formData.description}
+                  onBudgetSelect={(budget) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      budget: budget.toFixed(2),
+                    }))
+                  }
+                />
+              </div>
+            </div>
+          </aside>,
+          document.body,
+        );
+
   return (
     <>
       {congratsOverlay}
+      {floatingSuggestionsPanel}
       {!showCongratsOverlay && (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
           <DialogContent
             showCloseButton={false}
-            className="sm:max-w-4xl h-[80vh] overflow-hidden rounded-2xl border-0 bg-transparent shadow-none flex flex-col p-0 gap-0"
+            className="w-[96vw] sm:max-w-6xl h-[80vh] overflow-hidden rounded-2xl border-0 bg-transparent shadow-none flex flex-col p-0 gap-0 xl:left-0 xl:top-[7vh] xl:translate-x-0 xl:translate-y-0 xl:w-1/2 xl:max-w-none xl:h-[86vh] xl:rounded-r-2xl xl:rounded-l-none xl:border-r xl:border-gray-200 dark:xl:border-[#2a2a2a]"
             onInteractOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
@@ -621,7 +724,9 @@ export default function CreateProjectDialog({
                   <Info className="h-3.5 w-3.5 text-foreground dark:text-white" />
                 </div>
                 <span className="flex-1 text-center text-xs truncate">
-                  Creating a new data collection project
+                  {isEditMode
+                    ? `Editing project: ${project?.title ?? ""}`
+                    : "Creating a new data collection project"}
                 </span>
                 <button
                   type="button"
@@ -636,7 +741,7 @@ export default function CreateProjectDialog({
             {/* Header */}
             <DialogHeader className="shrink-0 flex-row items-center justify-between space-y-0 py-4 px-6 mt-4 bg-white dark:bg-[#0a0a0a] rounded-t-xl">
               <DialogTitle className="text-base font-semibold text-black dark:text-white">
-                Create Project
+                {isEditMode ? "Edit Project" : "Create Project"}
               </DialogTitle>
               {phase === "form" && (
                 <span className="text-xs text-black dark:text-white/50">
@@ -646,18 +751,20 @@ export default function CreateProjectDialog({
             </DialogHeader>
 
             {/* Main content */}
-            <div className="flex-1 min-h-0 overflow-y-auto bg-white dark:bg-[#0a0a0a] px-6 py-8  [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
+            <div className="flex-1 min-h-0 overflow-hidden bg-white dark:bg-[#0a0a0a] px-6 py-8">
               {phase === "form" && (
-                <div className="flex flex-col justify-center min-h-full">
-                  {error && (
-                    <div className="mb-6 p-3 bg-red-500/10 dark:bg-red-900/20 border border-red-500 dark:border-red-800 rounded-xl text-red-500 dark:text-red-400 text-sm">
-                      <TriangleAlert
-                        className="h-4 w-4 inline-block mr-2"
-                        strokeWidth={3}
-                      />
-                      {error}
-                    </div>
-                  )}
+                <div className="h-full min-h-0">
+                  <div className="h-full min-h-0 overflow-y-auto lg:pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
+                    <div className="flex flex-col justify-center min-h-full">
+                      {error && (
+                        <div className="mb-6 p-3 bg-red-500/10 dark:bg-red-900/20 border border-red-500 dark:border-red-800 rounded-xl text-red-500 dark:text-red-400 text-sm">
+                          <TriangleAlert
+                            className="h-4 w-4 inline-block mr-2"
+                            strokeWidth={3}
+                          />
+                          {error}
+                        </div>
+                      )}
 
                   {/* Step 1 — Title */}
                   {currentStepId === "title" && (
@@ -724,35 +831,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 3 — Data Suggestions */}
-                  {currentStepId === "dataSuggestions" && (
-                    <div className="space-y-6 pl-4 min-h-[50vh]">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          Data suggestions
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Browse similar projects and budget suggestions. You
-                          can apply a suggested budget or continue to the next
-                          step.
-                        </p>
-                      </div>
-                      <div className="overflow-hidden bg-white dark:bg-[#0a0a0a] min-h-[400px]">
-                        <DataSuggestionsPanel
-                          title={formData.title}
-                          description={formData.description}
-                          onBudgetSelect={(budget) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              budget: budget.toFixed(2),
-                            }))
-                          }
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 4 — Category (single select, chip UI) */}
+                  {/* Step 3 — Category (single select, chip UI) */}
                   {currentStepId === "category" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -807,7 +886,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 5 — Budget & Timeline */}
+                  {/* Step 4 — Budget & Timeline */}
                   {currentStepId === "budget" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -1138,7 +1217,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 6 — Data Types */}
+                  {/* Step 5 — Data Types */}
                   {currentStepId === "dataTypes" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -1219,7 +1298,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 7 — Formats */}
+                  {/* Step 6 — Formats */}
                   {currentStepId === "formats" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -1278,7 +1357,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 8 — Specifications */}
+                  {/* Step 7 — Specifications */}
                   {currentStepId === "specifications" && (
                     <div className="space-y-8 pl-4">
                       <div className="space-y-2">
@@ -1309,7 +1388,7 @@ export default function CreateProjectDialog({
                     </div>
                   )}
 
-                  {/* Step 9 — Location */}
+                  {/* Step 8 — Location */}
                   {currentStepId === "location" && (
                     <div className="space-y-8 pl-4 mb-24">
                       <div className="space-y-2">
@@ -1364,6 +1443,8 @@ export default function CreateProjectDialog({
                     </div>
                   )}
                 </div>
+                    </div>
+                  </div>
               )}
 
               {/* Processing phase */}
@@ -1377,7 +1458,9 @@ export default function CreateProjectDialog({
                     />
                   </div>
                   <p className="text-lg sm:text-xl font-semibold text-black dark:text-white">
-                    Creating your project...
+                    {isEditMode
+                      ? "Saving your project changes..."
+                      : "Creating your project..."}
                   </p>
                 </div>
               )}
@@ -1395,14 +1478,16 @@ export default function CreateProjectDialog({
                   </div>
                   <div className="space-y-2 relative z-10">
                     <p className="text-xl sm:text-2xl font-semibold text-black dark:text-white">
-                      Project Created! 🎉
+                      {isEditMode ? "Project Updated! 🎉" : "Project Created! 🎉"}
                     </p>
                     <p className="text-sm sm:text-base text-black dark:text-white/70 max-w-md mx-auto">
                       Your project{" "}
                       <span className="font-semibold text-black dark:text-white">
                         {formData.title}
                       </span>{" "}
-                      has been created successfully.
+                      {isEditMode
+                        ? "has been updated successfully."
+                        : "has been created successfully."}
                     </p>
                   </div>
                 </div>
@@ -1443,7 +1528,7 @@ export default function CreateProjectDialog({
                       className="btn-gelatine rounded-full bg-[#0a0a0a] dark:bg-white hover:bg-[#0a0a0a] dark:hover:bg-white text-white dark:text-black disabled:bg-white dark:disabled:bg-[#0a0a0a] disabled:text-black disabled:dark:text-white disabled:pointer-events-none !px-6 h-11 text-sm font-medium"
                     >
                       {isLastStep ? (
-                        "Create Project"
+                        isEditMode ? "Save Changes" : "Create Project"
                       ) : (
                         <>
                           Next

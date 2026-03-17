@@ -26,8 +26,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900" />;
   }
 
-  // Collector layout: sticky top header with nav, no sidebar
-  if (role === "collector") {
+  // Collector/Agent layout: sticky top header with nav, no sidebar
+  if (role === "collector" || role === "agent") {
     return (
       <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900">
         <div className="sticky top-0 z-20 px-2 pt-2 md:px-4 md:pt-4 bg-[#F4F5FA] dark:bg-gray-900 pb-2">
@@ -50,7 +50,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  // Default layout: sidebar + header + main (admin, agent, etc.)
+  // Default layout: sidebar + header + main (admin, etc.)
   return (
     <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900 p-2 md:py-4 md:pl-4">
       <div className="w-full h-[calc(100dvh-2rem)] mx-auto rounded-xl overflow-hidden flex gap-0 md:gap-4">

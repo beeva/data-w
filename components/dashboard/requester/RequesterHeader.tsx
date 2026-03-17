@@ -44,6 +44,7 @@ import {
   getUnreadNotificationCount,
   markAllNotificationsAsRead,
 } from "@/lib/services/notificationService";
+import { getUnreadMessagesCount } from "@/lib/services/chatService";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -66,6 +67,7 @@ export default function RequesterHeader() {
   const notificationsRef = useRef<HTMLDivElement>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [realtimeToast, setRealtimeToast] = useState<{
     title?: string;
@@ -152,6 +154,50 @@ export default function RequesterHeader() {
       if (!error) setUnreadCount(count);
     });
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setUnreadMessagesCount(0);
+      return;
+    }
+    if (pathname?.startsWith("/dashboard/messages")) {
+      setUnreadMessagesCount(0);
+      return;
+    }
+    getUnreadMessagesCount(userId, "requester").then(({ count, error }) => {
+      if (!error) setUnreadMessagesCount(count);
+    });
+  }, [userId, pathname]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel(`messages-unread-requester-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "project_messages",
+        },
+        (payload: RealtimePostgresChangesPayload<Record<string, any>>) => {
+          const message = payload.new as {
+            requester_id?: string;
+            collector_id?: string;
+            sender_id?: string;
+          };
+          if (pathname?.startsWith("/dashboard/messages")) return;
+          const involvesCurrentUser =
+            message.requester_id === userId || message.collector_id === userId;
+          if (!involvesCurrentUser || message.sender_id === userId) return;
+          setUnreadMessagesCount((prev) => prev + 1);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, pathname]);
 
   useEffect(() => {
     if (!userId) return;
@@ -360,6 +406,11 @@ export default function RequesterHeader() {
               className={navButtonClass(isMessagesActive)}
             >
               Messages
+              {unreadMessagesCount > 0 && (
+                <span className="ml-1.5 min-w-[16px] h-[16px] inline-flex items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
+                  {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                </span>
+              )}
             </Link>
           </nav>
         </div>

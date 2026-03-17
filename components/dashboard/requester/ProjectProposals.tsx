@@ -218,6 +218,24 @@ export default function ProjectProposals({
     withdrawn: 3,
   };
 
+  const getNormalizedRole = (role?: string | null) => {
+    const normalized = (role ?? "collector").toLowerCase().replace(/_/g, " ");
+    return normalized.includes("agent") ? "agent" : "collector";
+  };
+
+  const getRoleLabel = (role?: string | null) =>
+    getNormalizedRole(role) === "agent" ? "Agent" : "Collector";
+
+  const getRoleBadgeClass = (role?: string | null) =>
+    getNormalizedRole(role) === "agent"
+      ? "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+      : "border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300";
+
+  const getProposalCardClass = (role?: string | null) =>
+    getNormalizedRole(role) === "agent"
+      ? "bg-violet-50/80 dark:bg-violet-900/20 hover:bg-violet-100/80 dark:hover:bg-violet-900/30 border border-violet-200/60 dark:border-violet-800/50"
+      : "bg-cyan-50/70 dark:bg-cyan-900/20 hover:bg-cyan-100/70 dark:hover:bg-cyan-900/30 border border-cyan-200/60 dark:border-cyan-800/50";
+
   const filteredAndSortedProposals = useMemo(() => {
     let list = proposals;
     if (statusFilter) list = list.filter((p) => p.status === statusFilter);
@@ -498,7 +516,10 @@ export default function ProjectProposals({
                               setSelectedProposal(proposal);
                             }
                           }}
-                          className="group rounded-xl bg-gray-100 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors duration-150 overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className={cn(
+                            "group rounded-xl transition-colors duration-150 overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            getProposalCardClass(proposal.collector?.role),
+                          )}
                         >
                           <div className="p-4">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
@@ -528,10 +549,23 @@ export default function ProjectProposals({
                                   <p className="text-base font-semibold text-foreground truncate">
                                     {proposal.collector?.full_name ?? "Unknown"}
                                   </p>
-                                  <p className="text-xs text-muted-foreground truncate">
-                                    {proposal.location?.country ??
-                                      proposal.location?.city ??
-                                      "—"}
+                                  <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5">
+                                    <span
+                                      className={cn(
+                                        "inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold leading-none",
+                                        getRoleBadgeClass(
+                                          proposal.collector?.role,
+                                        ),
+                                      )}
+                                    >
+                                      {getRoleLabel(proposal.collector?.role)}
+                                    </span>
+                                    <span>·</span>
+                                    <span>
+                                      {proposal.location?.country ??
+                                        proposal.location?.city ??
+                                        "—"}
+                                    </span>
                                   </p>
                                 </div>
                               </div>
@@ -723,7 +757,10 @@ export default function ProjectProposals({
                                 setSelectedProposal(proposal);
                               }
                             }}
-                            className="group h-full flex flex-col rounded-xl bg-gray-100 dark:bg-gray-800/50 hover:bg-gray-200 dark:hover:bg-gray-700/50 transition-colors duration-150 overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className={cn(
+                              "group h-full flex flex-col rounded-xl transition-colors duration-150 overflow-hidden cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              getProposalCardClass(proposal.collector?.role),
+                            )}
                           >
                             {/* Card header — centered profile */}
                             <div className="flex flex-col items-center text-center gap-2 pt-6 pb-4 px-4">
@@ -748,6 +785,18 @@ export default function ProjectProposals({
                                 <p className="text-base font-bold text-foreground truncate leading-tight">
                                   {proposal.collector?.full_name ?? "Unknown"}
                                 </p>
+                                <div className="flex justify-center">
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                                      getRoleBadgeClass(
+                                        proposal.collector?.role,
+                                      ),
+                                    )}
+                                  >
+                                    {getRoleLabel(proposal.collector?.role)}
+                                  </span>
+                                </div>
                                 {(proposal.location?.city ||
                                   proposal.location?.country) && (
                                   <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
@@ -955,6 +1004,15 @@ export default function ProjectProposals({
                         <h2 className="text-xl font-bold text-foreground leading-tight">
                           {selectedProposal.collector?.full_name ?? "Unknown"}
                         </h2>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "capitalize",
+                            getRoleBadgeClass(selectedProposal.collector?.role),
+                          )}
+                        >
+                          {getRoleLabel(selectedProposal.collector?.role)}
+                        </Badge>
                         {selectedProposal.status === "accepted" &&
                           (() => {
                             const assignment = assignments.find(

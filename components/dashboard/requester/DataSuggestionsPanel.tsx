@@ -28,7 +28,7 @@ import { getCategoryColor } from "@/lib/utils";
 
 // Card: title+link row → description → tag pills → footer (author left, stats right)
 const CARD_BASE =
-  "rounded-xl border border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all p-4";
+  "rounded-xl border border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all p-4 min-w-0 overflow-hidden";
 
 interface DataSuggestionsPanelProps {
   title: string;
@@ -49,6 +49,10 @@ export default function DataSuggestionsPanel({
     useState<BudgetSuggestions | null>(null);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [loadingDatasets, setLoadingDatasets] = useState(false);
+  const [expandedProjectDescriptions, setExpandedProjectDescriptions] =
+    useState<Record<string, boolean>>({});
+  const [expandedDatasetDescriptions, setExpandedDatasetDescriptions] =
+    useState<Record<string, boolean>>({});
 
   // Debounce search queries
   const searchQuery = useMemo(() => {
@@ -107,15 +111,29 @@ export default function DataSuggestionsPanel({
   const isLoading = loadingProjects || loadingDatasets;
   const showLoadingSkeleton = isLoading && !hasContent;
 
+  const toggleProjectDescription = (projectId: string) => {
+    setExpandedProjectDescriptions((prev) => ({
+      ...prev,
+      [projectId]: !prev[projectId],
+    }));
+  };
+
+  const toggleDatasetDescription = (datasetId: string) => {
+    setExpandedDatasetDescriptions((prev) => ({
+      ...prev,
+      [datasetId]: !prev[datasetId],
+    }));
+  };
+
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full min-w-0 overflow-hidden flex flex-col">
       {!searchQuery || searchQuery.length < 3 ? (
         <div className="p-4 text-center text-xs text-muted-foreground">
           <Database className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p>Enter a project title and description to see suggestions</p>
         </div>
       ) : showLoadingSkeleton ? (
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full min-w-0">
           <div className="space-y-4 p-4">
             {/* Budget skeleton */}
             <div>
@@ -207,18 +225,18 @@ export default function DataSuggestionsPanel({
           </p>
         </div>
       ) : (
-        <ScrollArea className="h-full">
-          <div className="space-y-4">
+        <ScrollArea className="h-full min-w-0">
+          <div className="space-y-4 pr-4 overflow-x-hidden min-w-0">
             {/* Budget Suggestions Section */}
             {budgetSuggestions && (
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-cyan-400">
                   <TrendingUp className="w-3 h-3" />
                   Budget Suggestions
                 </h3>
                 <div className={CARD_BASE}>
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-xs text-muted-foreground">
                         Recommended
                       </span>
@@ -226,7 +244,7 @@ export default function DataSuggestionsPanel({
                         ${budgetSuggestions.recommended.toFixed(2)}
                       </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       <div>
                         <span className="text-muted-foreground">Average:</span>
                         <span className="ml-1 font-medium text-foreground">
@@ -259,7 +277,7 @@ export default function DataSuggestionsPanel({
                       </p>
                       <Button
                         size="sm"
-                        className="w-full h-8 text-xs bg-primary text-primary-foreground hover:bg-primary/90"
+                        className="w-full min-w-0 h-auto py-2 text-xs leading-tight whitespace-normal break-words text-center bg-primary text-primary-foreground hover:bg-primary/90"
                         onClick={() =>
                           onBudgetSelect?.(budgetSuggestions.recommended)
                         }
@@ -275,7 +293,7 @@ export default function DataSuggestionsPanel({
 
             {/* Similar Projects Section */}
             {similarProjects.length > 0 && (
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-cyan-400">
                   <Database className="w-3 h-3" />
                   Similar Projects
@@ -284,24 +302,41 @@ export default function DataSuggestionsPanel({
                   {similarProjects.map((project) => (
                     <div key={project.id} className={CARD_BASE}>
                       {/* Header: title only */}
-                      <h4 className="text-base font-semibold text-foreground truncate mb-1.5">
+                      <h4 className="text-base font-semibold text-foreground leading-tight line-clamp-2 break-words mb-1.5">
                         {project.title}
                       </h4>
                       {/* Description */}
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-3">
+                      <p
+                        className={`text-sm text-muted-foreground leading-relaxed mb-2 ${
+                          expandedProjectDescriptions[project.id]
+                            ? ""
+                            : "line-clamp-3"
+                        }`}
+                      >
                         {project.description}
                       </p>
+                      {project.description.length > 180 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleProjectDescription(project.id)}
+                          className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline mb-3"
+                        >
+                          {expandedProjectDescriptions[project.id]
+                            ? "Show less"
+                            : "Show more"}
+                        </button>
+                      )}
                       {/* Tags: category + budget pills */}
                       <div className="flex flex-wrap gap-1.5">
                         <Badge
                           variant="outline"
-                          className={`text-xs px-2.5 py-1 border-none rounded-full ${getCategoryColor(project.category)}`}
+                          className={`text-xs px-2.5 py-1 border-none rounded-full max-w-full whitespace-normal break-words ${getCategoryColor(project.category)}`}
                         >
                           {project.category}
                         </Badge>
                         <Badge
                           variant="outline"
-                          className="text-xs px-2.5 py-1 border-none rounded-full bg-gray-100 dark:bg-gray-800 text-muted-foreground"
+                          className="text-xs px-2.5 py-1 border-none rounded-full bg-gray-100 dark:bg-gray-800 text-muted-foreground max-w-full whitespace-normal break-all"
                         >
                           <DollarSign className="w-3 h-3 mr-1 inline" />
                           {project.budget.toFixed(2)}
@@ -315,7 +350,7 @@ export default function DataSuggestionsPanel({
 
             {/* Hugging Face Datasets Section */}
             {huggingFaceDatasets.length > 0 && (
-              <div>
+              <div className="min-w-0">
                 <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5 text-cyan-400">
                   <Sparkles className="w-3 h-3" />
                   Hugging Face Datasets
@@ -324,7 +359,7 @@ export default function DataSuggestionsPanel({
                   {huggingFaceDatasets.map((dataset) => (
                     <div key={dataset.id} className={CARD_BASE}>
                       <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <h4 className="text-base font-semibold text-foreground truncate flex-1 min-w-0">
+                        <h4 className="text-base font-semibold text-foreground leading-tight line-clamp-2 break-words flex-1 min-w-0">
                           {dataset.name}
                         </h4>
                         <a
@@ -339,23 +374,40 @@ export default function DataSuggestionsPanel({
                         </a>
                       </div>
                       {/* Description */}
-                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3 mb-3">
+                      <p
+                        className={`text-sm text-muted-foreground leading-relaxed mb-2 ${
+                          expandedDatasetDescriptions[dataset.id]
+                            ? ""
+                            : "line-clamp-3"
+                        }`}
+                      >
                         {dataset.description}
                       </p>
+                      {dataset.description.length > 180 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleDatasetDescription(dataset.id)}
+                          className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline mb-3"
+                        >
+                          {expandedDatasetDescriptions[dataset.id]
+                            ? "Show less"
+                            : "Show more"}
+                        </button>
+                      )}
                       {/* Tags: pill row */}
                       <div className="flex flex-wrap gap-1.5 mb-3">
                         {dataset.tags.slice(0, 5).map((tag, idx) => (
                           <Badge
                             key={idx}
                             variant="outline"
-                            className="text-xs px-2.5 py-1 border-none text-muted-foreground bg-gray-100 dark:bg-gray-700 rounded-full font-normal"
+                            className="text-xs px-2.5 py-1 border-none text-muted-foreground bg-gray-100 dark:bg-gray-700 rounded-full font-normal max-w-full whitespace-normal break-all"
                           >
                             {tag}
                           </Badge>
                         ))}
                       </div>
                       {/* Footer: [avatar] By Author (left) | views · likes (right) */}
-                      <div className="flex items-center justify-between pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-2 min-w-0">
                           <Avatar className="w-6 h-6 shrink-0">
                             <AvatarImage src="/default-avatar.svg" alt="" />
@@ -367,11 +419,11 @@ export default function DataSuggestionsPanel({
                               />
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-xs text-muted-foreground truncate">
+                          <span className="text-xs text-muted-foreground break-all">
                             By {dataset.author}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Eye className="w-3.5 h-3.5" />
                             {dataset.downloads.toLocaleString()}

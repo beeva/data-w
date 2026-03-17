@@ -6,6 +6,7 @@ import {
   createSubmission,
   uploadSubmissionFile,
   createDataItem,
+  autoValidateSubmissionWithAi,
   getFileTypeFromMime,
 } from "@/lib/services/submissionService";
 import { createNotification } from "@/lib/services/notificationService";
@@ -108,6 +109,9 @@ export default function SubmissionDialog({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [autoValidationPassed, setAutoValidationPassed] = useState<boolean | null>(
+    null,
+  );
   const [isDragOver, setIsDragOver] = useState(false);
 
   const requiredDataTypes = useMemo(
@@ -263,6 +267,7 @@ export default function SubmissionDialog({
     setUploadProgress(0);
     setUploadStatus("");
     setSubmitted(false);
+    setAutoValidationPassed(null);
     setIsDragOver(false);
   }, [files]);
 
@@ -421,7 +426,22 @@ export default function SubmissionDialog({
         setUploadProgress(Math.round((uploadedCount / totalFiles) * 100));
       }
 
-      setUploadStatus("Submission complete!");
+      setUploadStatus("Running automatic verification...");
+      const { data: validationData, error: validationError } =
+        await autoValidateSubmissionWithAi(submission.id);
+
+      if (validationError || !validationData) {
+        throw new Error(
+          validationError?.message || "Automatic verification failed",
+        );
+      }
+
+      setAutoValidationPassed(validationData.overall_pass);
+      setUploadStatus(
+        validationData.overall_pass
+          ? "Submission verified successfully!"
+          : "Submission was auto-rejected by verification.",
+      );
       setSubmitted(true);
 
       await createNotification({
@@ -438,8 +458,10 @@ export default function SubmissionDialog({
       });
 
       onToast?.({
-        message: `Successfully submitted ${files.length} file${files.length > 1 ? "s" : ""}!`,
-        type: "success",
+        message: validationData.overall_pass
+          ? `Successfully submitted and verified ${files.length} file${files.length > 1 ? "s" : ""}.`
+          : `Submitted ${files.length} file${files.length > 1 ? "s" : ""}, but verification rejected the submission.`,
+        type: validationData.overall_pass ? "success" : "error",
       });
       onSuccess?.();
     } catch (err: any) {
@@ -484,8 +506,9 @@ export default function SubmissionDialog({
                 Submission Successful!
               </h3>
               <p className="text-sm text-muted-foreground max-w-xs mx-auto leading-relaxed">
-                Your data has been submitted for review. You will be notified
-                once the requester validates your submission.
+                {autoValidationPassed
+                  ? "Your data has been submitted and automatically verified."
+                  : "Your submission was automatically rejected by verification checks."}
               </p>
             </div>
             <Button

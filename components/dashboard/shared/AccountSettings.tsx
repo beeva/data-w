@@ -581,27 +581,6 @@ export default function AccountSettings() {
                       </>
                     )}
 
-                    {/* Agent Stats */}
-                    {profile?.role === "agent" && (
-                      <>
-                        <Separator />
-                        <div>
-                          <h3 className="text-xs font-semibold mb-2">Validator Stats</h3>
-                          <div className="grid grid-cols-2 gap-2">
-                            {[
-                              { label: "Validations", value: profile.total_validations || 0 },
-                              { label: "Score", value: `${profile.validation_score?.toFixed(1) || "0.0"}%` },
-                            ].map((stat) => (
-                              <div key={stat.label} className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded text-center">
-                                <p className="text-sm font-bold text-cyan-500">{stat.value}</p>
-                                <p className="text-[10px] text-muted-foreground">{stat.label}</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </>
-                    )}
-
                     <div className="flex justify-end">
                       <Button type="submit" disabled={profileLoading} size="sm" className="h-8 text-xs px-3">
                         {profileLoading ? (

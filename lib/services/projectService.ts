@@ -544,17 +544,22 @@ export async function getCollectorFeedbackForProject(
  */
 export async function getCollectorFeedbackByProjects(
   projectIds: string[],
-  collectorId: string
+  collectorId?: string
 ): Promise<{ data: Record<string, CollectorFeedback>; error: Error | null }> {
   try {
     if (projectIds.length === 0) return { data: {}, error: null };
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("project_feedback_replies")
       .select("*")
-      .eq("collector_id", collectorId)
       .in("request_id", projectIds)
       .order("updated_at", { ascending: false });
+
+    if (collectorId) {
+      query = query.eq("collector_id", collectorId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return { data: {}, error: new Error(error.message) };
