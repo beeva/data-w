@@ -529,6 +529,10 @@ export default function ProjectProposals({
                                     {proposal.collector?.full_name ?? "Unknown"}
                                   </p>
                                   <p className="text-xs text-muted-foreground truncate">
+                                    {(proposal.collector?.role ?? "collector")
+                                      .replace(/_/g, " ")
+                                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                                    {" · "}
                                     {proposal.location?.country ??
                                       proposal.location?.city ??
                                       "—"}
@@ -748,6 +752,12 @@ export default function ProjectProposals({
                                 <p className="text-base font-bold text-foreground truncate leading-tight">
                                   {proposal.collector?.full_name ?? "Unknown"}
                                 </p>
+                                <p className="text-[11px] text-muted-foreground capitalize">
+                                  {(proposal.collector?.role ?? "collector").replace(
+                                    /_/g,
+                                    " ",
+                                  )}
+                                </p>
                                 {(proposal.location?.city ||
                                   proposal.location?.country) && (
                                   <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
@@ -955,6 +965,12 @@ export default function ProjectProposals({
                         <h2 className="text-xl font-bold text-foreground leading-tight">
                           {selectedProposal.collector?.full_name ?? "Unknown"}
                         </h2>
+                        <Badge variant="secondary" className="capitalize">
+                          {(selectedProposal.collector?.role ?? "collector").replace(
+                            /_/g,
+                            " ",
+                          )}
+                        </Badge>
                         {selectedProposal.status === "accepted" &&
                           (() => {
                             const assignment = assignments.find(
