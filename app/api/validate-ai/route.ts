@@ -17,6 +17,46 @@ interface FileResult {
   reasons: string[];
 }
 
+function getEffectiveFileType(fileType: string, fileName: string): string {
+  const docExtensions = [".pdf", ".csv", ".json", ".xml", ".txt", ".doc", ".docx", ".xls", ".xlsx"];
+  const lowerName = fileName.toLowerCase();
+  const normalizedType = fileType.toLowerCase();
+
+  if (docExtensions.some((ext) => lowerName.endsWith(ext))) return "document";
+  if (normalizedType === "image" || normalizedType.startsWith("image/")) return "image";
+  if (normalizedType === "video" || normalizedType.startsWith("video/")) return "video";
+  if (normalizedType === "audio" || normalizedType.startsWith("audio/")) return "audio";
+  if (normalizedType === "document" || normalizedType.startsWith("text/")) return "document";
+  if (
+    normalizedType.includes("pdf") ||
+    normalizedType.includes("document") ||
+    normalizedType.includes("spreadsheet") ||
+    normalizedType.includes("presentation")
+  ) {
+    return "document";
+  }
+  return fileType;
+}
+
+function analyzeBufferByType(
+  buffer: Buffer,
+  effectiveType: string,
+  fileName: string,
+  fileSize: number | null,
+  mimeType?: string | null
+): { is_ai_generated: boolean; confidence: number; reasons: string[] } {
+  switch (effectiveType) {
+    case "video":
+      return analyzeVideoBytes(buffer, fileName, fileSize);
+    case "audio":
+      return analyzeAudioBytes(buffer, fileName, fileSize);
+    case "document":
+      return analyzeDocumentBytes(buffer, fileName, fileSize, mimeType);
+    default:
+      return analyzeImageBytes(buffer, fileName, fileSize);
+  }
+}
+
 /**
  * Analyzes image binary data for AI-generation indicators by examining
  * raw byte patterns rather than relying on a third-party API.
@@ -704,6 +744,75 @@ function analyzeDocumentBytes(
 
 export async function POST(request: NextRequest) {
   try {
+    const contentType = request.headers.get("content-type") || "";
+    const isMultipart = contentType.includes("multipart/form-data");
+    const supportedTypes = ["image", "video", "audio", "document"];
+    const results: FileResult[] = [];
+    let hasAiContent = false;
+
+    if (isMultipart) {
+      const formData = await request.formData();
+      const uploadedFiles = formData
+        .getAll("files")
+        .filter((entry): entry is File => entry instanceof File);
+
+      if (uploadedFiles.length === 0) {
+        return NextResponse.json({ error: "No files provided" }, { status: 400 });
+      }
+
+      for (let index = 0; index < uploadedFiles.length; index++) {
+        const uploaded = uploadedFiles[index];
+        const effectiveType = getEffectiveFileType(uploaded.type || "other", uploaded.name);
+
+        if (!supportedTypes.includes(effectiveType)) {
+          results.push({
+            id: `local-${index}`,
+            file_name: uploaded.name,
+            is_ai_generated: false,
+            confidence: 0,
+            reasons: ["File type not applicable for AI check"],
+          });
+          continue;
+        }
+
+        try {
+          const fetchSize = effectiveType === "image" ? 65535 : effectiveType === "document" ? 262144 : 131072;
+          const chunk = uploaded.slice(0, fetchSize);
+          const arrayBuf = await chunk.arrayBuffer();
+          const buffer = Buffer.from(arrayBuf);
+          const analysis = analyzeBufferByType(
+            buffer,
+            effectiveType,
+            uploaded.name,
+            uploaded.size || null,
+            uploaded.type || null
+          );
+
+          if (analysis.is_ai_generated) hasAiContent = true;
+
+          results.push({
+            id: `local-${index}`,
+            file_name: uploaded.name,
+            ...analysis,
+          });
+        } catch {
+          results.push({
+            id: `local-${index}`,
+            file_name: uploaded.name,
+            is_ai_generated: false,
+            confidence: 0,
+            reasons: ["Error analyzing file"],
+          });
+        }
+      }
+
+      return NextResponse.json({
+        has_ai_content: hasAiContent,
+        overall_pass: !hasAiContent,
+        files: results,
+      });
+    }
+
     const body = await request.json();
     const files: FileToCheck[] = body.files;
 
@@ -711,16 +820,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No files provided" }, { status: 400 });
     }
 
-    const results: FileResult[] = [];
-    let hasAiContent = false;
-
     for (const file of files) {
-      const supportedTypes = ["image", "video", "audio", "document"];
-      const docExtensions = [".pdf", ".csv", ".json", ".xml"];
-      const isDocByExtension = docExtensions.some((ext) =>
-        file.file_name.toLowerCase().endsWith(ext)
-      );
-      const effectiveType = isDocByExtension ? "document" : file.file_type;
+      const effectiveType = getEffectiveFileType(file.file_type, file.file_name);
 
       if (!supportedTypes.includes(effectiveType)) {
         results.push({
@@ -755,22 +856,13 @@ export async function POST(request: NextRequest) {
 
         const arrayBuf = await res.arrayBuffer();
         const buffer = Buffer.from(arrayBuf);
-
-        let analysis: { is_ai_generated: boolean; confidence: number; reasons: string[] };
-
-        switch (effectiveType) {
-          case "video":
-            analysis = analyzeVideoBytes(buffer, file.file_name, file.file_size);
-            break;
-          case "audio":
-            analysis = analyzeAudioBytes(buffer, file.file_name, file.file_size);
-            break;
-          case "document":
-            analysis = analyzeDocumentBytes(buffer, file.file_name, file.file_size, file.mime_type);
-            break;
-          default:
-            analysis = analyzeImageBytes(buffer, file.file_name, file.file_size);
-        }
+        const analysis = analyzeBufferByType(
+          buffer,
+          effectiveType,
+          file.file_name,
+          file.file_size,
+          file.mime_type
+        );
 
         if (analysis.is_ai_generated) hasAiContent = true;
 

@@ -6,7 +6,8 @@ import {
   createSubmission,
   uploadSubmissionFile,
   createDataItem,
-  autoValidateSubmissionWithAi,
+  validateLocalFilesWithAi,
+  persistAutoValidationResult,
   getFileTypeFromMime,
 } from "@/lib/services/submissionService";
 import { createNotification } from "@/lib/services/notificationService";
@@ -366,9 +367,32 @@ export default function SubmissionDialog({
     setError("");
     setSubmitting(true);
     setUploadProgress(0);
-    setUploadStatus("Creating submission...");
+    setUploadStatus("Running AI validation...");
 
     try {
+      const { data: preValidationData, error: preValidationError } =
+        await validateLocalFilesWithAi(files.map((f) => f.file));
+
+      if (preValidationError || !preValidationData) {
+        throw new Error(
+          preValidationError?.message || "AI validation request failed",
+        );
+      }
+
+      if (!preValidationData.overall_pass) {
+        const detectedFiles = preValidationData.files
+          .filter((file) => file.is_ai_generated)
+          .map((file) => file.file_name);
+
+        const detail =
+          detectedFiles.length > 0
+            ? `Detected AI-generated content in: ${detectedFiles.join(", ")}.`
+            : "Detected AI-generated content in submitted files.";
+
+        throw new Error(`AI validation failed. ${detail}`);
+      }
+
+      setUploadStatus("Creating submission...");
       const metadata: SubmissionMetadata = {
         notes: notes || undefined,
         timestamp: new Date().toISOString(),
@@ -426,22 +450,19 @@ export default function SubmissionDialog({
         setUploadProgress(Math.round((uploadedCount / totalFiles) * 100));
       }
 
-      setUploadStatus("Running automatic verification...");
-      const { data: validationData, error: validationError } =
-        await autoValidateSubmissionWithAi(submission.id);
+      const { error: persistValidationError } = await persistAutoValidationResult(
+        submission.id,
+        true,
+      );
 
-      if (validationError || !validationData) {
+      if (persistValidationError) {
         throw new Error(
-          validationError?.message || "Automatic verification failed",
+          persistValidationError.message || "Failed to persist validation status",
         );
       }
 
-      setAutoValidationPassed(validationData.overall_pass);
-      setUploadStatus(
-        validationData.overall_pass
-          ? "Submission verified successfully!"
-          : "Submission was auto-rejected by verification.",
-      );
+      setAutoValidationPassed(true);
+      setUploadStatus("Submission verified successfully!");
       setSubmitted(true);
 
       await createNotification({
@@ -458,10 +479,8 @@ export default function SubmissionDialog({
       });
 
       onToast?.({
-        message: validationData.overall_pass
-          ? `Successfully submitted and verified ${files.length} file${files.length > 1 ? "s" : ""}.`
-          : `Submitted ${files.length} file${files.length > 1 ? "s" : ""}, but verification rejected the submission.`,
-        type: validationData.overall_pass ? "success" : "error",
+        message: `Successfully validated and submitted ${files.length} file${files.length > 1 ? "s" : ""}.`,
+        type: "success",
       });
       onSuccess?.();
     } catch (err: any) {

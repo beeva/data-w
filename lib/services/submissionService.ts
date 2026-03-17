@@ -309,6 +309,66 @@ export interface AiValidationResult {
   files: AiValidationFileResult[];
 }
 
+export async function validateLocalFilesWithAi(
+  files: File[]
+): Promise<{ data: AiValidationResult | null; error: Error | null }> {
+  try {
+    if (files.length === 0) {
+      return { data: null, error: new Error("No files selected for validation") };
+    }
+
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append("files", file, file.name);
+    });
+
+    const res = await fetch("/api/validate-ai", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      return { data: null, error: new Error("AI validation request failed") };
+    }
+
+    const aiResult = (await res.json()) as AiValidationResult;
+    return { data: aiResult, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to run local AI validation"),
+    };
+  }
+}
+
+export async function persistAutoValidationResult(
+  submissionId: string,
+  passed: boolean
+): Promise<{ error: Error | null }> {
+  try {
+    const { error } = await supabase.rpc("auto_validate_submission", {
+      p_submission_id: submissionId,
+      p_passed: passed,
+    });
+
+    if (error) {
+      return { error: new Error(error.message) };
+    }
+
+    return { error: null };
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to persist auto-validation result"),
+    };
+  }
+}
+
 /**
  * Run AI verification for a submission and persist automatic validation result.
  * - pass => marks submission as agent_validated
@@ -345,12 +405,9 @@ export async function autoValidateSubmissionWithAi(
 
     const aiResult = (await res.json()) as AiValidationResult;
 
-    const { error: persistError } = await supabase.rpc(
-      "auto_validate_submission",
-      {
-        p_submission_id: submissionId,
-        p_passed: aiResult.overall_pass,
-      }
+    const { error: persistError } = await persistAutoValidationResult(
+      submissionId,
+      aiResult.overall_pass
     );
 
     if (persistError) {
