@@ -22,6 +22,15 @@ import {
 } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import {
   Loader2,
   CheckCircle2,
   XCircle,
@@ -749,6 +758,11 @@ export default function ProjectSubmissions({
   const [sortBy, setSortBy] = useState<"newest" | "oldest" | "name" | "status">(
     "newest",
   );
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectSubmissionId, setRejectSubmissionId] = useState<string | null>(
+    null,
+  );
+  const [rejectReason, setRejectReason] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "grid">("grid");
 
   const fetchData = async () => {
@@ -801,21 +815,42 @@ export default function ProjectSubmissions({
     }
   };
 
-  const handleReject = async (submissionId: string) => {
+  const handleReject = (submissionId: string) => {
+    setRejectSubmissionId(submissionId);
+    setRejectReason("");
+    setRejectDialogOpen(true);
+  };
+
+  const handleConfirmReject = async () => {
     if (!user) return;
+    if (!rejectSubmissionId) return;
+    const reason = rejectReason.trim();
+    if (!reason) {
+      setToast({
+        title: "Reason required",
+        message: "Please enter a reason for rejecting this submission.",
+        type: "error",
+      });
+      return;
+    }
     try {
-      setProcessing(submissionId);
+      setProcessing(rejectSubmissionId);
       const { error: updateError } = await updateSubmissionStatus(
-        submissionId,
+        rejectSubmissionId,
         "rejected",
         user.id,
+        undefined,
+        reason,
       );
       if (updateError) throw updateError;
       setToast({
         title: "Submission rejected",
-        message: "The submission has been rejected.",
+        message: "The submission has been rejected with your reason.",
         type: "success",
       });
+      setRejectDialogOpen(false);
+      setRejectSubmissionId(null);
+      setRejectReason("");
       await fetchData();
     } catch (err: any) {
       setToast({
@@ -1093,6 +1128,60 @@ export default function ProjectSubmissions({
           </ScrollArea>
         )}
       </div>
+
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Submission</DialogTitle>
+            <DialogDescription>
+              Add a reason so the collector knows what to fix before resubmitting.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <label
+              htmlFor="submission-reject-reason"
+              className="text-sm font-medium text-foreground"
+            >
+              Rejection reason
+            </label>
+            <Textarea
+              id="submission-reject-reason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Example: The submitted photos are too blurry and missing required location shots."
+              className="min-h-[110px]"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRejectDialogOpen(false);
+                setRejectSubmissionId(null);
+                setRejectReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmReject}
+              disabled={processing === rejectSubmissionId}
+            >
+              {processing === rejectSubmissionId ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Rejecting...
+                </>
+              ) : (
+                "Reject Submission"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

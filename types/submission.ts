@@ -20,6 +20,7 @@ export interface Submission {
   request_id: string;
   collector_id: string;
   status: SubmissionStatus;
+  rejection_reason: string | null;
   validation_score: number | null;
   submitted_at: string;
   validated_at: string | null;

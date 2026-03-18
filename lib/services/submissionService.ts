@@ -172,7 +172,8 @@ export async function updateSubmissionStatus(
   submissionId: string,
   status: string,
   validatorId?: string,
-  validationScore?: number
+  validationScore?: number,
+  rejectionReason?: string
 ): Promise<{ data: Submission | null; error: Error | null }> {
   try {
     const updates: any = {
@@ -185,6 +186,11 @@ export async function updateSubmissionStatus(
     }
     if (validationScore !== undefined) {
       updates.validation_score = validationScore;
+    }
+    if (status === "rejected") {
+      updates.rejection_reason = rejectionReason?.trim() || null;
+    } else if (status === "validated") {
+      updates.rejection_reason = null;
     }
 
     const { data, error } = await supabase

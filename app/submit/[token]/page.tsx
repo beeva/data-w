@@ -1277,6 +1277,17 @@ export default function SubmitPage() {
                         {/* ── Expanded files panel ── */}
                         {isExpanded && (
                           <div className="border-t border-gray-200 dark:border-gray-700 bg-gray-100/80 dark:bg-gray-900/60 px-4 py-3">
+                            {submission.status === "rejected" &&
+                              submission.rejection_reason && (
+                                <div className="mb-3 rounded-lg border border-red-300/70 dark:border-red-700/70 bg-red-500/10 px-3 py-2.5">
+                                  <p className="text-[11px] font-semibold uppercase tracking-wide text-red-500">
+                                    Rejection reason
+                                  </p>
+                                  <p className="mt-1 text-sm text-red-700 dark:text-red-300 whitespace-pre-wrap">
+                                    {submission.rejection_reason}
+                                  </p>
+                                </div>
+                              )}
                             {isLoadingItems ? (
                               <div className="flex items-center gap-2 py-3 text-muted-foreground">
                                 <Loader2 className="w-4 h-4 animate-spin" />
