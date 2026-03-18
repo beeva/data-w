@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  completeProjectWithFeedback,
+  completeProjectWithCollectorFeedbacks,
   getProjectsByRequester,
   updateProjectStatus,
+  type RequesterCollectorFeedbackInput,
 } from "@/lib/services/projectService";
 import { getNotifications } from "@/lib/services/notificationService";
 import { getSubmissionsByProject } from "@/lib/services/submissionService";
+import { getAssignmentsByProject } from "@/lib/services/proposalService";
 import type { Project, ProjectStatus } from "@/types/project";
 import type { AppNotification } from "@/types/notification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,7 +76,10 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import CompleteProjectDialog from "./CompleteProjectDialog";
+import CompleteProjectDialog, {
+  type CollectorCompletionFeedback,
+  type CollectorFeedbackTarget,
+} from "./CompleteProjectDialog";
 import CreateProjectDialog from "./CreateProjectDialog";
 import {
   BarChart,
@@ -123,6 +128,9 @@ export default function RequesterDashboard() {
   >(null);
   const [pendingCompleteProject, setPendingCompleteProject] =
     useState<Project | null>(null);
+  const [pendingCompleteCollectors, setPendingCompleteCollectors] = useState<
+    CollectorFeedbackTarget[]
+  >([]);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
   const userId = user?.id;
@@ -225,20 +233,56 @@ export default function RequesterDashboard() {
     }
   };
 
-  const handleCompleteProject = (project: Project) => {
+  const handleCompleteProject = async (project: Project) => {
+    if (!user) return;
+    try {
+      const { data: assignments, error: assignmentsError } =
+        await getAssignmentsByProject(project.id);
+      if (assignmentsError) throw assignmentsError;
+
+      const collectors = Array.from(
+        new Map(
+          (assignments || [])
+            .filter((assignment) => assignment.status === "active")
+            .map((assignment) => [
+              assignment.collector_id,
+              {
+                collectorId: assignment.collector_id,
+                collectorName:
+                  assignment.collector?.full_name?.trim() ||
+                  assignment.collector?.email ||
+                  "Collector",
+              },
+            ]),
+        ).values(),
+      );
+
+      setPendingCompleteCollectors(collectors);
+    } catch (err) {
+      console.error("Error loading accepted collectors:", err);
+      setPendingCompleteCollectors([]);
+    }
     setPendingCompleteProject(project);
   };
 
-  const confirmCompleteProject = async (rating: number, feedback: string) => {
+  const confirmCompleteProject = async (
+    feedbacks: CollectorCompletionFeedback[],
+  ) => {
     if (!user) return;
     if (!pendingCompleteProject) return;
 
     try {
-      const { data, error } = await completeProjectWithFeedback(
+      const payload: RequesterCollectorFeedbackInput[] = feedbacks.map(
+        (item) => ({
+          collectorId: item.collectorId,
+          rating: item.rating,
+          feedback: item.feedback,
+        }),
+      );
+      const { data, error } = await completeProjectWithCollectorFeedbacks(
         pendingCompleteProject.id,
         user.id,
-        rating,
-        feedback,
+        payload,
       );
       if (error) {
         throw error;
@@ -252,6 +296,7 @@ export default function RequesterDashboard() {
         );
       }
       setPendingCompleteProject(null);
+      setPendingCompleteCollectors([]);
     } catch (err) {
       console.error("Error completing project:", err);
       throw err;
@@ -1800,9 +1845,13 @@ export default function RequesterDashboard() {
       <CompleteProjectDialog
         open={!!pendingCompleteProject}
         onOpenChange={(open) => {
-          if (!open) setPendingCompleteProject(null);
+          if (!open) {
+            setPendingCompleteProject(null);
+            setPendingCompleteCollectors([]);
+          }
         }}
         projectTitle={pendingCompleteProject?.title || ""}
+        collectors={pendingCompleteCollectors}
         onSubmit={confirmCompleteProject}
       />
     </div>

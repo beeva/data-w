@@ -72,4 +72,10 @@ export interface CollectorAssignment {
   assigned_at: string;
   created_at: string;
   updated_at: string;
+  collector?: {
+    id: string;
+    full_name: string | null;
+    email: string | null;
+    avatar_url: string | null;
+  };
 }

@@ -4,15 +4,22 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  completeProjectWithFeedback,
+  completeProjectWithCollectorFeedbacks,
   getProjectsByRequester,
   updateProjectStatus,
+  type RequesterCollectorFeedbackInput,
 } from "@/lib/services/projectService";
 import { getSubmissionsByProject } from "@/lib/services/submissionService";
-import { getProposalsByProject } from "@/lib/services/proposalService";
+import {
+  getAssignmentsByProject,
+  getProposalsByProject,
+} from "@/lib/services/proposalService";
 import type { Project, ProjectStatus } from "@/types/project";
 import EditProjectDialog from "@/components/dashboard/requester/EditProjectDialog";
-import CompleteProjectDialog from "./CompleteProjectDialog";
+import CompleteProjectDialog, {
+  type CollectorCompletionFeedback,
+  type CollectorFeedbackTarget,
+} from "./CompleteProjectDialog";
 import CreateProjectDialog from "./CreateProjectDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -235,6 +242,9 @@ export default function ActiveProjectsList() {
   >(null);
   const [pendingCompleteProject, setPendingCompleteProject] =
     useState<Project | null>(null);
+  const [pendingCompleteCollectors, setPendingCompleteCollectors] = useState<
+    CollectorFeedbackTarget[]
+  >([]);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
   const [projectStats, setProjectStats] = useState<
     Record<
@@ -422,22 +432,62 @@ export default function ActiveProjectsList() {
     }
   };
 
-  const handleCompleteProject = (project: Project) => {
+  const handleCompleteProject = async (project: Project) => {
+    if (!user) return;
+    try {
+      const { data: assignments, error: assignmentsError } =
+        await getAssignmentsByProject(project.id);
+      if (assignmentsError) throw assignmentsError;
+
+      const collectors = Array.from(
+        new Map(
+          (assignments || [])
+            .filter((assignment) => assignment.status === "active")
+            .map((assignment) => [
+              assignment.collector_id,
+              {
+                collectorId: assignment.collector_id,
+                collectorName:
+                  assignment.collector?.full_name?.trim() ||
+                  assignment.collector?.email ||
+                  "Collector",
+              },
+            ]),
+        ).values(),
+      );
+
+      setPendingCompleteCollectors(collectors);
+      if (collectors.length === 0) {
+        setError("No accepted collectors found for this project.");
+      }
+    } catch (err: any) {
+      console.error("Error loading accepted collectors:", err);
+      setPendingCompleteCollectors([]);
+      setError(err.message || "Failed to load accepted collectors");
+    }
     setPendingCompleteProject(project);
   };
 
-  const confirmCompleteProject = async (rating: number, feedback: string) => {
+  const confirmCompleteProject = async (
+    feedbacks: CollectorCompletionFeedback[],
+  ) => {
     if (!user) return;
     if (!pendingCompleteProject) return;
 
     try {
       setError("");
 
-      const { data, error } = await completeProjectWithFeedback(
+      const payload: RequesterCollectorFeedbackInput[] = feedbacks.map(
+        (item) => ({
+          collectorId: item.collectorId,
+          rating: item.rating,
+          feedback: item.feedback,
+        }),
+      );
+      const { data, error } = await completeProjectWithCollectorFeedbacks(
         pendingCompleteProject.id,
         user.id,
-        rating,
-        feedback,
+        payload,
       );
       if (error) {
         throw error;
@@ -451,6 +501,7 @@ export default function ActiveProjectsList() {
         );
       }
       setPendingCompleteProject(null);
+      setPendingCompleteCollectors([]);
     } catch (err: any) {
       console.error("Error completing project:", err);
       setError(err.message || "Failed to complete project");
@@ -1143,9 +1194,13 @@ export default function ActiveProjectsList() {
       <CompleteProjectDialog
         open={!!pendingCompleteProject}
         onOpenChange={(open) => {
-          if (!open) setPendingCompleteProject(null);
+          if (!open) {
+            setPendingCompleteProject(null);
+            setPendingCompleteCollectors([]);
+          }
         }}
         projectTitle={pendingCompleteProject?.title || ""}
+        collectors={pendingCompleteCollectors}
         onSubmit={confirmCompleteProject}
       />
       <ConfirmationDialog

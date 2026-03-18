@@ -17,8 +17,8 @@ import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import SubmitProposalDialog from "./SubmitProposalDialog";
 import { getProfileById } from "@/lib/services/profileService";
 import {
-  getCollectorFeedbackByProjects,
-  getRequesterFeedbackByProjects,
+  getCollectorFeedbackListsByProjects,
+  getRequesterFeedbackListsByProjects,
   getRequesterProjectHistory,
   type CollectorFeedback,
   type ProjectFeedback,
@@ -263,10 +263,10 @@ export default function ProjectDetailsSheet({
     null,
   );
   const [requesterFeedbackByProject, setRequesterFeedbackByProject] = useState<
-    Record<string, ProjectFeedback>
+    Record<string, ProjectFeedback[]>
   >({});
   const [collectorFeedbackByProject, setCollectorFeedbackByProject] = useState<
-    Record<string, CollectorFeedback>
+    Record<string, CollectorFeedback[]>
   >({});
   const [currentRequesterTime, setCurrentRequesterTime] = useState(() =>
     new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }),
@@ -290,8 +290,8 @@ export default function ProjectDetailsSheet({
           const historyProjectIds = historyProjects.map((p) => p.id);
           const [requesterFeedbackRes, collectorFeedbackRes] =
             await Promise.all([
-              getRequesterFeedbackByProjects(historyProjectIds),
-              getCollectorFeedbackByProjects(historyProjectIds),
+              getRequesterFeedbackListsByProjects(historyProjectIds),
+              getCollectorFeedbackListsByProjects(historyProjectIds),
             ]);
           if (mounted) {
             setRequesterFeedbackByProject(requesterFeedbackRes.data || {});
@@ -699,10 +699,10 @@ export default function ProjectDetailsSheet({
                     historyProject.id,
                     historyProject.category,
                   );
-                  const collectorFb =
-                    collectorFeedbackByProject[historyProject.id] ?? null;
-                  const requesterFb =
-                    requesterFeedbackByProject[historyProject.id] ?? null;
+                  const collectorFbs =
+                    collectorFeedbackByProject[historyProject.id] ?? [];
+                  const requesterFbs =
+                    requesterFeedbackByProject[historyProject.id] ?? [];
                   return (
                     <div
                       key={historyProject.id}
@@ -782,9 +782,11 @@ export default function ProjectDetailsSheet({
                         </div>
                       </div>
 
-                      <div className="border-t border-border divide-y divide-border">
-                        <FeedbackBlock label="Collector" feedback={collectorFb} />
-                        <FeedbackBlock label="Requester" feedback={requesterFb} />
+                      <div className="border-t border-border">
+                        <FeedbackPairsList
+                          requesterFeedbacks={requesterFbs}
+                          collectorFeedbacks={collectorFbs}
+                        />
                       </div>
                     </div>
                   );
@@ -1064,4 +1066,82 @@ function FeedbackBlock({
       )}
     </div>
   );
+}
+
+function FeedbackPairsList({
+  requesterFeedbacks,
+  collectorFeedbacks,
+}: {
+  requesterFeedbacks: ProjectFeedback[];
+  collectorFeedbacks: CollectorFeedback[];
+}) {
+  const pairs = pairFeedbackByCollector(requesterFeedbacks, collectorFeedbacks);
+
+  if (pairs.length === 0) {
+    return (
+      <div className="divide-y divide-border">
+        <FeedbackBlock label="Requester's feedback to Collector" feedback={null} />
+        <FeedbackBlock label="Collector's feedback to Requester" feedback={null} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-border">
+      {pairs.map((pair, index) => (
+        <div key={pair.key ?? `pair-${index}`} className="px-4 py-3 space-y-2.5">
+          <div className="rounded-md border border-border/70 bg-background/60 divide-y divide-border/70">
+            <FeedbackBlock
+              label="Requester's feedback to Collector"
+              feedback={pair.requester ?? null}
+            />
+            <FeedbackBlock
+              label="Collector's feedback to Requester"
+              feedback={pair.collector ?? null}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function pairFeedbackByCollector(
+  requesterFeedbacks: ProjectFeedback[],
+  collectorFeedbacks: CollectorFeedback[],
+): Array<{
+  key: string;
+  requester?: { rating: number; feedback: string };
+  collector?: { rating: number; feedback: string };
+}> {
+  const pairsByCollector = new Map<
+    string,
+    {
+      key: string;
+      requester?: { rating: number; feedback: string };
+      collector?: { rating: number; feedback: string };
+    }
+  >();
+
+  requesterFeedbacks.forEach((item, idx) => {
+    const key = item.collector_id ?? `requester-only-${idx}`;
+    const existing = pairsByCollector.get(key);
+    pairsByCollector.set(key, {
+      key,
+      requester: { rating: item.rating, feedback: item.feedback },
+      collector: existing?.collector,
+    });
+  });
+
+  collectorFeedbacks.forEach((item, idx) => {
+    const key = item.collector_id || `collector-only-${idx}`;
+    const existing = pairsByCollector.get(key);
+    pairsByCollector.set(key, {
+      key,
+      requester: existing?.requester,
+      collector: { rating: item.rating, feedback: item.feedback },
+    });
+  });
+
+  return Array.from(pairsByCollector.values());
 }
