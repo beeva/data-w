@@ -15,7 +15,6 @@ import {
 import {
   getSubmissionsByProject,
   getDataItemsBySubmission,
-  updateDataItemAccess,
 } from "@/lib/services/submissionService";
 import type { CollectorAssignment, Project } from "@/types";
 import type { Submission, DataItem } from "@/types/submission";
@@ -65,8 +64,6 @@ import {
   Activity,
   Package,
   DollarSign,
-  Globe,
-  Lock,
   ShieldCheck,
   Inbox,
   Copy,
@@ -365,10 +362,6 @@ export default function SubmitPage() {
   const [dataItemsMap, setDataItemsMap] = useState<Record<string, DataItem[]>>(
     {},
   );
-  const [itemConfigDrafts, setItemConfigDrafts] = useState<
-    Record<string, { visibility: "public" | "private"; price: string }>
-  >({});
-  const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [expandedSubmission, setExpandedSubmission] = useState<string | null>(
     null,
   );
@@ -480,95 +473,6 @@ export default function SubmitPage() {
     load();
   }, [project?.status, submissions, dataItemsMap]);
 
-  const isAccessConfigured = (item: DataItem) =>
-    (item.visibility === "public" || item.visibility === "private") &&
-    typeof item.price === "number" &&
-    Number.isFinite(item.price);
-
-  const getItemDraft = (item: DataItem) =>
-    itemConfigDrafts[item.id] || {
-      visibility: item.visibility || "private",
-      price:
-        typeof item.price === "number" && Number.isFinite(item.price)
-          ? String(item.price)
-          : "",
-    };
-
-  const updateItemDraft = (
-    itemId: string,
-    field: "visibility" | "price",
-    value: string,
-  ) => {
-    setItemConfigDrafts((prev) => {
-      const current = prev[itemId] || {
-        visibility: "private" as const,
-        price: "",
-      };
-      return {
-        ...prev,
-        [itemId]:
-          field === "visibility"
-            ? { ...current, visibility: value as "public" | "private" }
-            : { ...current, price: value },
-      };
-    });
-  };
-
-  const handleSaveItemAccess = async (submissionId: string, item: DataItem) => {
-    if (requiresCollectorFeedback) {
-      setToast({
-        title: "Feedback required",
-        message: "Please submit your feedback before updating access settings.",
-        type: "error",
-      });
-      return;
-    }
-    const draft = getItemDraft(item);
-    const priceValue = Number(draft.price);
-    if (Number.isNaN(priceValue) || priceValue < 0) {
-      setToast({
-        title: "Invalid price",
-        message: "Please enter a valid non-negative price.",
-        type: "error",
-      });
-      return;
-    }
-    try {
-      setSavingItemId(item.id);
-      const { data, error: updateError } = await updateDataItemAccess(
-        item.id,
-        draft.visibility,
-        priceValue,
-      );
-      if (updateError || !data)
-        throw new Error(updateError?.message || "Failed to update data item");
-      setDataItemsMap((prev) => ({
-        ...prev,
-        [submissionId]: (prev[submissionId] || []).map((e) =>
-          e.id === item.id ? data : e,
-        ),
-      }));
-      setItemConfigDrafts((prev) => {
-        const next = { ...prev };
-        delete next[item.id];
-        return next;
-      });
-      setToast({
-        title: "Access updated",
-        message: "Access settings updated successfully.",
-        type: "success",
-      });
-    } catch (err: any) {
-      setToast({
-        title: "Update failed",
-        message: err.message || "Failed to update access settings.",
-        type: "error",
-      });
-    } finally {
-      setSavingItemId(null);
-    }
-  };
-
   const handleSubmitCollectorFeedback = async () => {
     if (!project || !userId || !requesterFeedback) return;
     if (feedbackRating < 1 || feedbackRating > 5) {
@@ -610,13 +514,7 @@ export default function SubmitPage() {
 
   const isSubmissionClosed =
     project?.status === "completed" || project?.status === "cancelled";
-  const requiresAccessSetup = project?.status === "completed";
-  const allLoadedItems = Object.values(dataItemsMap).flat();
-  const pendingConfigCount = requiresAccessSetup
-    ? allLoadedItems.filter((item) => !isAccessConfigured(item)).length
-    : 0;
-  const requiresCollectorFeedback =
-    requiresAccessSetup && !!requesterFeedback && !collectorFeedback;
+  const isCompletedProject = project?.status === "completed";
 
   const toggleSubmissionFiles = async (submissionId: string) => {
     if (expandedSubmission === submissionId) {
@@ -1044,7 +942,7 @@ export default function SubmitPage() {
                 </div>
 
                 {/* ── Feedback Exchange ── */}
-                {requiresAccessSetup && requesterFeedback && (
+                {isCompletedProject && requesterFeedback && (
                   <div className="rounded-lg bg-gray-100 dark:bg-gray-800 px-4 py-4 space-y-3">
                     <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
                       <Star className="w-4 h-4" />
@@ -1124,32 +1022,6 @@ export default function SubmitPage() {
                   </div>
                 )}
 
-                {/* ── Access setup notice ── */}
-                {requiresAccessSetup && (
-                  <div
-                    className={cn(
-                      "flex gap-2.5 rounded-lg px-4 py-3 text-sm leading-relaxed",
-                      pendingConfigCount > 0 || requiresCollectorFeedback
-                        ? "bg-amber-500/10 border border-amber-400/30 dark:border-amber-400/50 text-amber-700 dark:text-amber-300"
-                        : "bg-emerald-500/10 border border-emerald-400/30 dark:border-emerald-400/50 text-emerald-700 dark:text-emerald-300",
-                    )}
-                  >
-                    <div className="mt-0.5 shrink-0">
-                      {pendingConfigCount > 0 || requiresCollectorFeedback ? (
-                        <AlertCircle className="w-3.5 h-3.5" />
-                      ) : (
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      )}
-                    </div>
-                    <span>
-                      {requiresCollectorFeedback
-                        ? "Submit your feedback to the requester before configuring file access."
-                        : pendingConfigCount > 0
-                          ? `Set visibility & price for each file. ${pendingConfigCount} file${pendingConfigCount > 1 ? "s" : ""} pending.`
-                          : "All files are configured."}
-                    </span>
-                  </div>
-                )}
               </div>
             </section>
 
@@ -1304,9 +1176,6 @@ export default function SubmitPage() {
                                   {items.length > 1 ? "s" : ""}
                                 </p>
                                 {items.map((item) => {
-                                  const draft = getItemDraft(item);
-                                  const alreadyConfigured =
-                                    isAccessConfigured(item);
                                   return (
                                     <div
                                       key={item.id}
@@ -1326,97 +1195,6 @@ export default function SubmitPage() {
                                           {formatFileSize(item.file_size)}
                                         </p>
                                       </div>
-
-                                      {/* Access controls (only when project is completed) */}
-                                      {requiresAccessSetup && (
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                          {/* Visibility */}
-                                          <div className="relative">
-                                            <select
-                                              className="h-8 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-foreground pl-7 pr-2 text-xs appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary/40"
-                                              value={draft.visibility}
-                                              onChange={(e) =>
-                                                updateItemDraft(
-                                                  item.id,
-                                                  "visibility",
-                                                  e.target.value,
-                                                )
-                                              }
-                                              disabled={
-                                                requiresCollectorFeedback
-                                              }
-                                            >
-                                              <option value="public">
-                                                Public
-                                              </option>
-                                              <option value="private">
-                                                Private
-                                              </option>
-                                            </select>
-                                            <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
-                                              {draft.visibility === "public" ? (
-                                                <Globe className="w-3.5 h-3.5 text-emerald-500" />
-                                              ) : (
-                                                <Lock className="w-3.5 h-3.5 text-muted-foreground" />
-                                              )}
-                                            </div>
-                                          </div>
-
-                                          {/* Price */}
-                                          <div className="relative">
-                                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                                              $
-                                            </span>
-                                            <input
-                                              type="number"
-                                              min={0}
-                                              step="0.01"
-                                              value={draft.price}
-                                              onChange={(e) =>
-                                                updateItemDraft(
-                                                  item.id,
-                                                  "price",
-                                                  e.target.value,
-                                                )
-                                              }
-                                              placeholder="0.00"
-                                              className="h-8 w-24 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-foreground pl-5 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary/40"
-                                              disabled={
-                                                requiresCollectorFeedback
-                                              }
-                                            />
-                                          </div>
-
-                                          {/* Save / Update */}
-                                          <Button
-                                            size="sm"
-                                            variant={
-                                              alreadyConfigured
-                                                ? "outline"
-                                                : "default"
-                                            }
-                                            className="h-8 text-xs px-3 rounded-lg"
-                                            onClick={() =>
-                                              handleSaveItemAccess(
-                                                submission.id,
-                                                item,
-                                              )
-                                            }
-                                            disabled={
-                                              savingItemId === item.id ||
-                                              requiresCollectorFeedback
-                                            }
-                                          >
-                                            {savingItemId === item.id ? (
-                                              <Loader2 className="w-3 h-3 animate-spin" />
-                                            ) : alreadyConfigured ? (
-                                              "Update"
-                                            ) : (
-                                              "Save"
-                                            )}
-                                          </Button>
-                                        </div>
-                                      )}
 
                                       {/* View link */}
                                       <a
