@@ -1,16 +1,20 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import Lottie from "lottie-react";
 import heroAnimation from "@/lib/assets/lottie/hero.json";
 import { GlobeConnectSvg } from "./svg/GlobeConnectSvg";
 import { IncomeSvg } from "./svg/IncomeSvg";
 import { EarthSvg } from "./svg/EarthSvg";
 
+type HeroTab = "requester" | "collector";
+
 export default function Hero() {
   const tubesCanvasRef = useRef<HTMLCanvasElement>(null);
   const tubesAppRef = useRef<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState<HeroTab>("requester");
 
   // Tubes Cursor Animation
   useEffect(() => {
@@ -73,7 +77,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="pt-20 sm:pt-24 md:pt-32 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 text-white relative overflow-hidden min-h-screen bg-gradient-to-b from-[#0a0f1e] via-[#0f172a] to-[#1e293b]">
+    <section className="pt-20 sm:pt-24 md:pt-32 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 text-white relative overflow-hidden min-h-screen bg-gradient-to-b from-[#0a0f1e] via-[#0f172a] to-[#28303E]">
       <div
         className="absolute top-0 bottom-0 overflow-hidden pointer-events-none hidden md:block"
         style={{
@@ -110,91 +114,146 @@ export default function Hero() {
                 </p>
               </div>
 
-              {/* Bullet Points */}
-              <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-                <div className="group relative rounded-xl sm:rounded-2xl p-4 sm:p-6 transition-all duration-300">
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                      <GlobeConnectSvg color="#00B8DB" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
-                        Global Connections
-                      </h3>
-                      <p className="text-sm sm:text-base text-white/80 leading-relaxed">
-                        Fill your data gap by connecting with people{" "}
-                        <span className="text-cyan-400 font-medium">
-                          worldwide
-                        </span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="group relative rounded-xl sm:rounded-2xl p-4 sm:p-6 transition-all duration-300">
-                  <div className="flex items-start gap-3 sm:gap-4">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                      <IncomeSvg color="#00B8DB" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg sm:text-xl font-semibold text-white mb-2">
-                        Earn While You Help
-                      </h3>
-                      <p className="text-sm sm:text-base text-white/80 leading-relaxed">
-                        <span className="text-cyan-400 font-medium">
-                          Earn income
-                        </span>{" "}
-                        by helping clean data and making the collection process
-                        easier and more efficient
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Search Bar */}
-              <div className="pt-2 sm:pt-4">
-                <form
-                  onSubmit={handleSearchSubmit}
-                  className="w-full max-w-3xl flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 sm:gap-6"
+              {/* Role switcher — compact inline */}
+              <div className="space-y-4 sm:space-y-6">
+                <div
+                  role="tablist"
+                  aria-label="Choose your role"
+                  className="inline-flex p-1 rounded-xl bg-white/5 border border-white/10 gap-1"
                 >
-                  <div className="relative group flex-1 w-full">
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-indigo-500/20 rounded-xl sm:rounded-2xl blur-xl opacity-100 transition-opacity duration-300"></div>
-                    <div className="relative flex items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg overflow-hidden hover:border-cyan-400/50 transition-all duration-300 shadow-xl">
-                      {/* Magnifying Glass Icon */}
-                      <div className="pl-4 sm:pl-6 pr-3 sm:pr-4 flex items-center">
-                        <svg
-                          className="w-5 h-5 sm:w-6 sm:h-6 text-white"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                          />
-                        </svg>
-                      </div>
+                  {(
+                    [
+                      {
+                        id: "requester" as const,
+                        label: "I need data",
+                        icon: (
+                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        id: "collector" as const,
+                        label: "I want to collect",
+                        icon: (
+                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        ),
+                      },
+                    ] as const
+                  ).map(({ id, label, icon }) => {
+                    const isActive = activeTab === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        aria-selected={isActive}
+                        aria-controls={`hero-panel-${id}`}
+                        id={`hero-tab-${id}`}
+                        onClick={() => setActiveTab(id)}
+                        className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                          isActive
+                            ? "bg-cyan-500/20 text-white border border-cyan-400/40 shadow-[0_0_20px_-6px_rgba(34,211,238,0.3)]"
+                            : "text-white/70 hover:text-white hover:bg-white/5 border border-transparent"
+                        }`}
+                      >
+                        {icon}
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
 
-                      {/* Input Field */}
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Submit your request here..."
-                        className="flex-1 bg-transparent py-3 sm:py-4 pr-4 sm:pr-6 text-white placeholder-white/50 focus:outline-none text-sm sm:text-base md:text-lg font-medium"
-                      />
+                {activeTab === "requester" && (
+                  <div id="hero-panel-requester" role="tabpanel" aria-labelledby="hero-tab-requester" className="max-w-2xl space-y-6">
+                    <p className="text-white/80 text-base sm:text-lg leading-relaxed">
+                      Describe the data you need—surveys, annotations, or custom collection tasks. We match your request with{" "}
+                      <span className="text-cyan-400 font-medium">qualified collectors worldwide</span>
+                      {" "}and deliver validated datasets to you.
+                    </p>
+                    {/* Search Bar */}
+                    <div>
+                      <form
+                        onSubmit={handleSearchSubmit}
+                        className="w-full max-w-3xl flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-4 sm:gap-6"
+                      >
+                        <div className="relative group flex-1 w-full">
+                          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-indigo-500/20 rounded-xl sm:rounded-2xl blur-xl opacity-100 transition-opacity duration-300"></div>
+                          <div className="relative flex items-center bg-white/10 backdrop-blur-xl border border-white/20 rounded-lg overflow-hidden hover:border-cyan-400/50 transition-all duration-300 shadow-xl">
+                            <div className="pl-4 sm:pl-6 pr-3 sm:pr-4 flex items-center">
+                              <svg
+                                className="w-5 h-5 sm:w-6 sm:h-6 text-white"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                                />
+                              </svg>
+                            </div>
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              placeholder="Submit your request here..."
+                              className="flex-1 bg-transparent py-3 sm:py-4 pr-4 sm:pr-6 text-white placeholder-white/50 focus:outline-none text-sm sm:text-base md:text-lg font-medium"
+                            />
+                          </div>
+                        </div>
+                        <div className="relative group flex-shrink-0 self-center sm:self-auto hidden md:block">
+                          <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full">
+                            <EarthSvg color="#00B8DB" />
+                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/50 via-blue-500/50 to-indigo-500/50 rounded-full blur-xl opacity-100" />
+                        </div>
+                      </form>
                     </div>
                   </div>
-                  <div className="relative group flex-shrink-0 self-center sm:self-auto hidden md:block">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full">
-                      <EarthSvg color="#00B8DB" />
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/50 via-blue-500/50 to-indigo-500/50 rounded-full blur-xl opacity-100" />
+                )}
+
+                {activeTab === "collector" && (
+                  <div
+                    id="hero-panel-collector"
+                    role="tabpanel"
+                    aria-labelledby="hero-tab-collector"
+                    className="max-w-2xl space-y-6"
+                  >
+                    <p className="text-white/80 text-base sm:text-lg leading-relaxed">
+                      Browse open data collection projects, apply to tasks that
+                      match your skills, and{" "}
+                      <span className="text-cyan-400 font-medium">
+                        earn while you help
+                      </span>
+                      . Complete quality work and get paid for your
+                      contributions.
+                    </p>
+                    <Link
+                      href="/projects"
+                      className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold text-base sm:text-lg shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:opacity-95 transition-all duration-300"
+                    >
+                      Browse projects
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 8l4 4m0 0l-4 4m4-4H3"
+                        />
+                      </svg>
+                    </Link>
                   </div>
-                </form>
+                )}
               </div>
             </div>
           </div>

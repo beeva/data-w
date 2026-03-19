@@ -30,7 +30,7 @@ export default function Footer({ compact = false }: FooterProps) {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     setFormData({
       ...formData,
@@ -69,9 +69,8 @@ export default function Footer({ compact = false }: FooterProps) {
   }
 
   return (
-    <footer className="relative bg-[#28303E] text-white">
+    <footer className="relative bg-gradient-to-b from-[#28303E] via-[#141a24] to-[#141a24] text-white">
       {/* Gradient border using pseudo-element */}
-      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-600 to-transparent" />
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 relative z-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 mb-8 sm:mb-12">
           {/* First Column - Product/Service Links */}
@@ -183,14 +182,6 @@ export default function Footer({ compact = false }: FooterProps) {
                   className="text-white/70 hover:text-cyan-400 transition-all duration-300 hover:translate-x-1 inline-block"
                 >
                   System Status
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/login"
-                  className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium"
-                >
-                  Login
                 </Link>
               </li>
             </ul>

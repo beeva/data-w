@@ -119,7 +119,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/signup"
-                    className="px-4 sm:px-6 py-2 bg-white/20 border border-white text-white hover:scale-105 transition-all duration-300 font-semibold rounded-md hover:opacity-90 shadow-lg text-sm sm:text-base"
+                    className="px-4 sm:px-6 py-2 bg-primary text-white hover:scale-105 transition-all duration-300 font-semibold rounded-md hover:opacity-90 shadow-lg text-sm sm:text-base"
                   >
                     Sign Up
                   </Link>

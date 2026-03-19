@@ -182,11 +182,17 @@ export default function DashboardSidebar({
 
         {/* Upper Navigation Items */}
         <div className="space-y-0.5">
-          {upperNavItems.filter(shouldShowNavItem).map((item) => {
+          {upperNavItems
+            .filter(shouldShowNavItem)
+            .filter(
+              (item) =>
+                !(item.name === "Projects" && userRole === "admin"),
+            )
+            .map((item) => {
             const Icon = item.icon;
             const hasSubmenu = item.submenu && item.submenu.length > 0;
 
-            // Projects tree view
+            // Projects tree view (requester: project list; collector: Find Projects)
             if (
               (item.name === "Projects" || item.name === "Find Projects") &&
               !collapsed

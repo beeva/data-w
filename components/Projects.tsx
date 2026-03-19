@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "./Header";
 import { getOpenProjects } from "@/lib/services/projectService";
 import type { Project } from "@/types/project";
@@ -22,6 +22,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import ProjectDetailsSheet from "./dashboard/collector/ProjectDetailsSheet";
 import { useAuth } from "@/contexts/AuthContext";
 import CTASceneCanvas from "./CTASceneCanvas";
+import { JOB_CATEGORIES } from "@/lib/categories";
 import {
   Users,
   MapPin,
@@ -394,10 +395,14 @@ function ProjectCardSkeleton() {
   const skeletonClass = "bg-white/10 dark:bg-white/10";
   return (
     <div className="flex items-stretch gap-4 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 p-4">
-      <Skeleton className={cn("shrink-0 w-12 h-12 rounded-xl", skeletonClass)} />
+      <Skeleton
+        className={cn("shrink-0 w-12 h-12 rounded-xl", skeletonClass)}
+      />
       <div className="flex-1 min-w-0 space-y-2">
         <div className="flex items-center gap-2">
-          <Skeleton className={cn("h-4 w-2/3 max-w-[200px] rounded", skeletonClass)} />
+          <Skeleton
+            className={cn("h-4 w-2/3 max-w-[200px] rounded", skeletonClass)}
+          />
         </div>
         <div className="flex items-center gap-3">
           <Skeleton className={cn("h-3 w-20 rounded", skeletonClass)} />
@@ -423,16 +428,7 @@ function ProjectCardSkeleton() {
   );
 }
 
-const categories = [
-  "Photography",
-  "Video",
-  "Audio",
-  "Text",
-  "Survey",
-  "Location Data",
-  "Sensor Data",
-  "Other",
-];
+const categories = JOB_CATEGORIES;
 
 const dataTypes = [
   "Images",
@@ -577,8 +573,19 @@ export default function Projects() {
   const [visibleCount, setVisibleCount] = useState(10);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // Filter states
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const searchParams = useSearchParams();
+  const categoryFromUrl = searchParams.get("category");
+
+  // Filter states — init category from URL when landing from landing page
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
+    if (
+      categoryFromUrl &&
+      (JOB_CATEGORIES as readonly string[]).includes(categoryFromUrl)
+    ) {
+      return [categoryFromUrl];
+    }
+    return [];
+  });
   const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [budgetRange, setBudgetRange] = useState<{ min: number; max: number }>({

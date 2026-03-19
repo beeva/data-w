@@ -45,6 +45,7 @@ import {
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import DataSuggestionsPanel from "./DataSuggestionsPanel";
 import { cn } from "@/lib/utils";
+import { JOB_CATEGORIES } from "@/lib/categories";
 
 const CONFETTI_COLORS = ["#d13447", "#ffbf00", "#263672"];
 
@@ -161,16 +162,7 @@ type StepId = (typeof STEP_ORDER)[number];
 
 const TOTAL_STEPS = STEP_ORDER.length;
 
-const CATEGORIES = [
-  "Photography",
-  "Video",
-  "Audio",
-  "Text",
-  "Survey",
-  "Location Data",
-  "Sensor Data",
-  "Other",
-];
+const CATEGORIES = JOB_CATEGORIES;
 
 const DATA_TYPES = [
   "Images",
