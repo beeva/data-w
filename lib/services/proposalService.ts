@@ -632,7 +632,17 @@ export async function getAssignmentsByProject(
   try {
     const { data, error } = await supabase
       .from("collector_assignments")
-      .select("*")
+      .select(
+        `
+        *,
+        collector:profiles!collector_id(
+          id,
+          full_name,
+          email,
+          avatar_url
+        )
+      `
+      )
       .eq("request_id", projectId)
       .order("assigned_at", { ascending: false });
 

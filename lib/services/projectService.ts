@@ -155,6 +155,7 @@ export interface ProjectFeedback {
   id: string;
   request_id: string;
   requester_id: string;
+  collector_id: string | null;
   rating: number;
   feedback: string;
   created_at: string;
@@ -170,6 +171,12 @@ export interface CollectorFeedback {
   feedback: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface RequesterCollectorFeedbackInput {
+  collectorId: string;
+  rating: number;
+  feedback: string;
 }
 
 /**
@@ -440,6 +447,70 @@ export async function completeProjectWithFeedback(
 }
 
 /**
+ * Complete a project with requester feedback for each assigned collector.
+ */
+export async function completeProjectWithCollectorFeedbacks(
+  projectId: string,
+  requesterId: string,
+  feedbacks: RequesterCollectorFeedbackInput[]
+): Promise<{ data: Project | null; error: Error | null }> {
+  try {
+    if (feedbacks.length === 0) {
+      return {
+        data: null,
+        error: new Error("At least one collector feedback is required."),
+      };
+    }
+
+    for (const item of feedbacks) {
+      const normalizedRating = Math.max(1, Math.min(5, Math.round(item.rating)));
+      const normalizedFeedback = item.feedback.trim();
+      if (!normalizedFeedback) {
+        return { data: null, error: new Error("Feedback is required for each collector.") };
+      }
+      const { error: feedbackError } = await supabase
+        .from("project_feedback")
+        .upsert(
+          {
+            request_id: projectId,
+            requester_id: requesterId,
+            collector_id: item.collectorId,
+            rating: normalizedRating,
+            feedback: normalizedFeedback,
+          },
+          { onConflict: "request_id,requester_id,collector_id" }
+        );
+
+      if (feedbackError) {
+        return { data: null, error: new Error(feedbackError.message) };
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("requests")
+      .update({ status: "completed" })
+      .eq("id", projectId)
+      .eq("requester_id", requesterId)
+      .select()
+      .single();
+
+    if (error) {
+      return { data: null, error: new Error(error.message) };
+    }
+
+    return { data: data as Project, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to complete project with collector feedbacks"),
+    };
+  }
+}
+
+/**
  * Fetch requester feedback for a completed project.
  */
 export async function getRequesterFeedbackForProject(
@@ -504,6 +575,45 @@ export async function getRequesterFeedbackByProjects(
         err instanceof Error
           ? err
           : new Error("Failed to fetch requester feedback by projects"),
+    };
+  }
+}
+
+/**
+ * Fetch requester feedback lists for multiple projects.
+ */
+export async function getRequesterFeedbackListsByProjects(
+  projectIds: string[]
+): Promise<{ data: Record<string, ProjectFeedback[]>; error: Error | null }> {
+  try {
+    if (projectIds.length === 0) return { data: {}, error: null };
+
+    const { data, error } = await supabase
+      .from("project_feedback")
+      .select("*")
+      .in("request_id", projectIds)
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      return { data: {}, error: new Error(error.message) };
+    }
+
+    const feedbackMap: Record<string, ProjectFeedback[]> = {};
+    ((data as ProjectFeedback[]) ?? []).forEach((item) => {
+      if (!feedbackMap[item.request_id]) {
+        feedbackMap[item.request_id] = [];
+      }
+      feedbackMap[item.request_id].push(item);
+    });
+
+    return { data: feedbackMap, error: null };
+  } catch (err) {
+    return {
+      data: {},
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to fetch requester feedback lists by projects"),
     };
   }
 }
@@ -580,6 +690,52 @@ export async function getCollectorFeedbackByProjects(
         err instanceof Error
           ? err
           : new Error("Failed to fetch collector feedback by projects"),
+    };
+  }
+}
+
+/**
+ * Fetch collector feedback lists for multiple projects.
+ */
+export async function getCollectorFeedbackListsByProjects(
+  projectIds: string[],
+  collectorId?: string
+): Promise<{ data: Record<string, CollectorFeedback[]>; error: Error | null }> {
+  try {
+    if (projectIds.length === 0) return { data: {}, error: null };
+
+    let query = supabase
+      .from("project_feedback_replies")
+      .select("*")
+      .in("request_id", projectIds)
+      .order("updated_at", { ascending: false });
+
+    if (collectorId) {
+      query = query.eq("collector_id", collectorId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return { data: {}, error: new Error(error.message) };
+    }
+
+    const feedbackMap: Record<string, CollectorFeedback[]> = {};
+    ((data as CollectorFeedback[]) ?? []).forEach((item) => {
+      if (!feedbackMap[item.request_id]) {
+        feedbackMap[item.request_id] = [];
+      }
+      feedbackMap[item.request_id].push(item);
+    });
+
+    return { data: feedbackMap, error: null };
+  } catch (err) {
+    return {
+      data: {},
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to fetch collector feedback lists by projects"),
     };
   }
 }
