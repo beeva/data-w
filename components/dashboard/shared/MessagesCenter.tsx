@@ -243,6 +243,12 @@ export default function MessagesCenter() {
   const [presenceTick, setPresenceTick] = useState(Date.now());
   const [typingMap, setTypingMap] = useState<Record<string, string>>({});
   const typingChannelRef = useRef<RealtimeChannel | null>(null);
+  const [messagesSubscriptionAttempt, setMessagesSubscriptionAttempt] =
+    useState(0);
+  const messagesRealtimeStatusRef = useRef<
+    "SUBSCRIBED" | "TIMED_OUT" | "CLOSED" | "CHANNEL_ERROR" | null
+  >(null);
+  const lastMessagesReconnectAtRef = useRef(0);
   const typingSentRef = useRef<Record<string, boolean>>({});
   const typingLastSentRef = useRef<Record<string, number>>({});
   const typingIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -734,6 +740,7 @@ export default function MessagesCenter() {
       )
       .subscribe(
         (status: "SUBSCRIBED" | "TIMED_OUT" | "CLOSED" | "CHANNEL_ERROR") => {
+          messagesRealtimeStatusRef.current = status;
           if (status === "SUBSCRIBED") {
             setRealtimeNotice("");
           } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
@@ -748,7 +755,7 @@ export default function MessagesCenter() {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, isMessagingRole]);
+  }, [user?.id, isMessagingRole, messagesSubscriptionAttempt]);
 
   const pinnedKeys = useSelector(
     (state: RootState) => state.pinnedConversations,
@@ -908,6 +915,18 @@ export default function MessagesCenter() {
     };
 
     const onFocus = () => void syncPresence(true);
+    const onFocusReconnect = () => {
+      void syncPresence(true);
+
+      const status = messagesRealtimeStatusRef.current;
+      if (!status || status === "SUBSCRIBED") return;
+
+      const now = Date.now();
+      if (now - lastMessagesReconnectAtRef.current < 5000) return;
+      lastMessagesReconnectAtRef.current = now;
+
+      setMessagesSubscriptionAttempt((n) => n + 1);
+    };
     const syncPresenceFromActivity = () => {
       const now = Date.now();
       if (now - presenceActivityLastSyncedRef.current < 15_000) return;
@@ -919,14 +938,14 @@ export default function MessagesCenter() {
     const onMouseMove = () => syncPresenceFromActivity();
 
     document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("focus", onFocus);
+    window.addEventListener("focus", onFocusReconnect);
     window.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("mousemove", onMouseMove, { passive: true });
 
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("focus", onFocusReconnect);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("mousemove", onMouseMove);
