@@ -1,6 +1,14 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -52,14 +60,62 @@ function conversationKey(
   return `${conversation.requestId}:${conversation.collectorId}`;
 }
 
-function timeLabel(dateText?: string) {
+/** Local calendar day for grouping; plain YYYY-MM-DD avoids UTC-midnight day shifts. */
+function messageCalendarDayKey(dateText: string | undefined): string {
   if (!dateText) return "";
+  const t = dateText.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+    return t;
+  }
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${day}`;
+}
+
+function formatThreadDateDividerLabel(dateText: string | undefined): string {
+  if (!dateText) return "";
+  const t = dateText.trim();
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(t)
+    ? new Date(`${t}T12:00:00`)
+    : new Date(dateText);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+const TIME_LABEL_CHAR_WIDTH = 8;
+
+function timeLabel(dateText?: string) {
+  const pad = (core: string) =>
+    core.length >= TIME_LABEL_CHAR_WIDTH
+      ? core.slice(0, TIME_LABEL_CHAR_WIDTH)
+      : core.padStart(TIME_LABEL_CHAR_WIDTH, " ");
+
+  if (!dateText) return " ".repeat(TIME_LABEL_CHAR_WIDTH);
   const date = new Date(dateText);
+  if (Number.isNaN(date.getTime())) return " ".repeat(TIME_LABEL_CHAR_WIDTH);
   const now = new Date();
   const sameDay = date.toDateString() === now.toDateString();
-  return sameDay
-    ? date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-    : date.toLocaleDateString([], { month: "short", day: "numeric" });
+  let core: string;
+  if (sameDay) {
+    const h24 = date.getHours();
+    const h12 = h24 % 12 || 12;
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    const ampm = h24 < 12 ? "AM" : "PM";
+    core =
+      h12 < 10
+        ? ` ${h12}:${mm} ${ampm}`
+        : `${h12}:${mm} ${ampm}`;
+  } else {
+    core = `${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
+  }
+  return pad(core);
 }
 
 type PresenceState = "online" | "idle" | "offline";
@@ -169,6 +225,10 @@ export default function MessagesCenter() {
     NotificationPermission | "unsupported"
   >("unsupported");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollWrapperRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
+  const prevTimelineLengthRef = useRef(0);
+  const prevSelectedKeyForScrollRef = useRef<string | null>(null);
   const composerRef = useRef<HTMLDivElement>(null);
   const selectedKeyRef = useRef("");
   const conversationsRef = useRef<ChatConversation[]>([]);
@@ -268,6 +328,15 @@ export default function MessagesCenter() {
       null,
     [conversations, selectedKey],
   );
+  const selectedPresenceMeta = useMemo(() => {
+    if (!selectedConversation) return null;
+    return presenceMeta(
+      getPresenceState(
+        selectedConversation.counterpartLastActiveAt,
+        presenceTick,
+      ),
+    );
+  }, [selectedConversation, presenceTick]);
   const timelineMessages = useMemo(() => {
     if (!selectedConversation) return [] as ProjectMessage[];
 
@@ -367,8 +436,55 @@ export default function MessagesCenter() {
   }, [selectedConversation]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!selectedConversation) return;
+    const wrap = messagesScrollWrapperRef.current;
+    const vp = wrap?.querySelector(
+      '[data-slot="scroll-area-viewport"]',
+    ) as HTMLElement | null;
+    if (!vp) return;
+    const thresholdPx = 120;
+    const onScroll = () => {
+      isNearBottomRef.current =
+        vp.scrollHeight - vp.scrollTop - vp.clientHeight < thresholdPx;
+    };
+    onScroll();
+    vp.addEventListener("scroll", onScroll, { passive: true });
+    return () => vp.removeEventListener("scroll", onScroll);
+  }, [selectedKey, selectedConversation]);
+
+  useLayoutEffect(() => {
+    if (!selectedConversation) return;
+
+    const keyChanged = prevSelectedKeyForScrollRef.current !== selectedKey;
+    if (keyChanged) {
+      prevSelectedKeyForScrollRef.current = selectedKey;
+      prevTimelineLengthRef.current = 0;
+      isNearBottomRef.current = true;
+    }
+
+    if (loadingMessages) return;
+
+    const end = messagesEndRef.current;
+    if (!end) return;
+
+    const len = timelineMessages.length;
+    const prevLen = prevTimelineLengthRef.current;
+    prevTimelineLengthRef.current = len;
+
+    const isInitialBatch = prevLen === 0 && len > 0;
+    const grew = len > prevLen;
+    const shouldScroll =
+      isInitialBatch || (grew && isNearBottomRef.current);
+
+    if (shouldScroll) {
+      end.scrollIntoView({ behavior: isInitialBatch ? "auto" : "smooth" });
+    }
+  }, [
+    timelineMessages,
+    loadingMessages,
+    selectedConversation,
+    selectedKey,
+  ]);
 
   useEffect(() => {
     if (!showEmojiPicker) return;
@@ -945,7 +1061,8 @@ export default function MessagesCenter() {
       ) : null}
       <div>
         <div className={cn("flex h-[calc(100dvh-114px)] pt-4")}>
-          <aside className="hidden w-80 bg-white dark:bg-gray-800 rounded-2xl p-3 sm:flex sm:flex-col mr-6">
+          {/* Desktop: conversations list */}
+          <aside className="hidden w-80 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:flex sm:flex-col mr-6">
             <div className="mb-3 flex items-center justify-between gap-2 px-1">
               <div>
                 <h2 className="text-lg font-semibold leading-tight">
@@ -954,12 +1071,12 @@ export default function MessagesCenter() {
               </div>
             </div>
             <div className="mb-3 flex items-center gap-2">
-              <div className="flex flex-1 items-center gap-2 rounded-2xl bg-gray-50 dark:bg-[#2B3544] px-3 py-1.5 text-xs shadow-sm">
+              <div className="flex flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  className="h-7 flex-1 border-0 bg-gray-50 dark:bg-[#2B3544] text-muted-foreground p-0 !text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="h-7 flex-1 border-0 bg-slate-50 text-muted-foreground p-0 !text-xs shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:bg-slate-800"
                   placeholder="Search messages or projects..."
                 />
               </div>
@@ -967,7 +1084,7 @@ export default function MessagesCenter() {
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="btn-gelatine h-10 w-10 shrink-0 rounded-2xl border-none bg-gray-50 dark:bg-gray-700/50 text-muted-foreground hover:text-foreground shadow-sm"
+                className="btn-gelatine h-10 w-10 shrink-0 rounded-2xl border-none bg-slate-100 text-muted-foreground hover:text-foreground shadow-sm dark:bg-slate-800"
                 aria-label="Filter conversations"
               >
                 <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
@@ -975,7 +1092,7 @@ export default function MessagesCenter() {
             </div>
 
             <div className="flex-1 overflow-y-auto pr-1 dashboard-scrollbar">
-              <div className="space-y-1">
+              <div className="space-y-0">
                 {loadingConversations ? (
                   <div className="space-y-1">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -1000,7 +1117,7 @@ export default function MessagesCenter() {
                     Conversations will appear here
                   </p>
                 ) : (
-                  filteredConversations.map((conversation) => {
+                  filteredConversations.map((conversation, index) => {
                     const key = conversationKey(conversation);
                     const unread = unreadMap[key] || 0;
                     const isActive = selectedKey === key;
@@ -1015,12 +1132,17 @@ export default function MessagesCenter() {
                         key={key}
                         onClick={() => setSelectedKey(key)}
                         className={cn(
-                          "group relative flex w-full gap-2 rounded-2xl px-2.5 py-2 text-left text-xs transition-all",
-                          isActive ? "bg-primary/10" : "hover:bg-muted/80",
+                          "group relative flex w-full gap-2 rounded-0.5xl px-2.5 py-2 text-left text-xs transition-all",
+                          index > 0
+                            ? "border-slate-200/70 dark:border-slate-700"
+                            : null,
+                          isActive
+                            ? "bg-slate-100 ring-1 ring-slate-200/80 dark:bg-slate-800 dark:ring-slate-600/50"
+                            : "hover:bg-slate-100 dark:hover:bg-slate-800/70",
                         )}
                       >
                         <span className="relative mt-0.5 shrink-0">
-                          <Avatar className="h-10 w-10">
+                          <Avatar className="h-12 w-12">
                             <AvatarImage
                               src={
                                 conversation.counterpartAvatar ||
@@ -1039,8 +1161,8 @@ export default function MessagesCenter() {
                               currentPresence.dotClass,
                               isActive
                                 ? isDark
-                                  ? "border-[#102938]"
-                                  : "border-[#DCEFF6]"
+                                  ? "border-slate-800"
+                                  : "border-slate-100"
                                 : isDark
                                   ? "border-background"
                                   : "border-background",
@@ -1054,7 +1176,7 @@ export default function MessagesCenter() {
                               {conversation.counterpartName}
                             </p>
                             <div className="flex items-center gap-2">
-                              <span className="shrink-0 text-[10px] text-muted-foreground">
+                              <span className="inline-block w-[8ch] shrink-0 whitespace-pre text-right font-mono text-[10px] tabular-nums text-muted-foreground">
                                 {timeLabel(
                                   conversation.lastMessage?.created_at ||
                                     conversation.assignedAt,
@@ -1070,15 +1192,15 @@ export default function MessagesCenter() {
                               )}
                             </div>
                           </div>
-                          <p className="truncate text-[11px] text-muted-foreground w-48">
+                          <p className="truncate text-[12px] text-muted-foreground/80">
+                            {conversation.projectTitle}
+                          </p>
+                          <p className="truncate text-[12px] text-muted-foreground w-48">
                             {conversation.lastMessage?.message ||
                               (isRequesterRole
                                 ? conversation.proposalMessage
                                 : conversation.projectDescription) ||
                               conversation.projectTitle}
-                          </p>
-                          <p className="truncate text-[10px] text-muted-foreground/80">
-                            {conversation.projectTitle}
                           </p>
                           <p
                             className={cn(
@@ -1102,9 +1224,10 @@ export default function MessagesCenter() {
             </div>
           </aside>
 
-          <section className="flex flex-1 flex-col rounded-xl">
+          {/* Desktop: messages center */}
+          <section className="flex flex-1 flex-col rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 overflow-hidden">
             {!selectedConversation ? (
-              <div className="flex h-[calc(100vh-114px)] flex-col items-center justify-center gap-3 px-6 text-center">
+              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
                 <div className="rounded-full bg-primary/10 p-3 text-primary shadow-sm">
                   <MessageCircle className="h-6 w-6" />
                 </div>
@@ -1126,11 +1249,109 @@ export default function MessagesCenter() {
                 </Button>
               </div>
             ) : (
-              <div className="flex h-[calc(100vh-114px)] flex-col rounded-2xl">
+              <div className="flex min-h-0 flex-1 flex-col rounded-2xl">
                 <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-                  <div className="flex flex-1 flex-col">
-                    <ScrollArea className="flex-1 bg-white dark:bg-gray-800 h-[calc(100vh-108px)] overflow-y-auto dashboard-scrollbar rounded-t-2xl pt-2">
-                      <div className="mx-auto flex w-full flex-col gap-6 px-5 py-4">
+                  <div className="flex min-h-0 flex-1 flex-col">
+                    {/* Header */}
+                    <div className="shrink-0 flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                      <div className="min-w-0 flex-1 pr-3">
+                        <span className="block truncate text-sm font-semibold">
+                          {selectedConversation.counterpartName}
+                        </span>
+                        {selectedPresenceMeta ? (
+                          <span className="mt-0.5 inline-flex shrink-0 flex-nowrap items-center gap-1.5 whitespace-nowrap">
+                            <span
+                              className={cn(
+                                "h-2 w-2 shrink-0 rounded-full",
+                                selectedPresenceMeta.dotClass,
+                              )}
+                              aria-hidden
+                            />
+                            <span
+                              className={cn(
+                                "whitespace-nowrap text-xs font-medium",
+                                selectedPresenceMeta.textClass,
+                              )}
+                            >
+                              {selectedPresenceMeta.label}
+                            </span>
+                          </span>
+                        ) : null}
+                        <Link
+                          href={`/dashboard/projects/${selectedConversation.requestId}/workshop`}
+                          className="mt-0.5 block truncate text-xs font-medium text-primary hover:underline"
+                        >
+                          {selectedConversation.projectTitle}
+                        </Link>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="btn-gelatine h-9 w-9 rounded-full border-none bg-slate-100 text-muted-foreground hover:text-foreground dark:bg-slate-800"
+                          type="button"
+                        >
+                          <Phone className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="btn-gelatine h-9 w-9 rounded-full border-none bg-slate-100 text-muted-foreground hover:text-foreground dark:bg-slate-800"
+                          type="button"
+                        >
+                          <Video className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className={cn(
+                            "btn-gelatine h-9 w-9 rounded-full border-none bg-slate-100 text-muted-foreground hover:text-foreground dark:bg-slate-800",
+                            selectedConversation &&
+                              pinnedKeys.includes(
+                                conversationKey(selectedConversation),
+                              ) &&
+                              "bg-primary/10 text-primary",
+                          )}
+                          type="button"
+                          onClick={() => {
+                            if (selectedConversation) {
+                              dispatch(
+                                togglePin(
+                                  conversationKey(selectedConversation),
+                                ),
+                              );
+                            }
+                          }}
+                          aria-label={
+                            selectedConversation &&
+                            pinnedKeys.includes(
+                              conversationKey(selectedConversation),
+                            )
+                              ? "Unpin conversation"
+                              : "Pin conversation"
+                          }
+                        >
+                          <Pin
+                            className={cn(
+                              "h-3.5 w-3.5",
+                              selectedConversation &&
+                                pinnedKeys.includes(
+                                  conversationKey(selectedConversation),
+                                ) &&
+                                "fill-current rotate-45",
+                            )}
+                          />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Messages */}
+                    <div
+                      ref={messagesScrollWrapperRef}
+                      className="flex min-h-0 min-w-0 flex-1 flex-col"
+                    >
+                    <ScrollArea className="min-h-0 flex-1 bg-slate-50/70 dark:bg-slate-900 overflow-y-auto dashboard-scrollbar pt-2">
+                      <div className="mx-auto flex w-full flex-col gap-6 px-5 py-1">
                         {loadingMessages ? (
                           <div className="flex flex-col gap-6">
                             <div className="flex items-center gap-3">
@@ -1181,138 +1402,106 @@ export default function MessagesCenter() {
                             const previous = timelineMessages[index - 1];
                             const showDateDivider =
                               !previous ||
-                              new Date(previous.created_at).toDateString() !==
-                                new Date(message.created_at).toDateString();
+                              messageCalendarDayKey(previous.created_at) !==
+                                messageCalendarDayKey(message.created_at);
+                            const sameSenderAsPrevious =
+                              !!previous &&
+                              previous.sender_id === message.sender_id;
+                            const showAvatar =
+                              !sameSenderAsPrevious || showDateDivider;
+                            const compactWithPrevious =
+                              sameSenderAsPrevious && !showDateDivider;
 
                             return (
-                              <Fragment key={message.id}>
+                              <Fragment key={message.id}>                                
                                 {showDateDivider ? (
-                                  <div className="my-4 flex items-center gap-3">
-                                    <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
-                                    <span className="rounded-full bg-gray-50 dark:bg-gray-700 px-3 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                                      {new Date(
+                                  <div
+                                    className="sticky top-0 z-10 -mx-5 mb-2 flex items-center gap-3 border-b border-slate-200/80 bg-slate-50/95 px-5 py-3 backdrop-blur-sm dark:border-slate-700/80 dark:bg-slate-900/95"
+                                    role="separator"
+                                    aria-label={formatThreadDateDividerLabel(
+                                      message.created_at,
+                                    )}
+                                  >
+                                    <span className="shrink-0 rounded-full px-3 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                                      {formatThreadDateDividerLabel(
                                         message.created_at,
-                                      ).toLocaleDateString([], {
-                                        month: "short",
-                                        day: "numeric",
-                                        year: "numeric",
-                                      })}
+                                      )}
                                     </span>
-                                    <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
                                   </div>
                                 ) : null}
                                 <div
                                   className={cn(
-                                    "flex items-start gap-3 w-full",
-                                    mine && "md:justify-start",
+                                    "relative z-0 flex w-full items-start gap-3",
+                                    compactWithPrevious && "-mt-4",
                                   )}
                                 >
-                                  {!mine ? (
-                                    <div className="relative mt-0.5 h-10 w-10 shrink-0">
-                                      <Avatar className="h-10 w-10">
+                                  {showAvatar ? (
+                                    <div className="relative mt-0.5 h-12 w-12 shrink-0">
+                                      <Avatar className="h-12 w-12">
                                         <AvatarImage
                                           src={
-                                            selectedConversation.counterpartAvatar ||
-                                            "/default-avatar.svg"
+                                            mine
+                                              ? profile?.avatar_url ||
+                                                "/default-avatar.svg"
+                                              : selectedConversation.counterpartAvatar ||
+                                                "/default-avatar.svg"
                                           }
                                         />
                                         <AvatarFallback className="text-[11px] font-medium">
-                                          {selectedConversation.counterpartName
-                                            .slice(0, 2)
-                                            .toUpperCase()}
+                                          {mine
+                                            ? profile?.full_name
+                                                ?.slice(0, 2)
+                                                .toUpperCase() || "YO"
+                                            : selectedConversation.counterpartName
+                                                .slice(0, 2)
+                                                .toUpperCase()}
                                         </AvatarFallback>
                                       </Avatar>
                                       <span
                                         className={cn(
                                           "absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background",
-                                          selectedPresence.dotClass,
+                                          mine
+                                            ? "bg-green-500"
+                                            : selectedPresence.dotClass,
                                         )}
-                                        title={selectedPresence.label}
+                                        title={
+                                          mine ? "available" : selectedPresence.label
+                                        }
                                         aria-hidden
                                       />
                                     </div>
-                                  ) : (
-                                    <div className="relative mt-0.5 h-10 w-10 shrink-0 hidden md:block">
-                                      <Avatar className="h-10 w-10">
-                                        <AvatarImage
-                                          src={
-                                            profile?.avatar_url ||
-                                            "/default-avatar.svg"
-                                          }
-                                        />
-                                        <AvatarFallback className="text-[11px] font-medium">
-                                          {profile?.full_name
-                                            ?.slice(0, 2)
-                                            .toUpperCase() || "YO"}
-                                        </AvatarFallback>
-                                      </Avatar>
-                                      <span
-                                        className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-green-500"
-                                        title="Available"
-                                        aria-hidden
-                                      />
-                                    </div>
-                                  )}
+                                  ) : null}
                                   <div
                                     className={cn(
                                       "min-w-0 flex-1 text-left",
-                                      mine && "text-right md:text-left",
+                                      !showAvatar &&
+                                        "pl-[calc(2.5rem+1.25rem)]",
                                     )}
                                   >
-                                    {mine ? (
-                                      <>
-                                        {/* Mobile: time left, You right (same row); content below right-aligned */}
-                                        <div className="flex flex-col gap-0 md:hidden">
-                                          <div className="flex items-baseline justify-between gap-2">
-                                            <span className="text-[11px] text-muted-foreground shrink-0">
-                                              {timeLabel(message.created_at)}
-                                            </span>
-                                            <p className="text-xs font-medium">
-                                              You
-                                            </p>
-                                          </div>
-                                          <p className="mt-1 text-sm text-foreground text-right">
-                                            <MessageContent
-                                              text={message.message}
-                                            />
-                                          </p>
-                                        </div>
-                                        {/* Desktop: same structure as other user */}
-                                        <div className="hidden md:block">
-                                          <div className="flex items-baseline justify-between gap-2">
-                                            <p className="text-xs font-medium">
-                                              You
-                                            </p>
-                                            <span className="text-[11px] text-muted-foreground shrink-0">
-                                              {timeLabel(message.created_at)}
-                                            </span>
-                                          </div>
-                                          <p className="mt-1 text-sm text-foreground">
-                                            <MessageContent
-                                              text={message.message}
-                                            />
-                                          </p>
-                                        </div>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <div className="flex items-baseline justify-between gap-2">
-                                          <p className="text-xs font-medium">
-                                            {
-                                              selectedConversation.counterpartName
-                                            }
-                                          </p>
-                                          <span className="text-[11px] text-muted-foreground shrink-0">
-                                            {timeLabel(message.created_at)}
-                                          </span>
-                                        </div>
-                                        <p className="mt-1 text-sm text-foreground">
-                                          <MessageContent
-                                            text={message.message}
-                                          />
+                                    {showAvatar ? (
+                                      <div className="mb-2">
+                                        <p className="text-xs font-medium">
+                                          {mine
+                                            ? "You"
+                                            : selectedConversation.counterpartName}
                                         </p>
-                                      </>
-                                    )}
+                                      </div>
+                                    ) : null}
+                                    <div
+                                      className={cn(
+                                        "grid grid-cols-[1fr_auto] items-start gap-x-2",
+                                        showAvatar ? "mt-4" : "mt-2",
+                                      )}
+                                    >
+                                      <p className="text-sm text-foreground">
+                                        <MessageContent
+                                          text={message.message}
+                                        />
+                                      </p>
+                                      <span className="inline-block w-[8ch] shrink-0 whitespace-pre text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+                                        {timeLabel(message.created_at)}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
                               </Fragment>
@@ -1322,8 +1511,10 @@ export default function MessagesCenter() {
                         <div ref={messagesEndRef} />
                       </div>
                     </ScrollArea>
+                    </div>
 
-                    <div className="bg-white dark:bg-gray-800 p-3 backdrop-blur rounded-b-2xl">
+                    {/* Composer */}
+                    <div className="shrink-0 border-t border-slate-200 bg-white p-3 backdrop-blur rounded-b-2xl dark:border-slate-700 dark:bg-slate-900">
                       {error ? (
                         <p className="mb-2 text-xs text-red-500">{error}</p>
                       ) : null}
@@ -1347,7 +1538,7 @@ export default function MessagesCenter() {
                           onChange={handleFileSelect}
                           aria-label="Attach file"
                         />
-                        <div className="flex flex-col gap-2 rounded-2xl bg-gray-50 dark:bg-gray-700/50 px-2 py-2 shadow-sm">
+                        <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-2 py-2 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                           {attachmentFiles.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {attachmentFiles.map(({ id, file, preview }) => (
@@ -1407,7 +1598,7 @@ export default function MessagesCenter() {
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="btn-gelatine h-9 w-9 shrink-0 rounded-full border-none bg-transparent text-muted-foreground hover:bg-background self-end"
+                                className="btn-gelatine h-9 w-9 shrink-0 rounded-full border-none bg-transparent text-muted-foreground hover:bg-white dark:hover:bg-slate-700 self-end"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={
                                   sending ||
@@ -1421,7 +1612,7 @@ export default function MessagesCenter() {
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="btn-gelatine h-9 w-9 shrink-0 rounded-full border-none bg-transparent text-muted-foreground hover:bg-background self-end"
+                                className="btn-gelatine h-9 w-9 shrink-0 rounded-full border-none bg-transparent text-muted-foreground hover:bg-white dark:hover:bg-slate-700 self-end"
                                 onClick={() =>
                                   setShowEmojiPicker((prev) => !prev)
                                 }
@@ -1456,7 +1647,7 @@ export default function MessagesCenter() {
                                 (!draft.trim() && attachmentFiles.length === 0)
                               }
                               size="icon"
-                              className="btn-gelatine h-9 w-9 shrink-0 rounded-full bg-transparent text-muted-foreground hover:bg-background self-end"
+                              className="btn-gelatine h-9 w-9 shrink-0 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 self-end disabled:bg-emerald-300 disabled:text-white"
                               type="button"
                             >
                               {sending ? (
@@ -1471,7 +1662,8 @@ export default function MessagesCenter() {
                     </div>
                   </div>
 
-                  <aside className="hidden w-70 flex-col bg-transparent text-xs lg:flex pl-6">
+                  {/* Mobile: partner card */}
+                  <aside className="hidden w-70 flex-col bg-transparent text-xs lg:hidden pl-6">
                     <div className="rounded-2xl bg-white dark:bg-gray-800 p-3 mb-6">
                       <div className="grid grid-cols-2 items-center gap-4 lg:grid-cols-4">
                         <Button
