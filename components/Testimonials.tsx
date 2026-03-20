@@ -145,7 +145,7 @@ export default function Testimonials() {
   const testimonialCards = [...testimonials, ...testimonials];
 
   return (
-    <div className="bg-[#28303E]">
+    <div className="bg-[#0f1419]">
       <div className="px-4 sm:px-6 py-12 sm:py-16 md:py-20 space-y-16 sm:space-y-20 md:space-y-24">
         {/* ——— Section 1: Value props ——— */}
         <section className="space-y-10 md:space-y-14 container mx-auto ">
@@ -399,7 +399,7 @@ export default function Testimonials() {
                   >
                     <Link
                       href={`/projects?category=${encodeURIComponent(cat)}`}
-                      className="group flex items-center gap-3 p-6 rounded-2xl border border-white/10 bg-[#333B48] transition-all duration-300 hover:border-cyan-400/50 hover:bg-[#28303E] hover:shadow-[0_0_24px_-8px_rgba(34,211,238,0.25)]"
+                      className="group flex items-center gap-3 p-6 rounded-2xl border border-white/10 bg-[#1B2025] transition-all duration-300 hover:border-cyan-400/50 hover:bg-[#202529] hover:shadow-[0_0_24px_-8px_rgba(34,211,238,0.25)]"
                     >
                       <span
                         className="flex h-10 w-10 shrink-0 items-center justify-center [&>svg]:h-8 [&>svg]:w-8"

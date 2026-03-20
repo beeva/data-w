@@ -1052,7 +1052,7 @@ export default function Projects() {
   );
 
   return (
-    <div className="min-h-screen bg-[#28303E]">
+    <div className="min-h-screen bg-[#0f1419]">
       <Header />
 
       <PageHero

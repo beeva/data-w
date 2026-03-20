@@ -59,7 +59,7 @@ export default function FAQ() {
   };
 
   return (
-    <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 bg-[#28303E] relative">
+    <section className="py-12 sm:py-16 md:py-20 px-4 sm:px-6 bg-[#0f1419] relative">
       <div className="container mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-10 md:gap-12 lg:gap-16 items-start">
           {/* Left: Title + subtitle */}
@@ -84,69 +84,69 @@ export default function FAQ() {
 
           {/* Right: FAQs list */}
           <div className="space-y-3 sm:space-y-4">
-              {faqs.map((faq, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-20px" }}
-                  transition={{
-                    duration: 0.5,
-                    delay: index * 0.05,
-                    ease: [0.25, 0.46, 0.45, 0.94],
-                  }}
-                  className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
+            {faqs.map((faq, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-20px" }}
+                transition={{
+                  duration: 0.5,
+                  delay: index * 0.05,
+                  ease: [0.25, 0.46, 0.45, 0.94],
+                }}
+                className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
+                  openIndex === index
+                    ? "border-cyan-400/40 bg-white/[0.07] shadow-[0_0_24px_-8px_rgba(34,211,238,0.2)]"
+                    : "border-white/10 bg-white/5 hover:border-cyan-400/30 hover:bg-white/[0.07]"
+                }`}
+              >
+                <div
+                  className="flex items-start sm:items-center justify-between p-5 sm:p-6 cursor-pointer gap-3"
+                  onClick={() => toggleFAQ(index)}
+                >
+                  <h3 className="text-base sm:text-lg font-semibold text-white flex-1 pr-2 leading-tight">
+                    {faq.question}
+                  </h3>
+                  <button
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-white/5 hover:bg-white/10 transition-colors flex-shrink-0"
+                    aria-expanded={openIndex === index}
+                    aria-label={openIndex === index ? "Collapse" : "Expand"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFAQ(index);
+                    }}
+                  >
+                    <svg
+                      className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${
+                        openIndex === index ? "rotate-180" : ""
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 9l-7 7-7-7"
+                      />
+                    </svg>
+                  </button>
+                </div>
+                <div
+                  className={`overflow-hidden transition-all duration-300 ease-in-out ${
                     openIndex === index
-                      ? "border-cyan-400/40 bg-white/[0.07] shadow-[0_0_24px_-8px_rgba(34,211,238,0.2)]"
-                      : "border-white/10 bg-white/5 hover:border-cyan-400/30 hover:bg-white/[0.07]"
+                      ? "max-h-96 opacity-100"
+                      : "max-h-0 opacity-0"
                   }`}
                 >
-                  <div
-                    className="flex items-start sm:items-center justify-between p-5 sm:p-6 cursor-pointer gap-3"
-                    onClick={() => toggleFAQ(index)}
-                  >
-                    <h3 className="text-base sm:text-lg font-semibold text-white flex-1 pr-2 leading-tight">
-                      {faq.question}
-                    </h3>
-                    <button
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-white bg-white/5 hover:bg-white/10 transition-colors flex-shrink-0"
-                      aria-expanded={openIndex === index}
-                      aria-label={openIndex === index ? "Collapse" : "Expand"}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFAQ(index);
-                      }}
-                    >
-                      <svg
-                        className={`w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-300 ${
-                          openIndex === index ? "rotate-180" : ""
-                        }`}
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                  <div
-                    className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                      openIndex === index
-                        ? "max-h-96 opacity-100"
-                        : "max-h-0 opacity-0"
-                    }`}
-                  >
-                    <p className="px-5 sm:px-6 pb-5 sm:pb-6 pt-0 text-sm sm:text-base text-white/70 leading-relaxed">
-                      {faq.answer}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
+                  <p className="px-5 sm:px-6 pb-5 sm:pb-6 pt-0 text-sm sm:text-base text-white/70 leading-relaxed">
+                    {faq.answer}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </div>
