@@ -634,3 +634,50 @@
 .drawer-submit-btn-clicked {
   animation: drawerSubmitClick 0.35s ease-out forwards;
 }
+
+/* Hero: trusted-by logo ticker (infinite marquee) */
+@keyframes logoTicker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.logo-ticker-track {
+  animation: logoTicker 30s linear infinite;
+  will-change: transform;
+}
+
+.logo-ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* Testimonials marquee: infinite horizontal scroll */
+@keyframes testimonialMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.testimonial-marquee-track {
+  animation: testimonialMarquee 40s linear infinite;
+  will-change: transform;
+}
+
+.testimonial-marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.testimonial-marquee-track-reverse {
+  animation: testimonialMarquee 40s linear infinite reverse;
+  will-change: transform;
+}
+
+.testimonial-marquee-track-reverse:hover {
+  animation-play-state: paused;
+}
