@@ -6,6 +6,7 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  memo,
   useState,
 } from "react";
 import Link from "next/link";
@@ -173,7 +174,11 @@ type ProfilePresenceRow = {
   last_active_at: string | null;
 };
 
-function MessageContent({ text }: { text: string }) {
+const MessageContent = memo(function MessageContent({
+  text,
+}: {
+  text: string;
+}) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
   return (
@@ -195,7 +200,7 @@ function MessageContent({ text }: { text: string }) {
       )}
     </>
   );
-}
+});
 
 export default function MessagesCenter() {
   const router = useRouter();
@@ -410,7 +415,10 @@ export default function MessagesCenter() {
   }, [conversations]);
 
   useEffect(() => {
-    if (!selectedConversation) {
+    const requestId = selectedConversation?.requestId;
+    const collectorId = selectedConversation?.collectorId;
+
+    if (!requestId || !collectorId) {
       setMessages([]);
       return;
     }
@@ -418,8 +426,8 @@ export default function MessagesCenter() {
     const loadMessages = async () => {
       setLoadingMessages(true);
       const { data, error: fetchError } = await getConversationMessages(
-        selectedConversation.requestId,
-        selectedConversation.collectorId,
+        requestId,
+        collectorId,
       );
       if (fetchError) {
         setError(fetchError.message);
@@ -430,10 +438,10 @@ export default function MessagesCenter() {
       setLoadingMessages(false);
     };
 
-    const key = conversationKey(selectedConversation);
+    const key = conversationKey({ requestId, collectorId });
     setUnreadMap((prev) => ({ ...prev, [key]: 0 }));
     loadMessages();
-  }, [selectedConversation]);
+  }, [selectedConversation?.requestId, selectedConversation?.collectorId]);
 
   useEffect(() => {
     if (!selectedConversation) return;
