@@ -12,8 +12,8 @@ BEGIN
     NEW.email,
     NULLIF(coalesce(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''), ''),
     CASE
-      WHEN v_role IN ('requester', 'collector', 'agent', 'admin') THEN v_role::user_role
-      ELSE 'collector'::user_role
+      WHEN v_role IN ('requester', 'collector', 'agent', 'admin') THEN v_role::public.user_role
+      ELSE 'collector'::public.user_role
     END
   )
   ON CONFLICT (id) DO NOTHING;
