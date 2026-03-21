@@ -988,6 +988,11 @@ export default function MessagesCenter() {
         }
         if (url) urls.push(`${file.name}: ${url}`);
       }
+      if (urls.length !== attachmentFiles.length) {
+        setError("Attachment upload did not finish. Check your connection and try again.");
+        setSending(false);
+        return;
+      }
       const attachmentLines = urls.join("\n");
       messageText = messageText
         ? `${messageText}\n\n${attachmentLines}`
