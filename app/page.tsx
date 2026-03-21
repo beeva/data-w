@@ -75,7 +75,7 @@ function HomeContent() {
   ];
 
   return (
-    <main className="min-h-screen bg-[#28303E] overflow-x-hidden">
+    <main className="min-h-screen bg-[#0f1419] overflow-x-hidden">
       {showToast && toastMessage && (
         <ToastNotification
           title="Signed out"
@@ -87,7 +87,7 @@ function HomeContent() {
       )}
       <Header />
       <Hero />
-      <div className="py-12 md:py-24 container mx-auto bg-[#28303E]">
+      <div className="py-12 md:py-24 container mx-auto bg-[#0f1419]">
         <div className="relative overflow-hidden">
           <div className="logo-ticker-track flex items-center gap-10 sm:gap-14 md:gap-20 w-max">
             {[...trustedByLogos, ...trustedByLogos].map((client, i) => (

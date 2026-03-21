@@ -69,7 +69,7 @@ export default function Footer({ compact = false }: FooterProps) {
   }
 
   return (
-    <footer className="relative bg-gradient-to-b from-[#28303E] via-[#141a24] to-[#141a24] text-white">
+    <footer className="relative bg-gradient-to-b from-[#0f1419] via-[#141a24] to-[#141a24] text-white">
       {/* Gradient border using pseudo-element */}
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8 relative z-10">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-6 sm:gap-8 lg:gap-12 mb-8 sm:mb-12">

@@ -77,7 +77,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="pt-20 sm:pt-24 md:pt-32 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 text-white relative overflow-hidden min-h-screen bg-gradient-to-b from-[#0a0f1e] via-[#0f172a] to-[#28303E]">
+    <section className="pt-20 sm:pt-24 md:pt-32 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 text-white relative overflow-hidden min-h-screen bg-gradient-to-b from-[#0a0f1e] via-[#0f172a] to-[#0f1419]">
       <div
         className="absolute top-0 bottom-0 overflow-hidden pointer-events-none hidden md:block"
         style={{
@@ -127,8 +127,19 @@ export default function Hero() {
                         id: "requester" as const,
                         label: "I need data",
                         icon: (
-                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          <svg
+                            className="w-4 h-4 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                            />
                           </svg>
                         ),
                       },
@@ -136,8 +147,19 @@ export default function Hero() {
                         id: "collector" as const,
                         label: "I want to collect",
                         icon: (
-                          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          <svg
+                            className="w-4 h-4 shrink-0"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            aria-hidden
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                            />
                           </svg>
                         ),
                       },
@@ -167,11 +189,19 @@ export default function Hero() {
                 </div>
 
                 {activeTab === "requester" && (
-                  <div id="hero-panel-requester" role="tabpanel" aria-labelledby="hero-tab-requester" className="max-w-2xl space-y-6">
+                  <div
+                    id="hero-panel-requester"
+                    role="tabpanel"
+                    aria-labelledby="hero-tab-requester"
+                    className="max-w-2xl space-y-6"
+                  >
                     <p className="text-white/80 text-base sm:text-lg leading-relaxed">
-                      Describe the data you need—surveys, annotations, or custom collection tasks. We match your request with{" "}
-                      <span className="text-cyan-400 font-medium">qualified collectors worldwide</span>
-                      {" "}and deliver validated datasets to you.
+                      Describe the data you need—surveys, annotations, or custom
+                      collection tasks. We match your request with{" "}
+                      <span className="text-cyan-400 font-medium">
+                        qualified collectors worldwide
+                      </span>{" "}
+                      and deliver validated datasets to you.
                     </p>
                     {/* Search Bar */}
                     <div>
