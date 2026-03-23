@@ -23,7 +23,8 @@ import {
   X,
   ChevronDown,
   ChevronUp,
-  HelpCircle,
+  ChevronRight,
+  ArrowLeft,
   Mail,
   Phone,
   FileText,
@@ -31,8 +32,6 @@ import {
   CheckCircle2,
   Bot,
   Loader2,
-  Book,
-  Video,
   Zap,
   Inbox,
 } from "lucide-react";
@@ -44,80 +43,32 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-interface FAQItem {
-  question: string;
-  answer: string;
-  category: string;
-}
-
-const faqs: FAQItem[] = [
-  {
-    category: "Getting Started",
-    question: "How do I create my first project?",
-    answer: "Navigate to Projects > Create New Project. Fill in the project details including title, description, data requirements, budget, and deadline. Once submitted, collectors can start working on your project.",
-  },
-  {
-    category: "Getting Started",
-    question: "What are the different user roles?",
-    answer: "DataW has 4 roles: Requesters (create projects and pay for data), Collectors (gather data and earn money), Agents (validate submissions), and Admins (manage the platform).",
-  },
-  {
-    category: "Payments",
-    question: "How do payments work?",
-    answer: "Requesters fund their projects upfront. When a collector's submission is validated and approved, payment is automatically released to their account. You can withdraw funds once they reach the minimum threshold.",
-  },
-  {
-    category: "Payments",
-    question: "What payment methods are accepted?",
-    answer: "We accept major credit cards (Visa, MasterCard, AmEx), PayPal, and bank transfers. Collectors can receive payments via PayPal or direct bank deposit.",
-  },
-  {
-    category: "Projects",
-    question: "How long does validation take?",
-    answer: "Most submissions are validated within 24-48 hours. AI-assisted validation helps speed up the process by pre-screening submissions for quality and compliance.",
-  },
-  {
-    category: "Projects",
-    question: "Can I edit my project after publishing?",
-    answer: "Yes, you can edit project details while it's open. However, certain fields like budget cannot be reduced below already committed amounts. Go to Active Projects and click Edit.",
-  },
-  {
-    category: "Account",
-    question: "How do I change my account settings?",
-    answer: "Go to Account Settings from the sidebar menu. You can update your profile picture, personal information, notification preferences, and security settings.",
-  },
-  {
-    category: "Account",
-    question: "How do I delete my account?",
-    answer: "Contact our support team to request account deletion. Note that pending projects must be completed or cancelled, and all funds withdrawn before deletion.",
-  },
-];
-
-const quickLinks = [
-  { icon: Book, label: "Documentation", href: "#", color: "text-blue-500" },
-  { icon: Video, label: "Video Tutorials", href: "#", color: "text-red-500" },
-  { icon: Zap, label: "API Reference", href: "#", color: "text-yellow-500" },
-  { icon: FileText, label: "Terms of Service", href: "#", color: "text-gray-500" },
-];
-
 // Simulated bot responses
 const getBotResponse = (message: string): string => {
   const lowerMsg = message.toLowerCase();
-  
-  if (lowerMsg.includes("payment") || lowerMsg.includes("pay") || lowerMsg.includes("money")) {
-    return "For payment-related queries, please check our FAQ section on Payments. If you need specific help, I'll connect you with a support agent.";
+
+  if (
+    lowerMsg.includes("payment") ||
+    lowerMsg.includes("pay") ||
+    lowerMsg.includes("money")
+  ) {
+    return "For payment-related queries, please check our Help Center. If you need specific help, I'll connect you with a support agent.";
   }
   if (lowerMsg.includes("project") || lowerMsg.includes("create")) {
     return "To create a project, go to Projects > Create New. Need help with a specific step? I can guide you through it.";
   }
-  if (lowerMsg.includes("hello") || lowerMsg.includes("hi") || lowerMsg.includes("hey")) {
+  if (
+    lowerMsg.includes("hello") ||
+    lowerMsg.includes("hi") ||
+    lowerMsg.includes("hey")
+  ) {
     return "Hello! 👋 I'm DataW Assistant. How can I help you today? You can ask about projects, payments, account settings, or any other questions.";
   }
   if (lowerMsg.includes("thank")) {
     return "You're welcome! Is there anything else I can help you with?";
   }
-  
-  return "I understand you need help. Let me connect you with a support agent who can better assist you. In the meantime, you can check our FAQ section for quick answers.";
+
+  return "I understand you need help. Let me connect you with a support agent who can better assist you. In the meantime, you can check our Help Center for quick answers.";
 };
 
 interface Ticket {
@@ -154,7 +105,6 @@ export default function HelpSupport() {
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [ticketSubject, setTicketSubject] = useState("");
   const [ticketMessage, setTicketMessage] = useState("");
   const [ticketPriority, setTicketPriority] = useState<string>("normal");
@@ -173,7 +123,10 @@ export default function HelpSupport() {
   const userId = user?.id;
 
   const fetchMyTickets = useCallback(async () => {
-    if (!userId) { setTicketsLoading(false); return; }
+    if (!userId) {
+      setTicketsLoading(false);
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from("support_tickets")
@@ -188,7 +141,9 @@ export default function HelpSupport() {
     }
   }, [userId]);
 
-  useEffect(() => { fetchMyTickets(); }, [fetchMyTickets]);
+  useEffect(() => {
+    fetchMyTickets();
+  }, [fetchMyTickets]);
 
   const fetchReplies = async (ticketId: string) => {
     setRepliesLoading(true);
@@ -207,7 +162,7 @@ export default function HelpSupport() {
             user_id: r.user_id,
             full_name: r.profiles?.full_name || null,
             role: r.profiles?.role || "user",
-          }))
+          })),
         );
       }
     } catch (e) {
@@ -266,16 +221,19 @@ export default function HelpSupport() {
     setIsTyping(true);
 
     // Simulate bot response delay
-    setTimeout(() => {
-      const botResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: getBotResponse(message),
-        sender: "bot",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, botResponse]);
-      setIsTyping(false);
-    }, 1000 + Math.random() * 1000);
+    setTimeout(
+      () => {
+        const botResponse: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          content: getBotResponse(message),
+          sender: "bot",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, botResponse]);
+        setIsTyping(false);
+      },
+      1000 + Math.random() * 1000,
+    );
   };
 
   const handleSubmitTicket = async () => {
@@ -309,349 +267,384 @@ export default function HelpSupport() {
     });
   };
 
-  const groupedFaqs = faqs.reduce((acc, faq) => {
-    if (!acc[faq.category]) acc[faq.category] = [];
-    acc[faq.category].push(faq);
-    return acc;
-  }, {} as Record<string, FAQItem[]>);
-
   return (
-    <div className="space-y-3 p-2 relative">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent dark:from-blue-500/20 dark:via-indigo-500/10 dark:to-transparent rounded-lg px-4 py-3 border-l-4 border-blue-500">
-        <h1 className="text-xl font-bold text-foreground">Help & Support</h1>
-        <p className="text-xs text-muted-foreground">Get help, find answers, or contact our support team</p>
+    <div className="p-2">
+      {/* Page header */}
+      <div className="pt-2 mb-4">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+          Help & Support
+        </h1>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Contact our support team, submit a ticket, or start a live chat
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        {/* Left Column - FAQ & Resources */}
-        <div className="lg:col-span-2 space-y-3">
-          {/* Quick Links */}
-          <Card className="dark:bg-gray-800/50 border-none">
-            <CardHeader className="py-2 px-3">
-              <CardTitle className="text-xs font-semibold">Quick Resources</CardTitle>
-            </CardHeader>
-            <CardContent className="py-2 px-3">
-              <div className="grid grid-cols-4 gap-2">
-                {quickLinks.map((link, idx) => (
-                  <a
-                    key={idx}
-                    href={link.href}
-                    className="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
-                  >
-                    <link.icon className={`w-5 h-5 ${link.color}`} />
-                    <span className="text-[9px] text-center">{link.label}</span>
-                  </a>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* FAQ Section */}
-          <Card className="dark:bg-gray-800/50 border-none">
-            <CardHeader className="py-2 px-3">
-              <CardTitle className="text-xs font-semibold flex items-center gap-1">
-                <HelpCircle className="w-3.5 h-3.5" />
-                Frequently Asked Questions
+      <div className="space-y-6">
+        {/* Row 1: Contact Us (left ~1/3) | Submit a Ticket (right ~2/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left - Contact Us */}
+          <Card className="dark:bg-gray-800/50 border-none shadow-md overflow-hidden lg:col-span-1">
+            <CardHeader className="pt-4 pb-3 px-5 border-b border-gray-100 dark:border-gray-700/50">
+              <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-cyan-500" />
+                </div>
+                Contact Us
               </CardTitle>
             </CardHeader>
-            <CardContent className="py-2 px-3">
-              <div className="space-y-3">
-                {Object.entries(groupedFaqs).map(([category, items]) => (
-                  <div key={category}>
-                    <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                      {category}
-                    </h3>
-                    <div className="space-y-1">
-                      {items.map((faq, idx) => {
-                        const globalIdx = faqs.indexOf(faq);
-                        return (
-                          <div
-                            key={idx}
-                            className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-                          >
-                            <button
-                              onClick={() => setExpandedFaq(expandedFaq === globalIdx ? null : globalIdx)}
-                              className="w-full flex items-center justify-between p-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                            >
-                              <span className="text-[11px] font-medium">{faq.question}</span>
-                              {expandedFaq === globalIdx ? (
-                                <ChevronUp className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                              ) : (
-                                <ChevronDown className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-                              )}
-                            </button>
-                            {expandedFaq === globalIdx && (
-                              <div className="px-3 py-2.5 text-[11px] leading-relaxed text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-200 dark:border-gray-600">
-                                {faq.answer}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right Column - Contact & Ticket */}
-        <div className="space-y-3">
-          {/* Contact Info */}
-          <Card className="dark:bg-gray-800/50 border-none">
-            <CardHeader className="py-2 px-3">
-              <CardTitle className="text-xs font-semibold">Contact Us</CardTitle>
-            </CardHeader>
-            <CardContent className="py-2 px-3 space-y-2">
-              <div className="flex items-center gap-2 text-[10px]">
-                <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Mail className="w-3.5 h-3.5 text-blue-600" />
+            <CardContent className="px-5 py-4 space-y-4">
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                  <Mail className="w-4 h-4 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Email</p>
-                  <p className="font-medium">support@dataw.io</p>
+                  <p className="text-xs text-muted-foreground">Email</p>
+                  <p className="font-medium text-sm">support@dataw.io</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-[10px]">
-                <div className="w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <Phone className="w-3.5 h-3.5 text-green-600" />
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-9 h-9 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Phone</p>
-                  <p className="font-medium">+1 (555) 123-4567</p>
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="font-medium text-sm">+1 (555) 123-4567</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-[10px]">
-                <div className="w-7 h-7 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                  <Clock className="w-3.5 h-3.5 text-purple-600" />
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-9 h-9 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Hours</p>
-                  <p className="font-medium">Mon-Fri, 9AM-6PM EST</p>
+                  <p className="text-xs text-muted-foreground">Hours</p>
+                  <p className="font-medium text-sm">Mon-Fri, 9AM-6PM EST</p>
                 </div>
               </div>
-              <Separator className="my-2" />
+              <Separator />
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-9 h-9 rounded-lg bg-cyan-500/20 flex items-center justify-center shrink-0">
+                  <Zap className="w-4 h-4 text-cyan-500" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium">Avg. response</p>
+                  <p className="text-xs text-muted-foreground">Under 2 hours</p>
+                </div>
+              </div>
               <Button
                 onClick={() => setChatOpen(true)}
-                className="w-full h-7 text-[10px] bg-primary text-primary-foreground hover:bg-primary/90"
+                className="w-full h-10 text-sm bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                <MessageCircle className="w-3.5 h-3.5 mr-1" />
+                <MessageCircle className="w-4 h-4 mr-2" />
                 Start Live Chat
               </Button>
             </CardContent>
           </Card>
 
-          {/* Submit Ticket */}
-          <Card className="dark:bg-gray-800/50 border-none">
-            <CardHeader className="py-2 px-3">
-              <CardTitle className="text-xs font-semibold flex items-center gap-1">
-                <FileText className="w-3.5 h-3.5" />
+          {/* Right - Submit a Ticket */}
+          <Card className="dark:bg-gray-800/50 border-none shadow-md overflow-hidden lg:col-span-2">
+            <CardHeader className="pt-4 pb-3 px-5 border-b border-gray-100 dark:border-gray-700/50">
+              <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                  <FileText className="w-5 h-5 text-cyan-500" />
+                </div>
                 Submit a Ticket
               </CardTitle>
             </CardHeader>
-            <CardContent className="py-2 px-3">
+            <CardContent className="px-5 py-4">
               {ticketSubmitted ? (
-                <div className="text-center py-4">
-                  <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                  <p className="text-[11px] font-semibold">Ticket Submitted!</p>
-                  <p className="text-[10px] text-muted-foreground">We'll respond within 24 hours</p>
+                <div className="text-center py-12">
+                  <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-4" />
+                  <p className="text-base font-semibold">Ticket Submitted!</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    We&apos;ll respond within 24 hours
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] text-muted-foreground">Subject</label>
+                    <label className="text-sm text-muted-foreground font-medium">
+                      Subject
+                    </label>
                     <Input
                       value={ticketSubject}
                       onChange={(e) => setTicketSubject(e.target.value)}
-                      placeholder="Brief description..."
-                      className="h-7 text-[11px]"
+                      placeholder="Brief description of your issue..."
+                      className="h-10 text-sm mt-2 bg-gray-100 dark:bg-gray-800 border-none shadow-none"
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] text-muted-foreground">Message</label>
+                    <label className="text-sm text-muted-foreground font-medium">
+                      Message
+                    </label>
                     <Textarea
                       value={ticketMessage}
                       onChange={(e) => setTicketMessage(e.target.value)}
                       placeholder="Describe your issue in detail..."
-                      className="text-[11px] min-h-[80px] resize-none"
+                      className="text-sm min-h-[120px] resize-none mt-2 bg-gray-100 dark:bg-gray-800 border-none shadow-none"
                     />
                   </div>
-                  <div>
-                    <label className="text-[10px] text-muted-foreground">Priority</label>
-                    <Select value={ticketPriority} onValueChange={setTicketPriority}>
-                      <SelectTrigger className="h-7 text-[11px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="low" className="text-[11px]">Low</SelectItem>
-                        <SelectItem value="normal" className="text-[11px]">Normal</SelectItem>
-                        <SelectItem value="high" className="text-[11px]">High</SelectItem>
-                        <SelectItem value="urgent" className="text-[11px]">Urgent</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-wrap justify-between gap-4">
+                    <div>
+                      <label className="text-sm text-muted-foreground font-medium">
+                        Priority
+                      </label>
+                      <Select
+                        value={ticketPriority}
+                        onValueChange={setTicketPriority}
+                      >
+                        <SelectTrigger className="h-10 text-sm mt-2 w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low" className="text-sm">
+                            Low
+                          </SelectItem>
+                          <SelectItem value="normal" className="text-sm">
+                            Normal
+                          </SelectItem>
+                          <SelectItem value="high" className="text-sm">
+                            High
+                          </SelectItem>
+                          <SelectItem value="urgent" className="text-sm">
+                            Urgent
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        onClick={handleSubmitTicket}
+                        disabled={
+                          !ticketSubject.trim() ||
+                          !ticketMessage.trim() ||
+                          ticketSubmitting
+                        }
+                        className="h-10 px-6 text-sm"
+                      >
+                        {ticketSubmitting ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : null}
+                        Submit Ticket
+                      </Button>
+                    </div>
                   </div>
-                  <Button
-                    onClick={handleSubmitTicket}
-                    disabled={!ticketSubject.trim() || !ticketMessage.trim() || ticketSubmitting}
-                    className="w-full h-7 text-[10px]"
-                  >
-                    {ticketSubmitting ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                    Submit Ticket
-                  </Button>
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Response Time */}
-          <Card className="dark:bg-gray-800/50 border-none bg-gradient-to-br from-cyan-500/10 to-blue-500/10">
-            <CardContent className="py-3 px-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-cyan-500" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-semibold">Average Response Time</p>
-                  <p className="text-[10px] text-muted-foreground">Under 2 hours during business hours</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>
-      </div>
 
-      {/* My Tickets */}
-      <Card className="dark:bg-gray-800/50 border-none">
-        <CardHeader className="py-2 px-3">
-          <CardTitle className="text-xs font-semibold flex items-center gap-1">
-            <Inbox className="w-3.5 h-3.5" />
-            My Tickets
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="py-2 px-3">
-          {ticketsLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-            </div>
-          ) : myTickets.length === 0 ? (
-            <p className="text-[11px] text-muted-foreground text-center py-4">No tickets yet</p>
-          ) : selectedTicket ? (
-            <div className="space-y-2">
-              <button
-                onClick={() => { setSelectedTicket(null); setTicketReplies([]); }}
-                className="text-[10px] text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1"
-              >
-                ← Back to tickets
-              </button>
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-[11px] font-semibold">{selectedTicket.subject}</h4>
-                  <Badge
-                    className={`text-[9px] capitalize ${
-                      selectedTicket.status === "open" ? "bg-blue-500/20 text-blue-600" :
-                      selectedTicket.status === "in_progress" ? "bg-yellow-500/20 text-yellow-600" :
-                      selectedTicket.status === "resolved" ? "bg-green-500/20 text-green-600" :
-                      "bg-gray-500/20 text-gray-600"
-                    }`}
-                    variant="secondary"
-                  >
-                    {selectedTicket.status.replace("_", " ")}
-                  </Badge>
+        {/* Row 2: My Tickets (full width) */}
+        <Card className="dark:bg-gray-800/50 border-none shadow-md overflow-hidden">
+          <CardHeader className="pt-4 pb-3 px-5 border-b border-gray-100 dark:border-gray-700/50">
+            <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                <Inbox className="w-5 h-5 text-cyan-500" />
+              </div>
+              My Tickets
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-5 py-4">
+            {ticketsLoading ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : myTickets.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30">
+                <div className="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-3">
+                  <Inbox className="w-6 h-6 text-cyan-500" />
                 </div>
-                <p className="text-[10px] text-muted-foreground">{selectedTicket.message}</p>
-                <p className="text-[9px] text-muted-foreground">
-                  {new Date(selectedTicket.created_at).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                <p className="text-sm font-medium text-foreground">No tickets yet</p>
+                <p className="text-xs text-muted-foreground mt-1 text-center max-w-[240px]">
+                  Submit a ticket above and we&apos;ll get back to you within 24 hours
                 </p>
               </div>
+            ) : selectedTicket ? (
+              <div className="space-y-6">
+                <button
+                  onClick={() => {
+                    setSelectedTicket(null);
+                    setTicketReplies([]);
+                  }}
+                  className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to tickets
+                </button>
 
-              <Separator />
-
-              <div className="space-y-2">
-                <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Replies</p>
-                {repliesLoading ? (
-                  <div className="flex items-center justify-center py-3">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
-                  </div>
-                ) : ticketReplies.length === 0 ? (
-                  <p className="text-[10px] text-muted-foreground text-center py-2">No replies yet</p>
-                ) : (
-                  ticketReplies.map((reply) => (
-                    <div
-                      key={reply.id}
-                      className={`rounded-lg p-2 text-[10px] ${
-                        reply.role === "admin"
-                          ? "bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800"
-                          : "bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold">
-                          {reply.role === "admin" ? "Support Team" : (reply.full_name || "You")}
-                        </span>
-                        <span className="text-[9px] text-muted-foreground">
-                          {new Date(reply.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30 overflow-hidden">
+                  <div className="p-5 space-y-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <h4 className="text-base font-semibold text-foreground">
+                        {selectedTicket.subject}
+                      </h4>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge
+                          className={`text-xs font-medium capitalize ${
+                            selectedTicket.status === "open"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                              : selectedTicket.status === "in_progress"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                                : selectedTicket.status === "resolved"
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                                  : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                          }`}
+                          variant="secondary"
+                        >
+                          {selectedTicket.status.replace("_", " ")}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(selectedTicket.created_at).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
                         </span>
                       </div>
-                      <p>{reply.message}</p>
                     </div>
-                  ))
-                )}
-              </div>
-
-              {selectedTicket.status !== "closed" && selectedTicket.status !== "resolved" && (
-                <div className="flex gap-2">
-                  <Input
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleReplySubmit()}
-                    placeholder="Type a reply..."
-                    className="h-7 text-[10px] flex-1"
-                  />
-                  <Button
-                    onClick={handleReplySubmit}
-                    disabled={!replyText.trim() || replySubmitting}
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                  >
-                    {replySubmitting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                  </Button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
-              {myTickets.map((ticket) => (
-                <button
-                  key={ticket.id}
-                  onClick={() => { setSelectedTicket(ticket); fetchReplies(ticket.id); }}
-                  className="w-full text-left p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-medium truncate">{ticket.subject}</span>
-                    <Badge
-                      className={`text-[8px] capitalize flex-shrink-0 ${
-                        ticket.status === "open" ? "bg-blue-500/20 text-blue-600" :
-                        ticket.status === "in_progress" ? "bg-yellow-500/20 text-yellow-600" :
-                        ticket.status === "resolved" ? "bg-green-500/20 text-green-600" :
-                        "bg-gray-500/20 text-gray-600"
-                      }`}
-                      variant="secondary"
-                    >
-                      {ticket.status.replace("_", " ")}
-                    </Badge>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {selectedTicket.message}
+                    </p>
                   </div>
-                  <p className="text-[9px] text-muted-foreground mt-0.5 truncate">{ticket.message}</p>
-                  <p className="text-[8px] text-muted-foreground mt-0.5">
-                    {new Date(ticket.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                  </p>
-                </button>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    Replies
+                  </h3>
+                  {repliesLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : ticketReplies.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700">
+                      No replies yet
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {ticketReplies.map((reply) => (
+                        <div
+                          key={reply.id}
+                          className={`rounded-xl p-4 text-sm ${
+                            reply.role === "admin"
+                              ? "bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200/80 dark:border-cyan-800"
+                              : "bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-semibold text-foreground">
+                              {reply.role === "admin"
+                                ? "Support Team"
+                                : reply.full_name || "You"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(reply.created_at).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground leading-relaxed">{reply.message}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {selectedTicket.status !== "closed" &&
+                  selectedTicket.status !== "resolved" && (
+                    <div className="flex gap-3 pt-2">
+                      <Input
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && handleReplySubmit()
+                        }
+                        placeholder="Type your reply..."
+                        className="h-10 text-sm flex-1 rounded-xl"
+                      />
+                      <Button
+                        onClick={handleReplySubmit}
+                        disabled={!replyText.trim() || replySubmitting}
+                        size="sm"
+                        className="h-10 px-4 rounded-xl"
+                      >
+                        {replySubmitting ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : (
+                          <Send className="w-4 h-4 mr-2" />
+                        )}
+                        Reply
+                      </Button>
+                    </div>
+                  )}
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                {myTickets.map((ticket) => (
+                  <button
+                    key={ticket.id}
+                    onClick={() => {
+                      setSelectedTicket(ticket);
+                      fetchReplies(ticket.id);
+                    }}
+                    className="w-full text-left flex items-center gap-4 p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50 hover:border-cyan-200 dark:hover:border-cyan-800 hover:bg-cyan-50/30 dark:hover:bg-cyan-950/20 transition-all group"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center shrink-0 group-hover:bg-cyan-500/20 transition-colors">
+                      <FileText className="w-5 h-5 text-cyan-500" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-sm font-semibold text-foreground truncate group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors">
+                          {ticket.subject}
+                        </span>
+                        <Badge
+                          className={`text-[10px] font-medium capitalize flex-shrink-0 ${
+                            ticket.status === "open"
+                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                              : ticket.status === "in_progress"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                                : ticket.status === "resolved"
+                                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300"
+                                  : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                          }`}
+                          variant="secondary"
+                        >
+                          {ticket.status.replace("_", " ")}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {ticket.message}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-1.5">
+                        {new Date(ticket.created_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0 group-hover:text-cyan-500 transition-colors" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Floating Chat Button */}
       {!chatOpen && (
@@ -681,7 +674,9 @@ export default function HelpSupport() {
               <div>
                 <p className="text-[11px] font-semibold">DataW Support</p>
                 {!chatMinimized && (
-                  <p className="text-[9px] text-primary-foreground/80">Online • Typically replies instantly</p>
+                  <p className="text-[9px] text-primary-foreground/80">
+                    Online • Typically replies instantly
+                  </p>
                 )}
               </div>
             </div>
@@ -725,7 +720,9 @@ export default function HelpSupport() {
                         <p className="text-[11px]">{msg.content}</p>
                         <p
                           className={`text-[8px] mt-0.5 ${
-                            msg.sender === "user" ? "text-primary-foreground/70" : "text-muted-foreground"
+                            msg.sender === "user"
+                              ? "text-primary-foreground/70"
+                              : "text-muted-foreground"
                           }`}
                         >
                           {formatTime(msg.timestamp)}
@@ -737,9 +734,18 @@ export default function HelpSupport() {
                     <div className="flex justify-start">
                       <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2">
                         <div className="flex items-center gap-1">
-                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                          <div
+                            className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                            style={{ animationDelay: "0ms" }}
+                          />
+                          <div
+                            className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                            style={{ animationDelay: "150ms" }}
+                          />
+                          <div
+                            className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"
+                            style={{ animationDelay: "300ms" }}
+                          />
                         </div>
                       </div>
                     </div>

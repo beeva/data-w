@@ -1114,7 +1114,7 @@ export default function CollectorDashboard() {
                 {
                   icon: LifeBuoy,
                   label: "Help Center",
-                  href: "/help",
+                  href: "/dashboard/faq",
                 },
                 {
                   icon: BookOpen,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -73,6 +74,7 @@ import {
   Settings,
   TrendingUp,
   Plus,
+  X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -90,6 +92,200 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+
+function RequesterGuideOverlay({
+  targetSelector,
+  title,
+  content,
+  step,
+  totalSteps,
+  onClose,
+  onNext,
+  onBack,
+}: {
+  targetSelector: string | null;
+  title: string;
+  content: string;
+  step: number;
+  totalSteps: number;
+  onClose: () => void;
+  onNext: () => void;
+  onBack: () => void;
+}) {
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{
+    top: number;
+    left: number;
+    placement: "top" | "bottom" | "left" | "right";
+  } | null>(null);
+
+  useEffect(() => {
+    if (!targetSelector) {
+      setTargetRect(null);
+      setPopoverPos(null);
+      return;
+    }
+    const el = document.querySelector(targetSelector);
+    if (!el) {
+      setTargetRect(null);
+      setPopoverPos(null);
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    setTargetRect(rect);
+    const popoverWidth = 320;
+    const popoverHeight = 180;
+    const gap = 12;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const spaceBottom = viewportH - rect.bottom;
+    const spaceTop = rect.top;
+    const spaceRight = viewportW - rect.right;
+    const spaceLeft = rect.left;
+    let placement: "top" | "bottom" | "left" | "right" = "bottom";
+    let top = 0;
+    let left = 0;
+    if (spaceBottom >= popoverHeight + gap) {
+      placement = "bottom";
+      top = rect.bottom + gap;
+      left = Math.max(
+        16,
+        Math.min(
+          rect.left + rect.width / 2 - popoverWidth / 2,
+          viewportW - popoverWidth - 16,
+        ),
+      );
+    } else if (spaceTop >= popoverHeight + gap) {
+      placement = "top";
+      top = rect.top - popoverHeight - gap;
+      left = Math.max(
+        16,
+        Math.min(
+          rect.left + rect.width / 2 - popoverWidth / 2,
+          viewportW - popoverWidth - 16,
+        ),
+      );
+    } else if (spaceRight >= popoverWidth + gap) {
+      placement = "right";
+      left = rect.right + gap;
+      top = Math.max(
+        16,
+        Math.min(
+          rect.top + rect.height / 2 - popoverHeight / 2,
+          viewportH - popoverHeight - 16,
+        ),
+      );
+    } else {
+      placement = "left";
+      left = rect.left - popoverWidth - gap;
+      top = Math.max(
+        16,
+        Math.min(
+          rect.top + rect.height / 2 - popoverHeight / 2,
+          viewportH - popoverHeight - 16,
+        ),
+      );
+    }
+    setPopoverPos({ top, left, placement });
+  }, [targetSelector]);
+
+  const padding = 8;
+  const highlightTop = targetRect ? targetRect.top - padding : 0;
+  const highlightLeft = targetRect ? targetRect.left - padding : 0;
+  const highlightWidth = targetRect ? targetRect.width + padding * 2 : 0;
+  const highlightHeight = targetRect ? targetRect.height + padding * 2 : 0;
+
+  return (
+    <div className="fixed inset-0 z-[100] pointer-events-auto">
+      {/* Full-screen transparent overlay for click-to-close */}
+      <div
+        className="absolute inset-0 cursor-pointer"
+        onClick={onClose}
+        aria-hidden
+      />
+      {/* Spotlight: box-shadow creates dimmed area with rounded inner edge; shadow follows border-radius */}
+      {targetRect && (
+        <div
+          className="absolute rounded-lg pointer-events-none"
+          style={{
+            top: highlightTop,
+            left: highlightLeft,
+            width: highlightWidth,
+            height: highlightHeight,
+            boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.6)",
+          }}
+        />
+      )}
+      {/* Popover */}
+      {popoverPos && (
+        <div
+          className="absolute w-80 rounded-xl shadow-2xl bg-card border border-border overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            top: popoverPos.top,
+            left: popoverPos.left,
+          }}
+        >
+          <div className="p-4 pb-2">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-bold text-card-foreground text-base leading-tight">
+                {title}
+              </h3>
+              <button
+                type="button"
+                onClick={onClose}
+                className="shrink-0 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+              {content}
+            </p>
+          </div>
+          <div className="flex items-center justify-between px-4 pb-4 pt-1">
+            <span className="text-xs font-semibold text-primary">
+              {step} of {totalSteps}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onBack}
+                className="h-8 px-3 rounded-lg bg-secondary text-secondary-foreground hover:bg-accent border-border"
+              >
+                Back
+              </Button>
+              <Button
+                size="sm"
+                onClick={onNext}
+                className="h-8 px-4 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+              >
+                {step >= totalSteps ? "Finish" : "Next"}
+              </Button>
+            </div>
+          </div>
+          {/* Caret pointing to target */}
+          {targetRect && popoverPos && (
+            <div
+              className={cn(
+                "absolute w-0 h-0 border-solid border-transparent",
+                popoverPos.placement === "bottom" &&
+                  "border-b-[8px] border-b-primary -top-2 left-1/2 -translate-x-1/2 border-x-[8px] border-x-transparent border-t-0",
+                popoverPos.placement === "top" &&
+                  "border-t-[8px] border-t-card -bottom-2 left-1/2 -translate-x-1/2 border-x-[8px] border-x-transparent border-b-0",
+                popoverPos.placement === "right" &&
+                  "border-r-[8px] border-r-card top-1/2 -translate-y-1/2 -left-2 border-y-[8px] border-y-transparent border-l-0",
+                popoverPos.placement === "left" &&
+                  "border-l-[8px] border-l-card top-1/2 -translate-y-1/2 -right-2 border-y-[8px] border-y-transparent border-r-0",
+              )}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function formatTimeAgo(dateString: string): string {
   const now = new Date();
@@ -132,6 +328,71 @@ export default function RequesterDashboard() {
     CollectorFeedbackTarget[]
   >([]);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideStep, setGuideStep] = useState(0);
+
+  useEffect(() => {
+    if (guideOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [guideOpen]);
+
+  const GUIDE_STEPS = [
+    {
+      target: "sidebar",
+      title: "Navigate with Ease",
+      content:
+        "This sidebar provides you with instant access to all the essential parts of your dashboard. Think of it as your personal shortcut menu, allowing you to quickly jump between profile, balance, and quick actions.",
+    },
+    {
+      target: "balance",
+      title: "Manage Your Budget",
+      content:
+        "Here you can see your available balance and total budget used across projects. Use 'View Transactions' to track all your payments and earnings.",
+    },
+    {
+      target: "quick-actions",
+      title: "Quick Actions Menu",
+      content:
+        "These shortcuts help you access help, settings, and support quickly without leaving the dashboard.",
+    },
+    {
+      target: "stats",
+      title: "Project Overview",
+      content:
+        "These stats give you a comprehensive overview of your projects. See active, paused, completed counts, pending reviews, and total budget at a glance.",
+    },
+    {
+      target: "new-project",
+      title: "Create New Projects",
+      content:
+        "Click here whenever you want to start a new data collection project. Define tasks, set budgets, and invite collectors.",
+    },
+    {
+      target: "projects",
+      title: "Track Your Projects",
+      content:
+        "This section lists all your projects with deadline, progress, and status. Click any project to open its workshop and manage submissions.",
+    },
+    {
+      target: "budget",
+      title: "Budget Allocation",
+      content:
+        "The budget overview shows how your budget is distributed across projects. Visualize spending and adjust your project budgets accordingly.",
+    },
+    {
+      target: "deadlines",
+      title: "Never Miss a Deadline",
+      content:
+        "Upcoming deadlines keep you on top of due dates. View your closest deadline and all upcoming projects to plan ahead.",
+    },
+  ];
+
+  const totalGuideSteps = GUIDE_STEPS.length;
 
   const userId = user?.id;
 
@@ -476,6 +737,36 @@ export default function RequesterDashboard() {
     .filter((p) => p.status === "open" || p.status === "completed")
     .reduce((sum, p) => sum + p.budget, 0);
 
+  const currentStepConfig = GUIDE_STEPS[guideStep];
+  const targetSelector = currentStepConfig?.target
+    ? `[data-guide="${currentStepConfig.target}"]`
+    : null;
+
+  const guideOverlay =
+    guideOpen && typeof document !== "undefined" && currentStepConfig
+      ? createPortal(
+          <RequesterGuideOverlay
+            targetSelector={targetSelector}
+            title={currentStepConfig.title}
+            content={currentStepConfig.content}
+            step={guideStep + 1}
+            totalSteps={totalGuideSteps}
+            onClose={() => setGuideOpen(false)}
+            onNext={() => {
+              if (guideStep >= totalGuideSteps - 1) {
+                setGuideOpen(false);
+              } else {
+                setGuideStep((s) => s + 1);
+              }
+            }}
+            onBack={() =>
+              setGuideStep((s) => (s <= 0 ? totalGuideSteps - 1 : s - 1))
+            }
+          />,
+          document.body,
+        )
+      : null;
+
   return (
     <div className="p-2">
       <CreateProjectDialog
@@ -483,9 +774,13 @@ export default function RequesterDashboard() {
         onOpenChange={setCreateProjectOpen}
         onSuccess={fetchData}
       />
+      {guideOverlay}
       <div className="flex flex-col lg:flex-row gap-6 pt-2">
         {/* Left panel – User info (like collector) */}
-        <aside className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-4">
+        <aside
+          data-guide="sidebar"
+          className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-4"
+        >
           <Card className="dark:bg-gray-800/50 border-none shadow-sm">
             <CardContent className="px-6">
               <div className="flex flex-col items-start gap-3">
@@ -599,7 +894,10 @@ export default function RequesterDashboard() {
           </Card>
 
           {/* Balance card */}
-          <Card className="dark:bg-gray-800/50 border-none shadow-sm">
+          <Card
+            data-guide="balance"
+            className="dark:bg-gray-800/50 border-none shadow-sm"
+          >
             <CardContent className="px-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -627,18 +925,21 @@ export default function RequesterDashboard() {
           </Card>
 
           {/* Quick Actions */}
-          <Card className="dark:bg-gray-800/50 border-none shadow-sm">
+          <Card
+            data-guide="quick-actions"
+            className="dark:bg-gray-800/50 border-none shadow-sm"
+          >
             <CardContent className="px-6">
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                 Quick Actions
               </p>
               <div className="flex flex-col gap-2">
                 {[
-                  { icon: LifeBuoy, label: "Help Center", href: "/help" },
+                  { icon: LifeBuoy, label: "Help Center", href: "/dashboard/faq" },
                   {
                     icon: BookOpen,
                     label: "Requester Guide",
-                    href: "/docs/requester",
+                    isGuide: true,
                   },
                   {
                     icon: MessageSquare,
@@ -650,17 +951,36 @@ export default function RequesterDashboard() {
                     label: "Account Settings",
                     href: "/dashboard/settings",
                   },
-                ].map(({ icon: Icon, label, href }) => (
-                  <Link
-                    key={label}
-                    href={href}
-                    className="flex items-center gap-3 px-2 py-2 rounded-lg text-sm text-foreground hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group"
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span className="flex-1 font-medium">{label}</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </Link>
-                ))}
+                ].map(({ icon: Icon, label, href, isGuide }) =>
+                  isGuide ? (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => {
+                        window.scrollTo(0, 0);
+                        requestAnimationFrame(() => {
+                          setGuideStep(0);
+                          setGuideOpen(true);
+                        });
+                      }}
+                      className="flex w-full items-center gap-3 px-2 py-2 rounded-lg text-sm text-foreground hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group text-left"
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="flex-1 font-medium">{label}</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </button>
+                  ) : (
+                    <Link
+                      key={label}
+                      href={href!}
+                      className="flex items-center gap-3 px-2 py-2 rounded-lg text-sm text-foreground hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors group"
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="flex-1 font-medium">{label}</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </Link>
+                  ),
+                )}
               </div>
             </CardContent>
           </Card>
@@ -679,6 +999,7 @@ export default function RequesterDashboard() {
               </p>
             </div>
             <Button
+              data-guide="new-project"
               onClick={() => setCreateProjectOpen(true)}
               size="sm"
               className="btn-gelatine gap-2 h-10 px-4 rounded-xl text-sm font-semibold bg-gradient-to-r from-cyan-500 to-teal-500 dark:from-cyan-600 dark:to-teal-600 text-white hover:opacity-90 transition-opacity shadow-sm"
@@ -735,7 +1056,10 @@ export default function RequesterDashboard() {
 
             if (loading) {
               return (
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
+                <div
+                  data-guide="stats"
+                  className="grid grid-cols-2 lg:grid-cols-5 gap-6"
+                >
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Card
                       key={i}
@@ -758,7 +1082,10 @@ export default function RequesterDashboard() {
             }
 
             return (
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-6">
+              <div
+                data-guide="stats"
+                className="grid grid-cols-2 lg:grid-cols-5 gap-6"
+              >
                 {stats.map(
                   ({
                     label,
@@ -810,7 +1137,10 @@ export default function RequesterDashboard() {
                   "minmax(0,0.7fr) 130px minmax(0,1fr) 80px 112px 44px";
 
                 return (
-                  <Card className="dark:bg-gray-800/50 border-none shadow-md overflow-hidden pt-2 flex-1 min-h-0 flex flex-col">
+                  <Card
+                    data-guide="projects"
+                    className="dark:bg-gray-800/50 border-none shadow-md overflow-hidden pt-2 flex flex-col"
+                  >
                     {/* Header */}
                     <CardHeader className="pt-4 pl-5 pr-0">
                       <div className="flex items-center justify-between gap-3">
@@ -834,7 +1164,7 @@ export default function RequesterDashboard() {
 
                     {loading ? (
                       <>
-                        <div className="flex flex-col gap-0 flex-1 min-h-0">
+                        <div className="flex flex-col gap-0">
                           <div
                             className="grid items-center px-5 py-5 bg-gray-50/80 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700/40 flex-shrink-0"
                             style={{ gridTemplateColumns: COL }}
@@ -858,7 +1188,7 @@ export default function RequesterDashboard() {
                               Action
                             </span>
                           </div>
-                          <ScrollArea className="flex-1 min-h-0">
+                          <div className="max-h-[256px] overflow-y-auto overflow-x-hidden dashboard-scrollbar">
                             <div className="flex flex-col pb-4">
                               {Array.from({ length: 5 }).map((_, i) => (
                                 <div
@@ -887,11 +1217,11 @@ export default function RequesterDashboard() {
                                 </div>
                               ))}
                             </div>
-                          </ScrollArea>
+                          </div>
                         </div>
                       </>
                     ) : projects.length === 0 ? (
-                      <div className="flex flex-1 min-h-0 flex-col items-center justify-center text-center">
+                      <div className="flex flex-col items-center justify-center text-center py-12">
                         <div className="w-12 h-12 rounded-full bg-muted dark:bg-gray-700 flex items-center justify-center mb-3">
                           <FolderKanban className="w-6 h-6 text-muted-foreground" />
                         </div>
@@ -909,7 +1239,7 @@ export default function RequesterDashboard() {
                     ) : (
                       <>
                         {/* Table header row — sticky outside the scroll area */}
-                        <div className="flex flex-col gap-0 flex-1 min-h-0">
+                        <div className="flex flex-col gap-0">
                           <div
                             className="grid items-center px-5 py-5 bg-gray-50/80 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700/40 flex-shrink-0"
                             style={{ gridTemplateColumns: COL }}
@@ -934,8 +1264,8 @@ export default function RequesterDashboard() {
                             </span>
                           </div>
 
-                          <ScrollArea className="flex-1 min-h-0">
-                            <div className="flex flex-col pb-4">
+                          <div className="max-h-[256px] overflow-y-auto overflow-x-hidden dashboard-scrollbar">
+                            <div className="flex flex-col">
                               {projects.map((project) => {
                                 const progress = getProjectProgress(project);
                                 const daysLeft = getDaysUntilDeadline(
@@ -1173,7 +1503,7 @@ export default function RequesterDashboard() {
                                 );
                               })}
                             </div>
-                          </ScrollArea>
+                          </div>
                         </div>
                       </>
                     )}
@@ -1182,7 +1512,10 @@ export default function RequesterDashboard() {
               })()}
 
               {/* Budget Overview — modern horizontal bar chart + legend */}
-              <Card className="dark:bg-gray-800/50 border-none shadow-md overflow-hidden pt-2 flex-1 min-h-0 flex flex-col">
+              <Card
+                data-guide="budget"
+                className="dark:bg-gray-800/50 border-none shadow-md overflow-hidden pt-2 flex-1 min-h-0 flex flex-col"
+              >
                 <CardHeader className="pt-4 pl-5 pr-0">
                   <div className="flex items-center justify-between gap-2">
                     <CardTitle className="text-base font-medium text-foreground">
@@ -1378,8 +1711,11 @@ export default function RequesterDashboard() {
             {/* Right Column - Notifications & Deadlines */}
             <div className="flex flex-col gap-6 min-h-0">
               {/* Upcoming Deadlines */}
-              <Card className="dark:bg-gray-800/50 border-none shadow-md pt-2 flex-1 min-h-0 flex flex-col">
-                <CardContent className="pt-3 px-5 flex flex-col flex-1 min-h-0">
+              <Card
+                data-guide="deadlines"
+                className="dark:bg-gray-800/50 border-none shadow-md pt-2 flex flex-col"
+              >
+                <CardContent className="pt-3 px-5 flex flex-col">
                   {loading ? (
                     <div className="overflow-hidden">
                       <Skeleton className="min-h-[5.5rem] rounded-xl w-full" />
@@ -1406,7 +1742,7 @@ export default function RequesterDashboard() {
                       </div>
                     </div>
                   ) : upcomingDeadlines.length === 0 ? (
-                    <div className="flex flex-1 min-h-0 flex-col items-center justify-center text-center">
+                    <div className="flex flex-col items-center justify-center text-center py-12">
                       <div className="w-12 h-12 rounded-full bg-muted dark:bg-gray-700 flex items-center justify-center mb-3">
                         <Timer className="w-6 h-6 text-muted-foreground" />
                       </div>
@@ -1563,7 +1899,7 @@ export default function RequesterDashboard() {
                             All upcoming
                           </p>
                           <div className="space-y-3">
-                            {upcomingDeadlines.slice(1).map((project) => {
+                            {upcomingDeadlines.slice(1, 4).map((project) => {
                               const created = project.created_at
                                 ? new Date(project.created_at).getTime()
                                 : Date.now();
@@ -1698,7 +2034,7 @@ export default function RequesterDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0 pb-0 pl-5 pr-0">
-                  <ScrollArea className="h-52 pr-5">
+                  <ScrollArea className="h-[256px] pr-5">
                     {loading ? (
                       <div className="space-y-0">
                         {Array.from({ length: 4 }).map((_, i) => (

@@ -39,7 +39,6 @@ import {
   FileVideo,
   File,
   Search,
-  InboxIcon,
   ExternalLink,
   Download,
   X,
@@ -1081,14 +1080,14 @@ export default function ProjectSubmissions({
 
         {/* List */}
         {submissions.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="rounded-full bg-muted/80 p-5 mb-4">
-              <InboxIcon className="w-8 h-8 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-24 h-24">
+              <EmptyDataSvg />
             </div>
-            <p className="text-base font-semibold text-foreground mb-1">
+            <h3 className="text-base font-semibold text-foreground">
               No submissions yet
-            </p>
-            <p className="text-sm text-muted-foreground max-w-[280px]">
+            </h3>
+            <p className="text-sm text-muted-foreground">
               When collectors submit their work, it will appear here.
             </p>
           </div>

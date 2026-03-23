@@ -39,7 +39,6 @@ import {
   Users,
   Check,
   X,
-  Briefcase,
   MapPin,
   MessageSquare,
   Star,
@@ -352,14 +351,14 @@ export default function ProjectProposals({
         )}
 
         {proposals.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border bg-muted/30 flex flex-col items-center justify-center py-14 px-6 text-center">
-            <div className="rounded-full bg-muted/80 p-4 mb-4">
-              <Briefcase className="w-6 h-6 text-muted-foreground" />
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-24 h-24">
+              <EmptyDataSvg />
             </div>
-            <p className="text-sm font-medium text-foreground mb-0.5">
+            <h3 className="text-base font-semibold text-foreground">
               No proposals yet
-            </p>
-            <p className="text-xs text-muted-foreground max-w-[260px]">
+            </h3>
+            <p className="text-sm text-muted-foreground">
               When collectors submit proposals, they’ll appear here.
             </p>
           </div>

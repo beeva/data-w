@@ -41,9 +41,15 @@ import {
   MoreHorizontal,
   type LucideIcon,
   TriangleAlert,
+  Database,
+  Download,
+  Heart,
 } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
-import DataSuggestionsPanel from "./DataSuggestionsPanel";
+import {
+  searchHuggingFaceDatasets,
+  type HuggingFaceDataset,
+} from "@/lib/services/dataSuggestionsService";
 import { cn } from "@/lib/utils";
 import { JOB_CATEGORIES } from "@/lib/categories";
 
@@ -327,6 +333,13 @@ export default function CreateProjectDialog({
   const deadlineTriggerRef = useRef<HTMLDivElement>(null);
   const deadlineCalendarRef = useRef<HTMLDivElement>(null);
 
+  const [titleSuggestions, setTitleSuggestions] = useState<
+    HuggingFaceDataset[]
+  >([]);
+  const [titleSuggestionsLoading, setTitleSuggestionsLoading] = useState(false);
+  const [titleSuggestionsOpen, setTitleSuggestionsOpen] = useState(false);
+  const titleInputWrapperRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!deadlineCalendarOpen) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -342,6 +355,50 @@ export default function CreateProjectDialog({
     return () =>
       document.removeEventListener("click", handleClickOutside, true);
   }, [deadlineCalendarOpen]);
+
+  // Search Hugging Face datasets when title changes (on title step)
+  useEffect(() => {
+    const query = formData.title.trim();
+    const stepId = STEP_ORDER[stepIndex];
+    if (stepId !== "title" || query.length < 2) {
+      setTitleSuggestions([]);
+      setTitleSuggestionsOpen(false);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      setTitleSuggestionsLoading(true);
+      setTitleSuggestionsOpen(true);
+      searchHuggingFaceDatasets(query, 8)
+        .then(({ data, error }) => {
+          if (!error && data) {
+            setTitleSuggestions(data);
+            setTitleSuggestionsOpen(data.length > 0);
+          } else {
+            setTitleSuggestions([]);
+            setTitleSuggestionsOpen(false);
+          }
+        })
+        .catch(() => {
+          setTitleSuggestions([]);
+          setTitleSuggestionsOpen(false);
+        })
+        .finally(() => setTitleSuggestionsLoading(false));
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [formData.title, stepIndex]);
+
+  useEffect(() => {
+    if (!titleSuggestionsOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (!titleInputWrapperRef.current?.contains(target)) {
+        setTitleSuggestionsOpen(false);
+      }
+    };
+    document.addEventListener("click", handleClickOutside, true);
+    return () =>
+      document.removeEventListener("click", handleClickOutside, true);
+  }, [titleSuggestionsOpen]);
 
   const currentStepId: StepId = STEP_ORDER[stepIndex];
   const isFirstStep = stepIndex === 0;
@@ -527,7 +584,9 @@ export default function CreateProjectDialog({
     setError("");
     setShowCongratsOverlay(false);
     setFormData(
-      isEditMode && project ? getInitialFormDataForProject(project) : initialFormData,
+      isEditMode && project
+        ? getInitialFormDataForProject(project)
+        : initialFormData,
     );
   }
 
@@ -665,47 +724,14 @@ export default function CreateProjectDialog({
           document.body,
         );
 
-  const floatingSuggestionsPanel =
-    typeof document === "undefined" || !open || showCongratsOverlay || phase !== "form"
-      ? null
-      : createPortal(
-          <aside className="hidden xl:block fixed right-0 top-[7vh] z-[60] w-1/2 h-[86vh] border-l border-gray-200 dark:border-[#2a2a2a] bg-[#fafafa] dark:bg-[#0f0f0f] p-6 overflow-y-auto">
-            <div className="h-full min-h-0 flex flex-col">
-              <div className="mb-3">
-                <p className="text-sm font-semibold text-black dark:text-white">
-                  Data suggestions
-                </p>
-                <p className="text-xs text-black dark:text-white/60 mt-1">
-                  Similar projects and budget ideas while
-                  {isEditMode ? " editing your project." : " creating your project."}
-                </p>
-              </div>
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <DataSuggestionsPanel
-                  title={formData.title}
-                  description={formData.description}
-                  onBudgetSelect={(budget) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      budget: budget.toFixed(2),
-                    }))
-                  }
-                />
-              </div>
-            </div>
-          </aside>,
-          document.body,
-        );
-
   return (
     <>
       {congratsOverlay}
-      {floatingSuggestionsPanel}
       {!showCongratsOverlay && (
-        <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogContent
             showCloseButton={false}
-            className="w-[96vw] sm:max-w-6xl h-[80vh] overflow-hidden rounded-2xl border-0 bg-transparent shadow-none flex flex-col p-0 gap-0 xl:left-0 xl:top-[7vh] xl:translate-x-0 xl:translate-y-0 xl:w-1/2 xl:max-w-none xl:h-[86vh] xl:rounded-r-2xl xl:rounded-l-none xl:border-r xl:border-gray-200 dark:xl:border-[#2a2a2a]"
+            className="sm:max-w-4xl h-[80vh] overflow-hidden rounded-2xl border-0 bg-transparent shadow-none flex flex-col p-0 gap-0"
             onInteractOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
           >
@@ -758,685 +784,759 @@ export default function CreateProjectDialog({
                         </div>
                       )}
 
-                  {/* Step 1 — Title */}
-                  {currentStepId === "title" && (
-                    <div className="space-y-8 pl-4 mb-24">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          What is your project about?
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Give your project a title.
-                        </p>
-                      </div>
-                      <div className="space-y-5 max-w-lg">
-                        <div className="space-y-2">
-                          <Label className="text-black dark:text-white/80 text-sm">
-                            Project Title *
-                          </Label>
-                          <Input
-                            value={formData.title}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                title: e.target.value,
-                              }))
-                            }
-                            placeholder="e.g., Collect Street Sign Images"
-                            className="rounded-full h-12 px-6 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 2 — Description */}
-                  {currentStepId === "description" && (
-                    <div className="space-y-8 pl-4 mb-24">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          Describe your project
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Describe what data you need and how it will be used.
-                        </p>
-                      </div>
-                      <div className="space-y-5 max-w-lg">
-                        <div className="space-y-2">
-                          <Label className="text-black dark:text-white/80 text-sm">
-                            Description *
-                          </Label>
-                          <Textarea
-                            value={formData.description}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                description: e.target.value,
-                              }))
-                            }
-                            placeholder="Describe what data you need..."
-                            rows={6}
-                            className="rounded-xl bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 resize-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 3 — Category (single select, chip UI) */}
-                  {currentStepId === "category" && (
-                    <div className="space-y-8 pl-4">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          Category
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Select one category for your project.
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-3">
-                        {CATEGORIES.map((cat) => {
-                          const selected = formData.category === cat;
-                          return (
-                            <button
-                              key={cat}
-                              type="button"
-                              onClick={() => {
-                                if (selected) {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    category: "",
-                                  }));
-                                } else {
-                                  setFormData((prev) => ({
-                                    ...prev,
-                                    category: cat,
-                                  }));
-                                  setStepIndex((i) =>
-                                    Math.min(i + 1, TOTAL_STEPS - 1),
-                                  );
-                                }
-                              }}
-                              className={cn(
-                                "btn-gelatine flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium transition-all border",
-                                selected
-                                  ? "bg-[#0a0a0a] dark:bg-white text-white dark:text-black border-[#0a0a0a] dark:border-white"
-                                  : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
-                              )}
-                            >
-                              {selected && (
-                                <Check
-                                  className="h-3.5 w-3.5 shrink-0"
-                                  strokeWidth={3}
-                                />
-                              )}
-                              {cat}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 4 — Budget & Timeline */}
-                  {currentStepId === "budget" && (
-                    <div className="space-y-8 pl-4">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          Budget and timeline
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Set your budget, deadline, and how many collectors you
-                          need.
-                        </p>
-                      </div>
-                      <div className="space-y-5 max-w-md">
-                        <div className="space-y-2">
-                          <Label className="text-black dark:text-white/80 text-sm">
-                            Budget (USD) *
-                          </Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black dark:text-white/50 pointer-events-none" />
-                            <Input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              placeholder="0.00"
-                              value={formData.budget}
-                              onChange={(e) =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  budget: e.target.value,
-                                }))
-                              }
-                              className="rounded-full h-12 w-full pl-10 pr-4 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
-                            />
+                      {/* Step 1 — Title */}
+                      {currentStepId === "title" && (
+                        <div className="space-y-8 pl-4 mb-52">
+                          <div className="space-y-2">
+                            <p className="text-2xl font-semibold text-black dark:text-white">
+                              What is your project about?
+                            </p>
+                            <p className="text-sm text-black dark:text-white/60">
+                              Give your project a title.
+                            </p>
                           </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-black dark:text-white/80 text-sm">
-                            Deadline *
-                          </Label>
-                          <div
-                            ref={deadlineTriggerRef}
-                            className="relative flex items-center"
-                          >
-                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black dark:text-white/50 pointer-events-none" />
-                            <Input
-                              type="date"
-                              value={formData.deadline}
-                              onChange={(e) =>
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  deadline: e.target.value,
-                                }))
-                              }
-                              className="rounded-full h-12 w-full pl-10 pr-12 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-10 [&::-webkit-calendar-picker-indicator]:w-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-default"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (!deadlineCalendarOpen) {
-                                  const rect =
-                                    deadlineTriggerRef.current?.getBoundingClientRect();
-                                  if (rect) {
-                                    setDeadlineCalendarPosition({
-                                      top: rect.bottom + 8,
-                                      left: rect.left,
-                                    });
-                                  }
-                                  if (formData.deadline) {
-                                    const [y, m] = formData.deadline
-                                      .split("-")
-                                      .map(Number);
-                                    setDeadlineCalendarView({
-                                      year: y,
-                                      month: m - 1,
-                                    });
-                                  } else {
-                                    const d = new Date();
-                                    setDeadlineCalendarView({
-                                      year: d.getFullYear(),
-                                      month: d.getMonth(),
-                                    });
-                                  }
-                                  setDeadlineCalendarOpen(true);
-                                } else {
-                                  setDeadlineCalendarOpen(false);
-                                  setDeadlineCalendarPosition(null);
-                                }
-                              }}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white transition-colors"
-                              aria-label="Open calendar"
+                          <div className="space-y-5 max-w-lg">
+                            <div
+                              ref={titleInputWrapperRef}
+                              className="space-y-2 relative"
                             >
-                              <Calendar className="h-4 w-4" />
-                            </button>
-                            {deadlineCalendarOpen &&
-                              deadlineCalendarPosition &&
-                              typeof document !== "undefined" &&
-                              createPortal(
-                                <div
-                                  ref={deadlineCalendarRef}
-                                  style={{
-                                    position: "fixed",
-                                    top: deadlineCalendarPosition.top,
-                                    left: deadlineCalendarPosition.left,
-                                    zIndex: 99999,
-                                    pointerEvents: "auto",
-                                  }}
-                                  className="w-[min(320px,calc(100vw-2rem))] rounded-2xl border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#0a0a0a] shadow-lg p-4 animate-in fade-in-0 zoom-in-95 duration-200"
-                                  role="dialog"
-                                  aria-label="Choose deadline date"
-                                >
-                                  <div className="flex items-center justify-between gap-2 mb-4">
-                                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      <Select
-                                        value={String(
-                                          deadlineCalendarView.month,
-                                        )}
-                                        onValueChange={(val) =>
-                                          setDeadlineCalendarView((v) => ({
-                                            ...v,
-                                            month: Number(val),
-                                          }))
-                                        }
-                                      >
-                                        <SelectTrigger
-                                          className="flex-1 min-w-0 text-sm font-medium text-black dark:text-white bg-transparent border border-[#e5e5e5] dark:border-[#333] rounded-lg h-8 px-2 py-1.5 focus:ring-2 focus:ring-[#263672] dark:focus:ring-[#5b7cce]"
-                                          aria-label="Select month"
-                                        >
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="z-[100000] bg-white dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#333]">
-                                          {MONTH_NAMES.map((name, i) => (
-                                            <SelectItem
-                                              key={name}
-                                              value={String(i)}
-                                              className="text-sm cursor-pointer"
-                                            >
-                                              {name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                      <Select
-                                        value={String(
-                                          deadlineCalendarView.year,
-                                        )}
-                                        onValueChange={(val) =>
-                                          setDeadlineCalendarView((v) => ({
-                                            ...v,
-                                            year: Number(val),
-                                          }))
-                                        }
-                                      >
-                                        <SelectTrigger
-                                          className="w-[72px] shrink-0 text-sm font-medium text-black dark:text-white bg-transparent border border-[#e5e5e5] dark:border-[#333] rounded-lg h-8 px-2 py-1.5 focus:ring-2 focus:ring-[#263672] dark:focus:ring-[#5b7cce]"
-                                          aria-label="Select year"
-                                        >
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="z-[100000] bg-white dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#333]">
-                                          {Array.from(
-                                            {
-                                              length:
-                                                CALENDAR_YEAR_MAX -
-                                                CALENDAR_YEAR_MIN +
-                                                1,
-                                            },
-                                            (_, i) => CALENDAR_YEAR_MIN + i,
-                                          ).map((y) => (
-                                            <SelectItem
-                                              key={y}
-                                              value={String(y)}
-                                              className="text-sm cursor-pointer"
-                                            >
-                                              {y}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="flex items-center gap-0.5 shrink-0">
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setDeadlineCalendarView((v) => {
-                                            const d = new Date(
-                                              v.year,
-                                              v.month - 1,
-                                              1,
-                                            );
-                                            return {
-                                              year: d.getFullYear(),
-                                              month: d.getMonth(),
-                                            };
-                                          })
-                                        }
-                                        className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white"
-                                        aria-label="Previous month"
-                                      >
-                                        <ChevronLeft className="h-4 w-4" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          setDeadlineCalendarView((v) => {
-                                            const d = new Date(
-                                              v.year,
-                                              v.month + 1,
-                                              1,
-                                            );
-                                            return {
-                                              year: d.getFullYear(),
-                                              month: d.getMonth(),
-                                            };
-                                          })
-                                        }
-                                        className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white"
-                                        aria-label="Next month"
-                                      >
-                                        <ChevronRight className="h-4 w-4" />
-                                      </button>
-                                    </div>
-                                  </div>
-                                  <div className="grid grid-cols-7 gap-0.5 mb-3">
-                                    {[
-                                      "Su",
-                                      "Mo",
-                                      "Tu",
-                                      "We",
-                                      "Th",
-                                      "Fr",
-                                      "Sa",
-                                    ].map((day) => (
-                                      <div
-                                        key={day}
-                                        className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1"
-                                      >
-                                        {day}
+                              <Label className="text-black dark:text-white/80 text-sm">
+                                Project Title *
+                              </Label>
+                              <Input
+                                value={formData.title}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    title: e.target.value,
+                                  }))
+                                }
+                                onFocus={() => {
+                                  if (
+                                    titleSuggestions.length > 0 &&
+                                    formData.title.trim().length >= 2
+                                  )
+                                    setTitleSuggestionsOpen(true);
+                                }}
+                                placeholder="e.g., Collect Street Sign Images"
+                                className="rounded-full h-12 px-6 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
+                              />
+                              {/* Hugging Face dataset suggestions dropdown */}
+                              {titleSuggestionsOpen &&
+                                (titleSuggestions.length > 0 ||
+                                  titleSuggestionsLoading) && (
+                                  <div className="absolute z-50 w-full mt-1 rounded-lg shadow-lg max-h-60 overflow-y-auto bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
+                                    {titleSuggestionsLoading &&
+                                    titleSuggestions.length === 0 ? (
+                                      <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                                        Searching datasets...
                                       </div>
-                                    ))}
-                                    {getCalendarDays(
-                                      deadlineCalendarView.year,
-                                      deadlineCalendarView.month,
-                                      formData.deadline,
-                                    ).map((cell) => (
-                                      <button
-                                        key={cell.ymd}
-                                        type="button"
-                                        onClick={() => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            deadline: cell.ymd,
-                                          }));
-                                          setDeadlineCalendarOpen(false);
-                                          setDeadlineCalendarPosition(null);
-                                        }}
-                                        className={cn(
-                                          "h-9 w-9 rounded-lg text-sm transition-colors",
-                                          !cell.isCurrentMonth &&
-                                            "text-gray-400 dark:text-gray-500",
-                                          cell.isToday &&
-                                            "bg-black/10 dark:bg-white/10 font-medium",
-                                          cell.isSelected &&
-                                            "bg-[#263672] dark:bg-[#3b4a7d] text-white font-medium hover:bg-[#1e2a4a] dark:hover:bg-[#4a5d8f]",
-                                          !cell.isSelected &&
-                                            cell.isCurrentMonth &&
-                                            "hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white",
-                                        )}
-                                      >
-                                        {cell.label}
-                                      </button>
-                                    ))}
+                                    ) : (
+                                      titleSuggestions.map((dataset) => (
+                                        <a
+                                          key={dataset.id}
+                                          href={dataset.url}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors flex items-start gap-3 block"
+                                        >
+                                          <div className="shrink-0 w-8 h-8 rounded-full border border-gray-200 dark:border-slate-500 flex items-center justify-center">
+                                            <Database className="w-4 h-4 text-muted-foreground dark:text-slate-400" />
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-foreground dark:text-white text-sm leading-tight">
+                                              {dataset.name}
+                                            </p>
+                                            {dataset.tags.length > 0 && (
+                                              <div className="flex flex-wrap gap-1 mt-1">
+                                                {dataset.tags
+                                                  .slice(0, 4)
+                                                  .map((tag, idx) => (
+                                                    <span
+                                                      key={idx}
+                                                      className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400"
+                                                    >
+                                                      {tag}
+                                                    </span>
+                                                  ))}
+                                              </div>
+                                            )}
+                                          </div>
+                                          <div className="shrink-0 flex items-center gap-3 text-xs text-muted-foreground dark:text-slate-400">
+                                            <span className="flex items-center gap-1">
+                                              <Download className="w-3.5 h-3.5" />
+                                              {dataset.downloads >= 1000
+                                                ? `${(dataset.downloads / 1000).toFixed(1)}k`
+                                                : dataset.downloads}
+                                            </span>
+                                            <span className="flex items-center gap-1">
+                                              <Heart className="w-3.5 h-3.5" />
+                                              {dataset.likes}
+                                            </span>
+                                          </div>
+                                        </a>
+                                      ))
+                                    )}
                                   </div>
-                                  <div className="flex items-center justify-between pt-2 border-t border-[#e5e5e5] dark:border-[#333]">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setFormData((prev) => ({
-                                          ...prev,
-                                          deadline: "",
-                                        }));
-                                        setDeadlineCalendarOpen(false);
-                                        setDeadlineCalendarPosition(null);
-                                      }}
-                                      className="text-sm font-medium text-[#263672] dark:text-[#5b7cce] hover:underline"
-                                    >
-                                      Clear
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setFormData((prev) => ({
-                                          ...prev,
-                                          deadline: toYMD(new Date()),
-                                        }));
-                                        setDeadlineCalendarOpen(false);
-                                        setDeadlineCalendarPosition(null);
-                                      }}
-                                      className="text-sm font-medium text-[#263672] dark:text-[#5b7cce] hover:underline"
-                                    >
-                                      Today
-                                    </button>
-                                  </div>
-                                </div>,
-                                document.body,
-                              )}
+                                )}
+                            </div>
                           </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-black dark:text-white/80 text-sm">
-                            Max Collectors *
-                          </Label>
-                          <div className="relative">
-                            <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black dark:text-white/50 pointer-events-none" />
-                            <Input
-                              type="number"
-                              min="1"
-                              value={formData.max_collectors}
+                      )}
+
+                      {/* Step 2 — Description */}
+                      {currentStepId === "description" && (
+                        <div className="space-y-8 pl-4 mb-24">
+                          <div className="space-y-2">
+                            <p className="text-2xl font-semibold text-black dark:text-white">
+                              Describe your project
+                            </p>
+                            <p className="text-sm text-black dark:text-white/60">
+                              Describe what data you need and how it will be
+                              used.
+                            </p>
+                          </div>
+                          <div className="space-y-5 max-w-lg">
+                            <div className="space-y-2">
+                              <Label className="text-black dark:text-white/80 text-sm">
+                                Description *
+                              </Label>
+                              <Textarea
+                                value={formData.description}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    description: e.target.value,
+                                  }))
+                                }
+                                placeholder="Describe what data you need..."
+                                rows={6}
+                                className="rounded-xl bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 resize-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 3 — Category (single select, chip UI) */}
+                      {currentStepId === "category" && (
+                        <div className="space-y-8 pl-4">
+                          <div className="space-y-2">
+                            <p className="text-2xl font-semibold text-black dark:text-white">
+                              Category
+                            </p>
+                            <p className="text-sm text-black dark:text-white/60">
+                              Select one category for your project.
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-3">
+                            {CATEGORIES.map((cat) => {
+                              const selected = formData.category === cat;
+                              return (
+                                <button
+                                  key={cat}
+                                  type="button"
+                                  onClick={() => {
+                                    if (selected) {
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        category: "",
+                                      }));
+                                    } else {
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        category: cat,
+                                      }));
+                                      setStepIndex((i) =>
+                                        Math.min(i + 1, TOTAL_STEPS - 1),
+                                      );
+                                    }
+                                  }}
+                                  className={cn(
+                                    "btn-gelatine flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium transition-all border",
+                                    selected
+                                      ? "bg-[#0a0a0a] dark:bg-white text-white dark:text-black border-[#0a0a0a] dark:border-white"
+                                      : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
+                                  )}
+                                >
+                                  {selected && (
+                                    <Check
+                                      className="h-3.5 w-3.5 shrink-0"
+                                      strokeWidth={3}
+                                    />
+                                  )}
+                                  {cat}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 4 — Budget & Timeline */}
+                      {currentStepId === "budget" && (
+                        <div className="space-y-8 pl-4">
+                          <div className="space-y-2">
+                            <p className="text-2xl font-semibold text-black dark:text-white">
+                              Budget and timeline
+                            </p>
+                            <p className="text-sm text-black dark:text-white/60">
+                              Set your budget, deadline, and how many collectors
+                              you need.
+                            </p>
+                          </div>
+                          <div className="space-y-5 max-w-md">
+                            <div className="space-y-2">
+                              <Label className="text-black dark:text-white/80 text-sm">
+                                Budget (USD) *
+                              </Label>
+                              <div className="relative">
+                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black dark:text-white/50 pointer-events-none" />
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  placeholder="0.00"
+                                  value={formData.budget}
+                                  onChange={(e) =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      budget: e.target.value,
+                                    }))
+                                  }
+                                  className="rounded-full h-12 w-full pl-10 pr-4 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-black dark:text-white/80 text-sm">
+                                Deadline *
+                              </Label>
+                              <div
+                                ref={deadlineTriggerRef}
+                                className="relative flex items-center"
+                              >
+                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black dark:text-white/50 pointer-events-none" />
+                                <Input
+                                  type="date"
+                                  value={formData.deadline}
+                                  onChange={(e) =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      deadline: e.target.value,
+                                    }))
+                                  }
+                                  className="rounded-full h-12 w-full pl-10 pr-12 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a] [&::-webkit-calendar-picker-indicator]:opacity-0 [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:right-10 [&::-webkit-calendar-picker-indicator]:w-0 [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-default"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (!deadlineCalendarOpen) {
+                                      const rect =
+                                        deadlineTriggerRef.current?.getBoundingClientRect();
+                                      if (rect) {
+                                        setDeadlineCalendarPosition({
+                                          top: rect.bottom + 8,
+                                          left: rect.left,
+                                        });
+                                      }
+                                      if (formData.deadline) {
+                                        const [y, m] = formData.deadline
+                                          .split("-")
+                                          .map(Number);
+                                        setDeadlineCalendarView({
+                                          year: y,
+                                          month: m - 1,
+                                        });
+                                      } else {
+                                        const d = new Date();
+                                        setDeadlineCalendarView({
+                                          year: d.getFullYear(),
+                                          month: d.getMonth(),
+                                        });
+                                      }
+                                      setDeadlineCalendarOpen(true);
+                                    } else {
+                                      setDeadlineCalendarOpen(false);
+                                      setDeadlineCalendarPosition(null);
+                                    }
+                                  }}
+                                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white transition-colors"
+                                  aria-label="Open calendar"
+                                >
+                                  <Calendar className="h-4 w-4" />
+                                </button>
+                                {deadlineCalendarOpen &&
+                                  deadlineCalendarPosition &&
+                                  typeof document !== "undefined" &&
+                                  createPortal(
+                                    <div
+                                      ref={deadlineCalendarRef}
+                                      style={{
+                                        position: "fixed",
+                                        top: deadlineCalendarPosition.top,
+                                        left: deadlineCalendarPosition.left,
+                                        zIndex: 99999,
+                                        pointerEvents: "auto",
+                                      }}
+                                      className="w-[min(320px,calc(100vw-2rem))] rounded-2xl border border-[#e5e5e5] dark:border-[#333] bg-white dark:bg-[#0a0a0a] shadow-lg p-4 animate-in fade-in-0 zoom-in-95 duration-200"
+                                      role="dialog"
+                                      aria-label="Choose deadline date"
+                                    >
+                                      <div className="flex items-center justify-between gap-2 mb-4">
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                          <Select
+                                            value={String(
+                                              deadlineCalendarView.month,
+                                            )}
+                                            onValueChange={(val) =>
+                                              setDeadlineCalendarView((v) => ({
+                                                ...v,
+                                                month: Number(val),
+                                              }))
+                                            }
+                                          >
+                                            <SelectTrigger
+                                              className="flex-1 min-w-0 text-sm font-medium text-black dark:text-white bg-transparent border border-[#e5e5e5] dark:border-[#333] rounded-lg h-8 px-2 py-1.5 focus:ring-2 focus:ring-[#263672] dark:focus:ring-[#5b7cce]"
+                                              aria-label="Select month"
+                                            >
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="z-[100000] bg-white dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#333]">
+                                              {MONTH_NAMES.map((name, i) => (
+                                                <SelectItem
+                                                  key={name}
+                                                  value={String(i)}
+                                                  className="text-sm cursor-pointer"
+                                                >
+                                                  {name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                          <Select
+                                            value={String(
+                                              deadlineCalendarView.year,
+                                            )}
+                                            onValueChange={(val) =>
+                                              setDeadlineCalendarView((v) => ({
+                                                ...v,
+                                                year: Number(val),
+                                              }))
+                                            }
+                                          >
+                                            <SelectTrigger
+                                              className="w-[72px] shrink-0 text-sm font-medium text-black dark:text-white bg-transparent border border-[#e5e5e5] dark:border-[#333] rounded-lg h-8 px-2 py-1.5 focus:ring-2 focus:ring-[#263672] dark:focus:ring-[#5b7cce]"
+                                              aria-label="Select year"
+                                            >
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="z-[100000] bg-white dark:bg-[#0a0a0a] border border-[#e5e5e5] dark:border-[#333]">
+                                              {Array.from(
+                                                {
+                                                  length:
+                                                    CALENDAR_YEAR_MAX -
+                                                    CALENDAR_YEAR_MIN +
+                                                    1,
+                                                },
+                                                (_, i) => CALENDAR_YEAR_MIN + i,
+                                              ).map((y) => (
+                                                <SelectItem
+                                                  key={y}
+                                                  value={String(y)}
+                                                  className="text-sm cursor-pointer"
+                                                >
+                                                  {y}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="flex items-center gap-0.5 shrink-0">
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setDeadlineCalendarView((v) => {
+                                                const d = new Date(
+                                                  v.year,
+                                                  v.month - 1,
+                                                  1,
+                                                );
+                                                return {
+                                                  year: d.getFullYear(),
+                                                  month: d.getMonth(),
+                                                };
+                                              })
+                                            }
+                                            className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white"
+                                            aria-label="Previous month"
+                                          >
+                                            <ChevronLeft className="h-4 w-4" />
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setDeadlineCalendarView((v) => {
+                                                const d = new Date(
+                                                  v.year,
+                                                  v.month + 1,
+                                                  1,
+                                                );
+                                                return {
+                                                  year: d.getFullYear(),
+                                                  month: d.getMonth(),
+                                                };
+                                              })
+                                            }
+                                            className="p-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white"
+                                            aria-label="Next month"
+                                          >
+                                            <ChevronRight className="h-4 w-4" />
+                                          </button>
+                                        </div>
+                                      </div>
+                                      <div className="grid grid-cols-7 gap-0.5 mb-3">
+                                        {[
+                                          "Su",
+                                          "Mo",
+                                          "Tu",
+                                          "We",
+                                          "Th",
+                                          "Fr",
+                                          "Sa",
+                                        ].map((day) => (
+                                          <div
+                                            key={day}
+                                            className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1"
+                                          >
+                                            {day}
+                                          </div>
+                                        ))}
+                                        {getCalendarDays(
+                                          deadlineCalendarView.year,
+                                          deadlineCalendarView.month,
+                                          formData.deadline,
+                                        ).map((cell) => (
+                                          <button
+                                            key={cell.ymd}
+                                            type="button"
+                                            onClick={() => {
+                                              setFormData((prev) => ({
+                                                ...prev,
+                                                deadline: cell.ymd,
+                                              }));
+                                              setDeadlineCalendarOpen(false);
+                                              setDeadlineCalendarPosition(null);
+                                            }}
+                                            className={cn(
+                                              "h-9 w-9 rounded-lg text-sm transition-colors",
+                                              !cell.isCurrentMonth &&
+                                                "text-gray-400 dark:text-gray-500",
+                                              cell.isToday &&
+                                                "bg-black/10 dark:bg-white/10 font-medium",
+                                              cell.isSelected &&
+                                                "bg-[#263672] dark:bg-[#3b4a7d] text-white font-medium hover:bg-[#1e2a4a] dark:hover:bg-[#4a5d8f]",
+                                              !cell.isSelected &&
+                                                cell.isCurrentMonth &&
+                                                "hover:bg-black/5 dark:hover:bg-white/10 text-black dark:text-white",
+                                            )}
+                                          >
+                                            {cell.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                      <div className="flex items-center justify-between pt-2 border-t border-[#e5e5e5] dark:border-[#333]">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setFormData((prev) => ({
+                                              ...prev,
+                                              deadline: "",
+                                            }));
+                                            setDeadlineCalendarOpen(false);
+                                            setDeadlineCalendarPosition(null);
+                                          }}
+                                          className="text-sm font-medium text-[#263672] dark:text-[#5b7cce] hover:underline"
+                                        >
+                                          Clear
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setFormData((prev) => ({
+                                              ...prev,
+                                              deadline: toYMD(new Date()),
+                                            }));
+                                            setDeadlineCalendarOpen(false);
+                                            setDeadlineCalendarPosition(null);
+                                          }}
+                                          className="text-sm font-medium text-[#263672] dark:text-[#5b7cce] hover:underline"
+                                        >
+                                          Today
+                                        </button>
+                                      </div>
+                                    </div>,
+                                    document.body,
+                                  )}
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-black dark:text-white/80 text-sm">
+                                Max Collectors *
+                              </Label>
+                              <div className="relative">
+                                <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black dark:text-white/50 pointer-events-none" />
+                                <Input
+                                  type="number"
+                                  min="1"
+                                  value={formData.max_collectors}
+                                  onChange={(e) =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      max_collectors: e.target.value,
+                                    }))
+                                  }
+                                  className="rounded-full h-12 w-full pl-10 pr-4 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 5 — Data Types */}
+                      {currentStepId === "dataTypes" && (
+                        <div className="space-y-8 pl-4">
+                          <div className="space-y-2">
+                            <p className="text-2xl font-semibold text-black dark:text-white">
+                              What types of data do you need?
+                            </p>
+                            <p className="text-sm text-black dark:text-white/60">
+                              Select all data types required for this project.
+                            </p>
+                          </div>
+                          {formData.data_types.length > 0 && (
+                            <div className="flex items-center gap-2 -mt-4">
+                              <span className="text-xs font-medium text-black dark:text-white/70">
+                                {formData.data_types.length} selected
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    data_types: [],
+                                  }))
+                                }
+                                className="text-xs font-medium text-black dark:text-white/70 hover:text-white underline underline-offset-2"
+                              >
+                                Clear all
+                              </button>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-3">
+                            {DATA_TYPES.map((type) => {
+                              const selected =
+                                formData.data_types.includes(type);
+                              const IconComponent =
+                                DATA_TYPE_ICONS[type] ?? MoreHorizontal;
+                              return (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => toggleItem("data_types", type)}
+                                  className={cn(
+                                    "btn-gelatine flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium transition-all border",
+                                    selected
+                                      ? "bg-[#0a0a0a] dark:bg-white text-white dark:text-black border-[#0a0a0a] dark:border-white"
+                                      : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
+                                  )}
+                                >
+                                  <span className="flex shrink-0 w-8 h-8 flex items-center justify-center rounded overflow-hidden">
+                                    <IconComponent
+                                      className={cn(
+                                        "w-6 h-6 object-contain",
+                                        selected
+                                          ? "dark:text-[#0a0a0a] text-white"
+                                          : "text-[#0a0a0a] dark:text-white",
+                                      )}
+                                      strokeWidth={1.5}
+                                      aria-hidden
+                                    />
+                                  </span>
+                                  <span className="flex-1 min-w-0 truncate">
+                                    {type}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      "flex shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-all ml-4",
+                                      selected
+                                        ? "bg-white dark:bg-[#0a0a0a] border-white dark:border-[#0a0a0a] text-[#0a0a0a] dark:text-white"
+                                        : "dark:border-white/50 border-[#0a0a0a] bg-transparent",
+                                    )}
+                                  >
+                                    {selected && (
+                                      <Check
+                                        className="h-3 w-3"
+                                        strokeWidth={3}
+                                      />
+                                    )}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 6 — Formats */}
+                      {currentStepId === "formats" && (
+                        <div className="space-y-8 pl-4">
+                          <div className="space-y-2">
+                            <p className="text-2xl font-semibold text-black dark:text-white">
+                              What formats do you accept?
+                            </p>
+                            <p className="text-sm text-black dark:text-white/60">
+                              Select all file formats collectors can submit.
+                            </p>
+                          </div>
+                          {formData.formats.length > 0 && (
+                            <div className="flex items-center gap-2 -mt-4">
+                              <span className="text-xs font-medium text-black dark:text-white/70">
+                                {formData.formats.length} selected
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    formats: [],
+                                  }))
+                                }
+                                className="text-xs font-medium text-black dark:text-white/70 hover:text-white underline underline-offset-2"
+                              >
+                                Clear all
+                              </button>
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-3">
+                            {FORMATS.map((format) => {
+                              const selected =
+                                formData.formats.includes(format);
+                              return (
+                                <button
+                                  key={format}
+                                  type="button"
+                                  onClick={() => toggleItem("formats", format)}
+                                  className={cn(
+                                    "btn-gelatine flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium transition-all border",
+                                    selected
+                                      ? "bg-[#0a0a0a] dark:bg-white text-white dark:text-black border-[#0a0a0a] dark:border-white"
+                                      : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
+                                  )}
+                                >
+                                  {selected && (
+                                    <Check
+                                      className="h-3.5 w-3.5 shrink-0"
+                                      strokeWidth={3}
+                                    />
+                                  )}
+                                  {format}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step 7 — Specifications */}
+                      {currentStepId === "specifications" && (
+                        <div className="space-y-8 pl-4">
+                          <div className="space-y-2">
+                            <p className="text-2xl font-semibold text-black dark:text-white">
+                              Additional specifications
+                            </p>
+                            <p className="text-sm text-black dark:text-white/60">
+                              Optional. Add any extra requirements for the data.
+                            </p>
+                          </div>
+                          <div className="space-y-2 max-w-lg">
+                            <Label className="text-black dark:text-white/80 text-sm">
+                              Notes for collectors
+                            </Label>
+                            <Textarea
+                              value={formData.specifications}
                               onChange={(e) =>
                                 setFormData((prev) => ({
                                   ...prev,
-                                  max_collectors: e.target.value,
+                                  specifications: e.target.value,
                                 }))
                               }
-                              className="rounded-full h-12 w-full pl-10 pr-4 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
+                              placeholder="Any additional requirements..."
+                              rows={5}
+                              className="rounded-xl bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 resize-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
                             />
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
+                      )}
 
-                  {/* Step 5 — Data Types */}
-                  {currentStepId === "dataTypes" && (
-                    <div className="space-y-8 pl-4">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          What types of data do you need?
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Select all data types required for this project.
-                        </p>
-                      </div>
-                      {formData.data_types.length > 0 && (
-                        <div className="flex items-center gap-2 -mt-4">
-                          <span className="text-xs font-medium text-black dark:text-white/70">
-                            {formData.data_types.length} selected
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                data_types: [],
-                              }))
-                            }
-                            className="text-xs font-medium text-black dark:text-white/70 hover:text-white underline underline-offset-2"
-                          >
-                            Clear all
-                          </button>
+                      {/* Step 8 — Location */}
+                      {currentStepId === "location" && (
+                        <div className="space-y-8 pl-4 mb-24">
+                          <div className="space-y-2">
+                            <p className="text-2xl font-semibold text-black dark:text-white">
+                              Where should data be collected?
+                            </p>
+                            <p className="text-sm text-black dark:text-white/60">
+                              Search and select the location (and radius) for
+                              this project.
+                            </p>
+                          </div>
+                          <div className="space-y-5 max-w-md">
+                            <AddressAutocomplete
+                              value={formData.location_address}
+                              onChange={(value) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  location_address: value,
+                                }))
+                              }
+                              onSelect={(result) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  location_address: result.address,
+                                  location_lat: result.lat?.toString() ?? "",
+                                  location_lng: result.lng?.toString() ?? "",
+                                  radius_km: prev.radius_km || "5",
+                                }))
+                              }
+                              placeholder="Search for a location..."
+                              className="h-12 text-sm rounded-full border border-[#0a0a0a] dark:border-gray-700 shadow-none bg-white dark:bg-[#0a0a0a] ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
+                            />
+                            <div className="space-y-2">
+                              <Label className="text-black dark:text-white/80 text-sm">
+                                Radius (km)
+                              </Label>
+                              <Input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                value={formData.radius_km}
+                                onChange={(e) =>
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    radius_km: e.target.value,
+                                  }))
+                                }
+                                className="rounded-full h-12 px-6 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
+                              />
+                            </div>
+                          </div>
                         </div>
                       )}
-                      <div className="flex flex-wrap gap-3">
-                        {DATA_TYPES.map((type) => {
-                          const selected = formData.data_types.includes(type);
-                          const IconComponent =
-                            DATA_TYPE_ICONS[type] ?? MoreHorizontal;
-                          return (
-                            <button
-                              key={type}
-                              type="button"
-                              onClick={() => toggleItem("data_types", type)}
-                              className={cn(
-                                "btn-gelatine flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium transition-all border",
-                                selected
-                                  ? "bg-[#0a0a0a] dark:bg-white text-white dark:text-black border-[#0a0a0a] dark:border-white"
-                                  : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
-                              )}
-                            >
-                              <span className="flex shrink-0 w-8 h-8 flex items-center justify-center rounded overflow-hidden">
-                                <IconComponent
-                                  className={cn(
-                                    "w-6 h-6 object-contain",
-                                    selected
-                                      ? "dark:text-[#0a0a0a] text-white"
-                                      : "text-[#0a0a0a] dark:text-white",
-                                  )}
-                                  strokeWidth={1.5}
-                                  aria-hidden
-                                />
-                              </span>
-                              <span className="flex-1 min-w-0 truncate">
-                                {type}
-                              </span>
-                              <span
-                                className={cn(
-                                  "flex shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-all ml-4",
-                                  selected
-                                    ? "bg-white dark:bg-[#0a0a0a] border-white dark:border-[#0a0a0a] text-[#0a0a0a] dark:text-white"
-                                    : "dark:border-white/50 border-[#0a0a0a] bg-transparent",
-                                )}
-                              >
-                                {selected && (
-                                  <Check className="h-3 w-3" strokeWidth={3} />
-                                )}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 6 — Formats */}
-                  {currentStepId === "formats" && (
-                    <div className="space-y-8 pl-4">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          What formats do you accept?
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Select all file formats collectors can submit.
-                        </p>
-                      </div>
-                      {formData.formats.length > 0 && (
-                        <div className="flex items-center gap-2 -mt-4">
-                          <span className="text-xs font-medium text-black dark:text-white/70">
-                            {formData.formats.length} selected
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                formats: [],
-                              }))
-                            }
-                            className="text-xs font-medium text-black dark:text-white/70 hover:text-white underline underline-offset-2"
-                          >
-                            Clear all
-                          </button>
-                        </div>
-                      )}
-                      <div className="flex flex-wrap gap-3">
-                        {FORMATS.map((format) => {
-                          const selected = formData.formats.includes(format);
-                          return (
-                            <button
-                              key={format}
-                              type="button"
-                              onClick={() => toggleItem("formats", format)}
-                              className={cn(
-                                "btn-gelatine flex items-center gap-2 rounded-full px-6 py-3.5 text-sm font-medium transition-all border",
-                                selected
-                                  ? "bg-[#0a0a0a] dark:bg-white text-white dark:text-black border-[#0a0a0a] dark:border-white"
-                                  : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
-                              )}
-                            >
-                              {selected && (
-                                <Check
-                                  className="h-3.5 w-3.5 shrink-0"
-                                  strokeWidth={3}
-                                />
-                              )}
-                              {format}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 7 — Specifications */}
-                  {currentStepId === "specifications" && (
-                    <div className="space-y-8 pl-4">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          Additional specifications
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Optional. Add any extra requirements for the data.
-                        </p>
-                      </div>
-                      <div className="space-y-2 max-w-lg">
-                        <Label className="text-black dark:text-white/80 text-sm">
-                          Notes for collectors
-                        </Label>
-                        <Textarea
-                          value={formData.specifications}
-                          onChange={(e) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              specifications: e.target.value,
-                            }))
-                          }
-                          placeholder="Any additional requirements..."
-                          rows={5}
-                          className="rounded-xl bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 resize-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Step 8 — Location */}
-                  {currentStepId === "location" && (
-                    <div className="space-y-8 pl-4 mb-24">
-                      <div className="space-y-2">
-                        <p className="text-2xl font-semibold text-black dark:text-white">
-                          Where should data be collected?
-                        </p>
-                        <p className="text-sm text-black dark:text-white/60">
-                          Search and select the location (and radius) for this
-                          project.
-                        </p>
-                      </div>
-                      <div className="space-y-5 max-w-md">
-                        <AddressAutocomplete
-                          value={formData.location_address}
-                          onChange={(value) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              location_address: value,
-                            }))
-                          }
-                          onSelect={(result) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              location_address: result.address,
-                              location_lat: result.lat?.toString() ?? "",
-                              location_lng: result.lng?.toString() ?? "",
-                              radius_km: prev.radius_km || "5",
-                            }))
-                          }
-                          placeholder="Search for a location..."
-                          className="h-12 text-sm rounded-full border border-[#0a0a0a] dark:border-gray-700 shadow-none bg-white dark:bg-[#0a0a0a] ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
-                        />
-                        <div className="space-y-2">
-                          <Label className="text-black dark:text-white/80 text-sm">
-                            Radius (km)
-                          </Label>
-                          <Input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            value={formData.radius_km}
-                            onChange={(e) =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                radius_km: e.target.value,
-                              }))
-                            }
-                            className="rounded-full h-12 px-6 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
                     </div>
                   </div>
+                </div>
               )}
 
               {/* Processing phase */}
@@ -1470,7 +1570,9 @@ export default function CreateProjectDialog({
                   </div>
                   <div className="space-y-2 relative z-10">
                     <p className="text-xl sm:text-2xl font-semibold text-black dark:text-white">
-                      {isEditMode ? "Project Updated! 🎉" : "Project Created! 🎉"}
+                      {isEditMode
+                        ? "Project Updated! 🎉"
+                        : "Project Created! 🎉"}
                     </p>
                     <p className="text-sm sm:text-base text-black dark:text-white/70 max-w-md mx-auto">
                       Your project{" "}
@@ -1520,7 +1622,11 @@ export default function CreateProjectDialog({
                       className="btn-gelatine rounded-full bg-[#0a0a0a] dark:bg-white hover:bg-[#0a0a0a] dark:hover:bg-white text-white dark:text-black disabled:bg-white dark:disabled:bg-[#0a0a0a] disabled:text-black disabled:dark:text-white disabled:pointer-events-none !px-6 h-11 text-sm font-medium"
                     >
                       {isLastStep ? (
-                        isEditMode ? "Save Changes" : "Create Project"
+                        isEditMode ? (
+                          "Save Changes"
+                        ) : (
+                          "Create Project"
+                        )
                       ) : (
                         <>
                           Next
