@@ -871,7 +871,7 @@ export default function WalletContent() {
                         counterpartyProfile?.full_name ||
                         counterpartyProfile?.email ||
                         (isIncoming ? "Requester" : "Collector");
-                      const avatarUrl = counterpartyProfile?.avatar_url || null;
+                      const avatarUrl = counterpartyProfile?.avatar_url || "/default-avatar.svg";
                       const displayAmount = isIncoming ? amount : amount + fee;
 
                       return (
@@ -907,7 +907,7 @@ export default function WalletContent() {
                             <div className="flex items-center gap-2.5 min-w-0">
                               <Avatar>
                                 <AvatarImage
-                                  src={avatarUrl ?? undefined}
+                                  src={avatarUrl}
                                   alt={counterparty}
                                 />
                                 <AvatarFallback>

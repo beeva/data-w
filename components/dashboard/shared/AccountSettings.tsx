@@ -3,8 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { updateProfile, uploadAvatar, deleteAvatar } from "@/lib/services/profileService";
-import { resizeImage, validateImageFile, getOptimalImageFormat } from "@/lib/utils/imageUtils";
+import {
+  updateProfile,
+  uploadAvatar,
+  deleteAvatar,
+} from "@/lib/services/profileService";
+import {
+  resizeImage,
+  validateImageFile,
+  getOptimalImageFormat,
+} from "@/lib/utils/imageUtils";
 import type { UserProfile } from "@/types/user";
 import {
   Card,
@@ -63,14 +71,40 @@ interface FormData {
   company_website: string;
 }
 
-const TABS: { id: TabId; label: string; desc: string; icon: React.ElementType }[] = [
-  { id: "profile",  label: "My Profile",           desc: "Avatar & bio",         icon: UserCircle },
-  { id: "security", label: "Password & Security",  desc: "Change your password", icon: Lock },
-  { id: "contact",  label: "Contact Info",          desc: "Name, phone & address",icon: Contact },
+const TABS: {
+  id: TabId;
+  label: string;
+  desc: string;
+  icon: React.ElementType;
+}[] = [
+  {
+    id: "profile",
+    label: "My Profile",
+    desc: "Avatar & bio",
+    icon: UserCircle,
+  },
+  {
+    id: "security",
+    label: "Password & Security",
+    desc: "Change your password",
+    icon: Lock,
+  },
+  {
+    id: "contact",
+    label: "Contact Info",
+    desc: "Name, phone & address",
+    icon: Contact,
+  },
 ];
 
 export default function AccountSettings() {
-  const { user, profile, loading: authLoading, refreshProfile, signOut } = useAuth();
+  const {
+    user,
+    profile,
+    loading: authLoading,
+    refreshProfile,
+    signOut,
+  } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("profile");
 
@@ -118,8 +152,12 @@ export default function AccountSettings() {
 
   const hasLocationCoordinates =
     formData.location_lat.trim() !== "" && formData.location_lng.trim() !== "";
-  const locationLat = hasLocationCoordinates ? parseFloat(formData.location_lat) : NaN;
-  const locationLng = hasLocationCoordinates ? parseFloat(formData.location_lng) : NaN;
+  const locationLat = hasLocationCoordinates
+    ? parseFloat(formData.location_lat)
+    : NaN;
+  const locationLng = hasLocationCoordinates
+    ? parseFloat(formData.location_lng)
+    : NaN;
 
   useEffect(() => {
     if (profile) {
@@ -130,15 +168,19 @@ export default function AccountSettings() {
         location_address: profile.location?.address || "",
         location_city: profile.location?.city || "",
         location_country: profile.location?.country || "",
-        location_lat: profile.location?.lat != null ? String(profile.location.lat) : "",
-        location_lng: profile.location?.lng != null ? String(profile.location.lng) : "",
+        location_lat:
+          profile.location?.lat != null ? String(profile.location.lat) : "",
+        location_lng:
+          profile.location?.lng != null ? String(profile.location.lng) : "",
         company_name: profile.company_name || "",
         company_website: profile.company_website || "",
       });
     }
   }, [profile]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -179,13 +221,21 @@ export default function AccountSettings() {
           address: formData.location_address || undefined,
           city: formData.location_city || undefined,
           country: formData.location_country || undefined,
-          lat: formData.location_lat ? parseFloat(formData.location_lat) : undefined,
-          lng: formData.location_lng ? parseFloat(formData.location_lng) : undefined,
+          lat: formData.location_lat
+            ? parseFloat(formData.location_lat)
+            : undefined,
+          lng: formData.location_lng
+            ? parseFloat(formData.location_lng)
+            : undefined,
         },
         company_name: formData.company_name || null,
         company_website: formData.company_website || null,
       };
-      if (!formData.location_address && !formData.location_city && !formData.location_country) {
+      if (
+        !formData.location_address &&
+        !formData.location_city &&
+        !formData.location_country
+      ) {
         updates.location = null;
       }
       const { error: updateError } = await updateProfile(user.id, updates);
@@ -274,11 +324,17 @@ export default function AccountSettings() {
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-      const verifyRes = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: supabaseKey },
-        body: JSON.stringify({ email: user.email, password: passwordData.current_password }),
-      });
+      const verifyRes = await fetch(
+        `${supabaseUrl}/auth/v1/token?grant_type=password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: supabaseKey },
+          body: JSON.stringify({
+            email: user.email,
+            password: passwordData.current_password,
+          }),
+        },
+      );
       if (!verifyRes.ok) throw new Error("Current password is incorrect");
       const { access_token } = await verifyRes.json();
       const updateRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
@@ -292,7 +348,9 @@ export default function AccountSettings() {
       });
       if (!updateRes.ok) {
         const err = await updateRes.json().catch(() => null);
-        throw new Error(err?.msg || err?.message || "Failed to update password");
+        throw new Error(
+          err?.msg || err?.message || "Failed to update password",
+        );
       }
       setPasswordLoading(false);
       setPasswordToast(true);
@@ -309,45 +367,65 @@ export default function AccountSettings() {
   };
 
   const getVerificationBadge = (tier: string | null) => {
-    const colors: Record<string, string> = {
+    const TIER_COLORS: Record<string, string> = {
       bronze: "bg-amber-600",
       silver: "bg-gray-400",
       gold: "bg-yellow-500",
       platinum: "bg-purple-500",
     };
+    const key = (tier || "bronze").toLowerCase();
+    const label =
+      (tier || "Bronze").charAt(0).toUpperCase() +
+      (tier || "bronze").slice(1).toLowerCase();
     return (
-      <Badge className={`${colors[tier || "bronze"]} text-white capitalize text-[9px] px-1.5 py-0`}>
-        <Shield className="w-2.5 h-2.5 mr-0.5" />
-        {tier || "Bronze"}
+      <Badge
+        className={`${TIER_COLORS[key] || "bg-amber-600"} text-white border-0 text-xs px-2 py-0.5 gap-1`}
+      >
+        <Shield className="w-3 h-3 shrink-0" />
+        {label}
       </Badge>
     );
   };
 
   const getRoleBadge = (role: string) => {
-    const colors: Record<string, string> = {
+    const ROLE_COLORS: Record<string, string> = {
       requester: "bg-blue-500",
       collector: "bg-green-500",
       agent: "bg-purple-500",
       admin: "bg-red-500",
     };
+    const key = (role || "requester").toLowerCase();
+    const label =
+      (role || "Requester").charAt(0).toUpperCase() +
+      (role || "requester").slice(1).toLowerCase();
     return (
-      <Badge className={`${colors[role] || "bg-gray-500"} text-white capitalize text-[9px] px-1.5 py-0`}>
-        {role}
+      <Badge
+        className={`${ROLE_COLORS[key] || "bg-gray-500"} text-white border-0 text-xs px-2 py-0.5`}
+      >
+        {label}
       </Badge>
     );
   };
 
   const getInitials = (name: string | null, email: string) => {
     if (name) {
-      return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
     }
     return email?.slice(0, 2).toUpperCase() || "U";
   };
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center min-h-[300px] p-8">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading account...</p>
+        </div>
       </div>
     );
   }
@@ -364,36 +442,47 @@ export default function AccountSettings() {
         />
       )}
 
-      <div className="p-2 space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Account Settings</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your account</p>
+      <div className="p-2 space-y-6">
+        <div className="pt-2 mb-4">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            Account Settings
+          </h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Manage your profile, security, and contact information
+          </p>
         </div>
 
-        <div className="flex gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-stretch">
           {/* ── Left Sidebar ── */}
-          <aside className="w-64 shrink-0">
-            <Card className="dark:bg-gray-800/50 border-none shadow-sm pt-6">
-              <CardHeader className="px-6 pb-0">
+          <aside className="w-full lg:w-72 shrink-0 order-1">
+            <Card className="overflow-hidden border-none bg-white dark:bg-gray-800/50 shadow-sm h-fit">
+              <CardHeader className="px-5 pt-5 pb-3">
                 {/* Avatar + user info */}
-                <div className="flex flex-col items-center gap-3 text-center pb-4">
-                  <div className="relative">
-                    <Avatar className="w-16 h-16">
-                      <AvatarImage src={profile?.avatar_url || ""} />
-                      <AvatarFallback className="text-lg bg-cyan-500 text-white">
-                        {getInitials(profile?.full_name || null, profile?.email || "")}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-4">
+                  <div className="relative shrink-0">
+                    <Avatar className="w-14 h-14 sm:w-16 sm:h-16">
+                      <AvatarImage
+                        src={profile?.avatar_url || "/default-avatar.svg"}
+                      />
+                      <AvatarFallback className="text-base bg-primary/90 text-primary-foreground font-medium">
+                        {getInitials(
+                          profile?.full_name || null,
+                          profile?.email || "",
+                        )}
                       </AvatarFallback>
                     </Avatar>
-                    <button
+                    {/* <button
                       type="button"
                       onClick={handleAvatarClick}
                       disabled={uploadingAvatar}
-                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-background border-2 border-border flex items-center justify-center shadow-sm hover:bg-muted transition-colors"
+                      className="absolute -bottom-0.5 -right-0.5 w-7 h-7 rounded-full bg-background border-2 border-border flex items-center justify-center shadow-md hover:bg-muted hover:scale-105 transition-all duration-200"
                     >
-                      {uploadingAvatar
-                        ? <Loader2 className="w-3 h-3 animate-spin" />
-                        : <Camera className="w-3 h-3" />}
-                    </button>
+                      {uploadingAvatar ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />
+                      ) : (
+                        <Camera className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                    </button> */}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -402,71 +491,106 @@ export default function AccountSettings() {
                       className="hidden"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold leading-tight">
+                  <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <p className="text-sm font-semibold text-foreground truncate">
                       {profile?.full_name || "No name set"}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate max-w-[180px]">
+                    <p className="text-xs text-muted-foreground truncate mt-0.5 w-40">
                       {profile?.email}
                     </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                    {profile && getRoleBadge(profile.role)}
-                    {profile && getVerificationBadge(profile.verification_tier)}
+                    <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start mt-2">
+                      {profile?.role && getRoleBadge(profile.role)}
+                      {profile &&
+                        getVerificationBadge(profile.verification_tier)}
+                    </div>
                   </div>
                 </div>
               </CardHeader>
 
-              <CardContent className="px-6 pt-2 pb-4">
-                {/* Navigation label */}
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-                  Settings
-                </p>
+              <CardContent className="px-5 pt-0 pb-5">
+                {/* Tab nav - vertical on desktop */}
+                <div className="hidden lg:block">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Settings
+                  </p>
+                  <nav className="flex flex-col gap-0.5" role="tablist">
+                    {TABS.map(({ id, label, desc, icon: Icon }) => (
+                      <button
+                        key={id}
+                        role="tab"
+                        aria-selected={activeTab === id}
+                        onClick={() => setActiveTab(id)}
+                        className={cn(
+                          "group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-200",
+                          activeTab === id
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:text-foreground",
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                            activeTab === id
+                              ? "bg-primary/15"
+                              : "bg-gray-100 dark:bg-gray-800/50 group-hover:bg-gray-100 dark:group-hover:bg-gray-800/50",
+                          )}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium leading-none">
+                            {label}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {desc}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
 
-                {/* Tab nav */}
-                <div className="flex flex-col gap-0.5">
-                  {TABS.map(({ id, label, desc, icon: Icon }) => (
+                {/* Horizontal tabs - mobile */}
+                <div className="lg:hidden flex gap-1 p-1 rounded-lg bg-muted/40 overflow-x-auto">
+                  {TABS.map(({ id, label, icon: Icon }) => (
                     <button
                       key={id}
                       onClick={() => setActiveTab(id)}
                       className={cn(
-                        "group w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
+                        "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all",
                         activeTab === id
-                          ? "bg-cyan-500/10 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400"
-                          : "text-muted-foreground hover:bg-gray-100 dark:hover:bg-gray-800/50 hover:text-foreground",
+                          ? "bg-background text-primary shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
                       )}
                     >
-                      <div className={cn(
-                        "w-8 h-8 rounded-md flex items-center justify-center shrink-0",
-                        activeTab === id ? "bg-cyan-500/20" : "",
-                      )}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium leading-none">{label}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{desc}</p>
-                      </div>
+                      <Icon className="w-4 h-4 shrink-0" />
+                      {label}
                     </button>
                   ))}
                 </div>
 
                 {/* Account info footer */}
-                <div className="mt-4 pt-4 border-t border-border dark:border-gray-700 space-y-2">
+                <div className="hidden lg:block mt-5 pt-5 border-t border-border/50 dark:border-gray-700/50 space-y-2.5">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Account Info
                   </p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                     <CalendarDays className="w-3.5 h-3.5 shrink-0" />
                     <span>
                       Joined{" "}
                       {profile?.created_at
-                        ? new Date(profile.created_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+                        ? new Date(profile.created_at).toLocaleDateString(
+                            "en-US",
+                            { month: "short", year: "numeric" },
+                          )
                         : "—"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
                     <Shield className="w-3.5 h-3.5 shrink-0" />
-                    <span className="capitalize">{profile?.verification_tier || "Bronze"} tier</span>
+                    <span className="capitalize">
+                      {profile?.verification_tier || "Bronze"} tier
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -474,28 +598,37 @@ export default function AccountSettings() {
           </aside>
 
           {/* Right – Tab Content */}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 order-2">
             {/* ── MY PROFILE ── */}
             {activeTab === "profile" && (
-              <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-                <CardHeader className="py-4 px-6">
-                  <CardTitle className="text-sm font-semibold">My Profile</CardTitle>
-                  <CardDescription className="text-xs">
+              <Card className="border-none bg-white dark:bg-gray-800/50 shadow-sm overflow-hidden">
+                <CardHeader className="py-5 px-6 border-b border-border/50">
+                  <CardTitle className="text-base font-semibold">
+                    My Profile
+                  </CardTitle>
+                  <CardDescription className="text-sm mt-0.5">
                     Update your profile photo and bio
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-5 py-4 px-6">
+                <CardContent className="space-y-6 py-6 px-6">
                   {/* Photo section */}
-                  <div className="flex items-center gap-5 p-4 rounded-xl bg-muted/40 border border-border/50">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 p-5 rounded-xl bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50">
                     <Avatar className="w-16 h-16 shrink-0">
-                      <AvatarImage src={profile?.avatar_url || ""} />
+                      <AvatarImage
+                        src={profile?.avatar_url || "/default-avatar.svg"}
+                      />
                       <AvatarFallback className="text-base bg-cyan-500 text-white">
-                        {getInitials(profile?.full_name || null, profile?.email || "")}
+                        {getInitials(
+                          profile?.full_name || null,
+                          profile?.email || "",
+                        )}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="space-y-1.5">
+                    <div className="space-y-2 flex-1 min-w-0">
                       <p className="text-sm font-medium">Profile Photo</p>
-                      <p className="text-xs text-muted-foreground">JPG, PNG or WebP · max 5 MB</p>
+                      <p className="text-xs text-muted-foreground">
+                        JPG, PNG or WebP · Max 5 MB
+                      </p>
                       <div className="flex gap-2">
                         <Button
                           type="button"
@@ -503,12 +636,16 @@ export default function AccountSettings() {
                           variant="outline"
                           onClick={handleAvatarClick}
                           disabled={uploadingAvatar}
-                          className="text-xs h-7 px-3 gap-1.5"
+                          className="text-xs h-7 px-3 gap-1.5 bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50"
                         >
-                          {uploadingAvatar
-                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <Upload className="w-3.5 h-3.5" />}
-                          {profile?.avatar_url ? "Change Photo" : "Upload Photo"}
+                          {uploadingAvatar ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Upload className="w-3.5 h-3.5" />
+                          )}
+                          {profile?.avatar_url
+                            ? "Change Photo"
+                            : "Upload Photo"}
                         </Button>
                         {profile?.avatar_url && (
                           <Button
@@ -530,23 +667,26 @@ export default function AccountSettings() {
                     </div>
                   </div>
 
-                  <Separator />
+                  <Separator className="my-6" />
 
                   {/* Bio */}
-                  <form onSubmit={handleProfileSubmit} className="space-y-3">
+                  <form onSubmit={handleProfileSubmit} className="space-y-4">
                     {profileError && (
-                      <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-600 dark:text-red-400 text-xs">
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                        <span className="shrink-0">!</span>
                         {profileError}
                       </div>
                     )}
                     {profileSuccess && (
-                      <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-green-600 dark:text-green-400 text-xs flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Saved!
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 dark:bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400 text-sm">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        Profile saved successfully!
                       </div>
                     )}
-                    <div className="space-y-1">
-                      <Label htmlFor="bio" className="text-xs">Bio</Label>
+                    <div className="space-y-2">
+                      <Label htmlFor="bio" className="text-sm font-medium">
+                        Bio
+                      </Label>
                       <Textarea
                         id="bio"
                         name="bio"
@@ -554,26 +694,47 @@ export default function AccountSettings() {
                         onChange={handleChange}
                         placeholder="Tell us a bit about yourself..."
                         rows={4}
-                        className="text-sm min-h-[80px]"
+                        className="text-sm min-h-[100px] resize-none bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50"
                       />
                     </div>
 
                     {/* Collector Stats */}
                     {profile?.role === "collector" && (
                       <>
-                        <Separator />
+                        <Separator className="my-6" />
                         <div>
-                          <h3 className="text-xs font-semibold mb-2">Collector Stats</h3>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          <h3 className="text-sm font-semibold mb-3">
+                            Collector Stats
+                          </h3>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             {[
-                              { label: "Earnings", value: `$${profile.total_earnings?.toFixed(2) || "0.00"}` },
-                              { label: "Submissions", value: profile.total_submissions || 0 },
-                              { label: "Completed", value: profile.completed_tasks || 0 },
-                              { label: "Rating", value: `${profile.rating?.toFixed(1) || "0.0"}` },
+                              {
+                                label: "Earnings",
+                                value: `$${profile.total_earnings?.toFixed(2) || "0.00"}`,
+                              },
+                              {
+                                label: "Submissions",
+                                value: profile.total_submissions || 0,
+                              },
+                              {
+                                label: "Completed",
+                                value: profile.completed_tasks || 0,
+                              },
+                              {
+                                label: "Rating",
+                                value: `${profile.rating?.toFixed(1) || "0.0"}`,
+                              },
                             ].map((stat) => (
-                              <div key={stat.label} className="p-2 bg-gray-50 dark:bg-gray-700/50 rounded text-center">
-                                <p className="text-sm font-bold text-cyan-500">{stat.value}</p>
-                                <p className="text-[10px] text-muted-foreground">{stat.label}</p>
+                              <div
+                                key={stat.label}
+                                className="p-4 rounded-lg bg-muted/50 dark:bg-muted/30 border border-border/50 text-center"
+                              >
+                                <p className="text-base font-bold text-primary">
+                                  {stat.value}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {stat.label}
+                                </p>
                               </div>
                             ))}
                           </div>
@@ -581,12 +742,23 @@ export default function AccountSettings() {
                       </>
                     )}
 
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={profileLoading} size="sm" className="h-8 text-xs px-3">
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        type="submit"
+                        disabled={profileLoading}
+                        size="sm"
+                        className="h-9 px-4 gap-2"
+                      >
                         {profileLoading ? (
-                          <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />Saving...</>
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Saving...
+                          </>
                         ) : (
-                          <><Save className="w-3.5 h-3.5 mr-1" />Save</>
+                          <>
+                            <Save className="w-4 h-4" />
+                            Save changes
+                          </>
                         )}
                       </Button>
                     </div>
@@ -597,37 +769,47 @@ export default function AccountSettings() {
 
             {/* ── PASSWORD & SECURITY ── */}
             {activeTab === "security" && (
-              <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-                <CardHeader className="py-4 px-6">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5" />
+              <Card className="border-none bg-white dark:bg-gray-800/50 shadow-sm overflow-hidden">
+                <CardHeader className="py-5 px-6 border-b border-border/50">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
                     Password &amp; Security
                   </CardTitle>
-                  <CardDescription className="text-xs">
-                    Update your account password
+                  <CardDescription className="text-sm mt-0.5">
+                    Update your account password and enable 2FA
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="py-4 px-6">
-                  <form onSubmit={handlePasswordSubmit} className="space-y-3">
+                <CardContent className="py-6 px-6">
+                  <form onSubmit={handlePasswordSubmit} className="space-y-4">
                     {passwordError && (
-                      <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-600 dark:text-red-400 text-xs">
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                        <span className="shrink-0">!</span>
                         {passwordError}
                       </div>
                     )}
 
                     {/* Account info row */}
-                    <div className="p-2.5 rounded-md bg-muted/50 flex items-center gap-2.5">
-                      <Mail className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                    <div className="p-4 rounded-xl bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50 flex items-center justify-center shrink-0">
+                        <Mail className="w-5 h-5 text-muted-foreground" />
+                      </div>
                       <div>
-                        <p className="text-[10px] text-muted-foreground">Signed in as</p>
+                        <p className="text-xs text-muted-foreground">
+                          Signed in as
+                        </p>
                         <p className="text-sm font-medium">{profile?.email}</p>
                       </div>
                     </div>
 
-                    <Separator />
+                    <Separator className="my-6" />
 
-                    <div className="space-y-1">
-                      <Label htmlFor="current_password" className="text-xs">Current Password</Label>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="current_password"
+                        className="text-sm font-medium"
+                      >
+                        Current Password
+                      </Label>
                       <div className="relative">
                         <Input
                           id="current_password"
@@ -636,14 +818,16 @@ export default function AccountSettings() {
                           value={passwordData.current_password}
                           onChange={handlePasswordChange}
                           placeholder="Enter current password"
-                          className="text-sm pr-9"
+                          className="text-sm pr-9 bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50"
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
                           className="absolute right-0 top-0 h-9 w-9 p-0"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          onClick={() =>
+                            setShowCurrentPassword(!showCurrentPassword)
+                          }
                         >
                           {showCurrentPassword ? (
                             <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
@@ -654,9 +838,14 @@ export default function AccountSettings() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="new_password" className="text-xs">New Password</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="new_password"
+                          className="text-sm font-medium"
+                        >
+                          New Password
+                        </Label>
                         <div className="relative">
                           <Input
                             id="new_password"
@@ -665,7 +854,7 @@ export default function AccountSettings() {
                             value={passwordData.new_password}
                             onChange={handlePasswordChange}
                             placeholder="At least 6 characters"
-                            className="text-sm pr-9"
+                            className="text-sm pr-9 bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50"
                           />
                           <Button
                             type="button"
@@ -683,8 +872,13 @@ export default function AccountSettings() {
                         </div>
                       </div>
 
-                      <div className="space-y-1">
-                        <Label htmlFor="confirm_password" className="text-xs">Confirm New Password</Label>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="confirm_password"
+                          className="text-sm font-medium"
+                        >
+                          Confirm New Password
+                        </Label>
                         <div className="relative">
                           <Input
                             id="confirm_password"
@@ -693,14 +887,16 @@ export default function AccountSettings() {
                             value={passwordData.confirm_password}
                             onChange={handlePasswordChange}
                             placeholder="Re-enter new password"
-                            className="text-sm pr-9"
+                            className="text-sm pr-9 bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50"
                           />
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             className="absolute right-0 top-0 h-9 w-9 p-0"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
                           >
                             {showConfirmPassword ? (
                               <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
@@ -712,50 +908,67 @@ export default function AccountSettings() {
                       </div>
                     </div>
 
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={passwordLoading} size="sm" className="h-8 text-xs px-3">
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        type="submit"
+                        disabled={passwordLoading}
+                        size="sm"
+                        className="h-9 px-4 gap-2"
+                      >
                         {passwordLoading ? (
-                          <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />Updating...</>
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Updating...
+                          </>
                         ) : (
-                          <><Lock className="w-3.5 h-3.5 mr-1" />Change Password</>
+                          <>
+                            <Lock className="w-4 h-4" />
+                            Change password
+                          </>
                         )}
                       </Button>
                     </div>
                   </form>
 
-                  <Separator className="my-4" />
-                  <PhoneTwoFactorAuth defaultPhone={profile?.phone || ""} />
+                  {/* <Separator className="my-6" />
+                  <PhoneTwoFactorAuth defaultPhone={profile?.phone || ""} /> */}
                 </CardContent>
               </Card>
             )}
 
             {/* ── CONTACT INFO ── */}
             {activeTab === "contact" && (
-              <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-                <CardHeader className="py-4 px-6">
-                  <CardTitle className="text-sm font-semibold">Contact Info</CardTitle>
-                  <CardDescription className="text-xs">
-                    Update your name, phone and address
+              <Card className="border-none bg-white dark:bg-gray-800/50 shadow-sm overflow-hidden">
+                <CardHeader className="py-5 px-6 border-b border-border/50">
+                  <CardTitle className="text-base font-semibold">
+                    Contact Info
+                  </CardTitle>
+                  <CardDescription className="text-sm mt-0.5">
+                    Update your name, phone, and address
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="py-4 px-6">
-                  <form onSubmit={handleContactSubmit} className="space-y-3">
+                <CardContent className="py-6 px-6">
+                  <form onSubmit={handleContactSubmit} className="space-y-5">
                     {contactError && (
-                      <div className="p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-red-600 dark:text-red-400 text-xs">
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                        <span className="shrink-0">!</span>
                         {contactError}
                       </div>
                     )}
                     {contactSuccess && (
-                      <div className="p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-green-600 dark:text-green-400 text-xs flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Saved!
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-400 text-sm">
+                        <CheckCircle2 className="w-4 h-4 shrink-0" />
+                        Contact info saved successfully!
                       </div>
                     )}
 
                     {/* Name + Phone */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="full_name" className="text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="full_name"
+                          className="text-sm font-medium"
+                        >
                           <User className="w-3 h-3 inline mr-1" />
                           Full Name
                         </Label>
@@ -768,8 +981,8 @@ export default function AccountSettings() {
                           className="text-sm"
                         />
                       </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="phone" className="text-xs">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone" className="text-sm font-medium">
                           <Phone className="w-3 h-3 inline mr-1" />
                           Phone Number
                         </Label>
@@ -785,38 +998,59 @@ export default function AccountSettings() {
                       </div>
                     </div>
 
-                    <Separator />
+                    <Separator className="my-6" />
 
                     {/* Address */}
                     <div>
-                      <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5">
-                        <MapPin className="w-3.5 h-3.5" />
+                      <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                        <MapPin className="w-4 h-4" />
                         Address
                       </h3>
-                      <div className="space-y-2">
-                        <div className="space-y-1">
-                          <Label htmlFor="location_address" className="text-xs">Street Address</Label>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="location_address"
+                            className="text-sm font-medium"
+                          >
+                            Street Address
+                          </Label>
                           <AddressAutocomplete
                             value={formData.location_address}
                             onChange={(value) =>
-                              setFormData((prev) => ({ ...prev, location_address: value }))
+                              setFormData((prev) => ({
+                                ...prev,
+                                location_address: value,
+                              }))
                             }
                             onSelect={(result) => {
                               setFormData((prev) => ({
                                 ...prev,
                                 location_address: result.address,
-                                location_city: result.city || prev.location_city,
-                                location_country: result.country || prev.location_country,
-                                location_lat: result.lat != null ? String(result.lat) : prev.location_lat,
-                                location_lng: result.lng != null ? String(result.lng) : prev.location_lng,
+                                location_city:
+                                  result.city || prev.location_city,
+                                location_country:
+                                  result.country || prev.location_country,
+                                location_lat:
+                                  result.lat != null
+                                    ? String(result.lat)
+                                    : prev.location_lat,
+                                location_lng:
+                                  result.lng != null
+                                    ? String(result.lng)
+                                    : prev.location_lng,
                               }));
                             }}
                             placeholder="Start typing to search..."
                           />
                         </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label htmlFor="location_city" className="text-xs">City</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="location_city"
+                              className="text-sm font-medium"
+                            >
+                              City
+                            </Label>
                             <Input
                               id="location_city"
                               name="location_city"
@@ -826,8 +1060,13 @@ export default function AccountSettings() {
                               className="text-sm bg-muted/50 cursor-not-allowed"
                             />
                           </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="location_country" className="text-xs">Country</Label>
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="location_country"
+                              className="text-sm font-medium"
+                            >
+                              Country
+                            </Label>
                             <Input
                               id="location_country"
                               name="location_country"
@@ -838,9 +1077,14 @@ export default function AccountSettings() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label htmlFor="location_lat" className="text-xs">Latitude</Label>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="location_lat"
+                              className="text-sm font-medium"
+                            >
+                              Latitude
+                            </Label>
                             <Input
                               id="location_lat"
                               name="location_lat"
@@ -850,8 +1094,13 @@ export default function AccountSettings() {
                               className="text-sm bg-muted/50 cursor-not-allowed"
                             />
                           </div>
-                          <div className="space-y-1">
-                            <Label htmlFor="location_lng" className="text-xs">Longitude</Label>
+                          <div className="space-y-2">
+                            <Label
+                              htmlFor="location_lng"
+                              className="text-sm font-medium"
+                            >
+                              Longitude
+                            </Label>
                             <Input
                               id="location_lng"
                               name="location_lng"
@@ -862,29 +1111,42 @@ export default function AccountSettings() {
                             />
                           </div>
                         </div>
-                        {hasLocationCoordinates && Number.isFinite(locationLat) && Number.isFinite(locationLng) && (
-                          <div className="space-y-1">
-                            <Label className="text-xs">Map Preview</Label>
-                            <div className="overflow-hidden rounded border border-gray-200 dark:border-gray-700">
-                              <LocationMapPreview lat={locationLat} lng={locationLng} radiusKm={0} />
+                        {hasLocationCoordinates &&
+                          Number.isFinite(locationLat) &&
+                          Number.isFinite(locationLng) && (
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">
+                                Map Preview
+                              </Label>
+                              <div className="overflow-hidden rounded-lg border border-border">
+                                <LocationMapPreview
+                                  lat={locationLat}
+                                  lng={locationLng}
+                                  radiusKm={0}
+                                />
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
                     </div>
 
                     {/* Company Info (requesters only) */}
                     {profile?.role === "requester" && (
                       <>
-                        <Separator />
+                        <Separator className="my-6" />
                         <div>
-                          <h3 className="text-xs font-semibold mb-2 flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5" />
+                          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                            <Building2 className="w-4 h-4" />
                             Company Information
                           </h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="space-y-1">
-                              <Label htmlFor="company_name" className="text-xs">Company Name</Label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor="company_name"
+                                className="text-sm font-medium"
+                              >
+                                Company Name
+                              </Label>
                               <Input
                                 id="company_name"
                                 name="company_name"
@@ -894,8 +1156,11 @@ export default function AccountSettings() {
                                 className="text-sm"
                               />
                             </div>
-                            <div className="space-y-1">
-                              <Label htmlFor="company_website" className="text-xs">
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor="company_website"
+                                className="text-sm font-medium"
+                              >
                                 <Globe className="w-3 h-3 inline mr-1" />
                                 Website
                               </Label>
@@ -914,12 +1179,23 @@ export default function AccountSettings() {
                       </>
                     )}
 
-                    <div className="flex justify-end">
-                      <Button type="submit" disabled={contactLoading} size="sm" className="h-8 text-xs px-3">
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        type="submit"
+                        disabled={contactLoading}
+                        size="sm"
+                        className="h-9 px-4 gap-2"
+                      >
                         {contactLoading ? (
-                          <><Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />Saving...</>
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Saving...
+                          </>
                         ) : (
-                          <><Save className="w-3.5 h-3.5 mr-1" />Save</>
+                          <>
+                            <Save className="w-4 h-4" />
+                            Save changes
+                          </>
                         )}
                       </Button>
                     </div>

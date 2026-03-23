@@ -281,7 +281,7 @@ export default function UserManagement() {
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <Avatar className="w-9 h-9">
-                              <AvatarImage src={u.avatar_url || ""} />
+                              <AvatarImage src={u.avatar_url || "/default-avatar.svg"} />
                               <AvatarFallback className="bg-cyan-500 text-white text-xs">
                                 {getInitials(u.full_name, u.email)}
                               </AvatarFallback>

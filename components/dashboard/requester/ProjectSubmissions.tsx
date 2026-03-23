@@ -452,12 +452,10 @@ function SubmissionRow({
             <div className="flex items-center justify-between gap-2 py-3 w-full h-[56px] shrink-0">
               <div className="flex min-w-0 items-center gap-2">
                 <Avatar className="h-8 w-8 shrink-0 rounded-full ring-1 ring-border/70">
-                  {submission.collector?.avatar_url && (
-                    <AvatarImage
-                      src={submission.collector.avatar_url}
-                      alt={collectorName}
-                    />
-                  )}
+                  <AvatarImage
+                    src={submission.collector?.avatar_url || "/default-avatar.svg"}
+                    alt={collectorName}
+                  />
                   <AvatarFallback className="text-[10px] font-semibold bg-muted text-muted-foreground">
                     {collectorInitials}
                   </AvatarFallback>
@@ -561,12 +559,10 @@ function SubmissionRow({
           {/* col1: avatar, name */}
           <div className="flex items-center gap-2 min-w-0">
             <Avatar className="h-8 w-8 shrink-0 rounded-full ring-1 ring-border">
-              {submission.collector?.avatar_url && (
-                <AvatarImage
-                  src={submission.collector.avatar_url}
-                  alt={collectorName}
-                />
-              )}
+              <AvatarImage
+                src={submission.collector?.avatar_url || "/default-avatar.svg"}
+                alt={collectorName}
+              />
               <AvatarFallback className="text-[10px] font-semibold bg-muted text-muted-foreground">
                 {collectorInitials}
               </AvatarFallback>

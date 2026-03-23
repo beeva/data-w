@@ -831,7 +831,7 @@ export default function RequesterHeader() {
             >
               <div className="relative shrink-0">
                 <Avatar className="w-9 h-9">
-                  <AvatarImage src={profile?.avatar_url || ""} />
+                  <AvatarImage src={profile?.avatar_url || "/default-avatar.svg"} />
                   <AvatarFallback className="p-0 overflow-hidden">
                     <img
                       src="/default-avatar.svg"
@@ -849,7 +849,7 @@ export default function RequesterHeader() {
                 <div className="px-4 py-3 bg-gradient-to-br from-gray-50 to-white dark:from-gray-700/40 dark:to-gray-800 border-b border-gray-100 dark:border-gray-700">
                   <div className="flex items-center gap-2.5">
                     <Avatar className="w-10 h-10 ring-2 ring-white dark:ring-gray-700 shadow-sm">
-                      <AvatarImage src={profile?.avatar_url || ""} />
+                      <AvatarImage src={profile?.avatar_url || "/default-avatar.svg"} />
                       <AvatarFallback className="p-0 overflow-hidden">
                         <img
                           src="/default-avatar.svg"

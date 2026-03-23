@@ -4,7 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ClipboardEvent, KeyboardEvent } from "react";
 import { supabase } from "@/lib/supabase/client";
 import type { Factor } from "@supabase/supabase-js";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,7 +26,9 @@ function isE164Phone(value: string) {
   return /^\+[1-9]\d{7,14}$/.test(value.trim());
 }
 
-export default function PhoneTwoFactorAuth({ defaultPhone }: PhoneTwoFactorAuthProps) {
+export default function PhoneTwoFactorAuth({
+  defaultPhone,
+}: PhoneTwoFactorAuthProps) {
   const CODE_LENGTH = 6;
   const [loadingState, setLoadingState] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -29,12 +37,16 @@ export default function PhoneTwoFactorAuth({ defaultPhone }: PhoneTwoFactorAuthP
   const [pendingFactorId, setPendingFactorId] = useState<string | null>(null);
   const [phone, setPhone] = useState(defaultPhone || "");
   const [challengeId, setChallengeId] = useState<string | null>(null);
-  const [digits, setDigits] = useState<string[]>(() => Array(CODE_LENGTH).fill(""));
+  const [digits, setDigits] = useState<string[]>(() =>
+    Array(CODE_LENGTH).fill(""),
+  );
   const codeInputRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const verificationPending = Boolean(challengeId && (pendingFactorId || verifiedFactorId));
+  const verificationPending = Boolean(
+    challengeId && (pendingFactorId || verifiedFactorId),
+  );
 
   useEffect(() => {
     setPhone((prev) => (prev ? prev : defaultPhone || ""));
@@ -54,11 +66,16 @@ export default function PhoneTwoFactorAuth({ defaultPhone }: PhoneTwoFactorAuthP
     const allFactors: Factor[] = data?.all ?? [];
     const verifiedPhoneFactor =
       data?.phone?.[0] ??
-      allFactors.find((factor) => factor.factor_type === "phone" && factor.status === "verified") ??
+      allFactors.find(
+        (factor) =>
+          factor.factor_type === "phone" && factor.status === "verified",
+      ) ??
       null;
     const unverifiedPhoneFactor =
-      allFactors.find((factor) => factor.factor_type === "phone" && factor.status === "unverified") ??
-      null;
+      allFactors.find(
+        (factor) =>
+          factor.factor_type === "phone" && factor.status === "unverified",
+      ) ?? null;
 
     setEnabled(Boolean(verifiedPhoneFactor));
     setVerifiedFactorId(verifiedPhoneFactor?.id ?? null);
@@ -92,7 +109,7 @@ export default function PhoneTwoFactorAuth({ defaultPhone }: PhoneTwoFactorAuthP
       setStatusMessage("Verification code sent to your phone.");
       setTimeout(() => codeInputRefs.current[0]?.focus(), 0);
     },
-    [CODE_LENGTH]
+    [CODE_LENGTH],
   );
 
   const startEnableFlow = async () => {
@@ -146,7 +163,9 @@ export default function PhoneTwoFactorAuth({ defaultPhone }: PhoneTwoFactorAuthP
     setStatusMessage("");
 
     try {
-      const { error } = await supabase.auth.mfa.unenroll({ factorId: verifiedFactorId });
+      const { error } = await supabase.auth.mfa.unenroll({
+        factorId: verifiedFactorId,
+      });
       if (error) {
         throw new Error(error.message || "Failed to disable 2FA");
       }
@@ -219,7 +238,10 @@ export default function PhoneTwoFactorAuth({ defaultPhone }: PhoneTwoFactorAuthP
     }
   };
 
-  const handleDigitKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+  const handleDigitKeyDown = (
+    index: number,
+    e: KeyboardEvent<HTMLInputElement>,
+  ) => {
     if (e.key !== "Backspace") return;
 
     if (digits[index] === "") {
@@ -242,7 +264,10 @@ export default function PhoneTwoFactorAuth({ defaultPhone }: PhoneTwoFactorAuthP
   };
 
   const handleDigitPaste = (e: ClipboardEvent<HTMLInputElement>) => {
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, CODE_LENGTH);
+    const pasted = e.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, CODE_LENGTH);
     if (!pasted) return;
     const nextDigits = Array(CODE_LENGTH).fill("");
     for (let i = 0; i < Math.min(CODE_LENGTH, pasted.length); i++) {
@@ -273,7 +298,7 @@ export default function PhoneTwoFactorAuth({ defaultPhone }: PhoneTwoFactorAuthP
   };
 
   return (
-    <Card className="border border-border/60 shadow-none">
+    <Card className="border-none bg-white dark:bg-gray-800/50 shadow-none">
       <CardHeader className="py-4 px-4 sm:px-5">
         <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
           <Shield className="w-3.5 h-3.5" />
@@ -284,12 +309,15 @@ export default function PhoneTwoFactorAuth({ defaultPhone }: PhoneTwoFactorAuthP
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 py-4 px-4 sm:px-5">
-        <div className="p-2.5 rounded-md bg-muted/50 flex items-center justify-between gap-3">
+        <div className="p-2.5 rounded-md bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">Phone 2FA status</p>
             <p className="text-sm font-medium flex items-center gap-2">
               {enabled ? "Enabled" : "Disabled"}
-              <Badge variant={enabled ? "default" : "secondary"} className="text-[10px]">
+              <Badge
+                variant={enabled ? "default" : "secondary"}
+                className="text-[10px]"
+              >
                 {enabled ? "Protected" : "Not active"}
               </Badge>
             </p>

@@ -787,7 +787,7 @@ export default function RequesterDashboard() {
                 <div className="flex gap-4">
                   <div className="relative">
                     <Avatar className="w-20 h-20">
-                      <AvatarImage src={profile?.avatar_url || ""} />
+                      <AvatarImage src={profile?.avatar_url || "/default-avatar.svg"} />
                       <AvatarFallback className="p-0 overflow-hidden text-2xl font-bold bg-gradient-to-br from-cyan-400 to-blue-500 text-white">
                         <img
                           src="/default-avatar.svg"
@@ -935,7 +935,11 @@ export default function RequesterDashboard() {
               </p>
               <div className="flex flex-col gap-2">
                 {[
-                  { icon: LifeBuoy, label: "Help Center", href: "/dashboard/faq" },
+                  {
+                    icon: LifeBuoy,
+                    label: "Help Center",
+                    href: "/dashboard/faq",
+                  },
                   {
                     icon: BookOpen,
                     label: "Requester Guide",
@@ -944,7 +948,7 @@ export default function RequesterDashboard() {
                   {
                     icon: MessageSquare,
                     label: "Contact Support",
-                    href: "/support",
+                    href: "/dashboard/support",
                   },
                   {
                     icon: Settings,

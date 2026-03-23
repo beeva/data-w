@@ -528,8 +528,8 @@ export default function ProjectProposals({
                                   <Avatar className="h-12 w-12 rounded-full bg-muted/50">
                                     <AvatarImage
                                       src={
-                                        proposal.collector?.avatar_url ??
-                                        undefined
+                                        proposal.collector?.avatar_url ||
+                                        "/default-avatar.svg"
                                       }
                                     />
                                     <AvatarFallback className="p-0 overflow-hidden rounded-full">
@@ -766,7 +766,8 @@ export default function ProjectProposals({
                               <Avatar className="h-16 w-16 rounded-full shrink-0">
                                 <AvatarImage
                                   src={
-                                    proposal.collector?.avatar_url ?? undefined
+                                    proposal.collector?.avatar_url ||
+                                    "/default-avatar.svg"
                                   }
                                 />
                                 <AvatarFallback className="p-0 overflow-hidden rounded-full">
@@ -983,7 +984,8 @@ export default function ProjectProposals({
                       <Avatar className="h-full w-full rounded-xl">
                         <AvatarImage
                           src={
-                            selectedProposal.collector?.avatar_url ?? undefined
+                            selectedProposal.collector?.avatar_url ||
+                            "/default-avatar.svg"
                           }
                         />
                         <AvatarFallback className="p-0 overflow-hidden rounded-xl">

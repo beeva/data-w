@@ -250,7 +250,7 @@ export default function AdminTickets() {
               {/* User info */}
               <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/30">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src={selectedTicket.user_avatar || ""} />
+                  <AvatarImage src={selectedTicket.user_avatar || "/default-avatar.svg"} />
                   <AvatarFallback className="bg-cyan-500 text-white text-xs">
                     {getInitials(selectedTicket.user_name, selectedTicket.user_email)}
                   </AvatarFallback>
@@ -443,7 +443,7 @@ export default function AdminTickets() {
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
                           <Avatar className="w-8 h-8 flex-shrink-0">
-                            <AvatarImage src={ticket.user_avatar || ""} />
+                            <AvatarImage src={ticket.user_avatar || "/default-avatar.svg"} />
                             <AvatarFallback className="bg-cyan-500 text-white text-[10px]">
                               {getInitials(ticket.user_name, ticket.user_email)}
                             </AvatarFallback>

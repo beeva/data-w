@@ -967,7 +967,7 @@ export default function CollectorDashboard() {
               <div className="flex gap-4">
                 <div className="relative">
                   <Avatar className="w-20 h-20">
-                    <AvatarImage src={profile?.avatar_url || ""} />
+                    <AvatarImage src={profile?.avatar_url || "/default-avatar.svg"} />
                     <AvatarFallback className="p-0 overflow-hidden text-2xl font-bold bg-gradient-to-br from-cyan-400 to-blue-500 text-white">
                       <img
                         src="/default-avatar.svg"
