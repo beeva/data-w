@@ -3,7 +3,26 @@ import { createBrowserClient } from '@supabase/ssr'
 let browserClient: ReturnType<typeof createBrowserClient> | null = null
 const SUPABASE_REQUEST_TIMEOUT_MS = 15000
 
+function isStorageObjectRequest(input: RequestInfo | URL): boolean {
+  try {
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof Request
+          ? input.url
+          : input.href
+    return url.includes('/storage/v1/object/')
+  } catch {
+    return false
+  }
+}
+
 const fetchWithTimeout: typeof fetch = async (input, init = {}) => {
+  // File uploads can exceed the default API timeout; do not abort storage transfers.
+  if (isStorageObjectRequest(input)) {
+    return fetch(input, init)
+  }
+
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), SUPABASE_REQUEST_TIMEOUT_MS)
 

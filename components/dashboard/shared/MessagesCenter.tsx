@@ -174,30 +174,77 @@ type ProfilePresenceRow = {
   last_active_at: string | null;
 };
 
-const MessageContent = memo(function MessageContent({
-  text,
-}: {
-  text: string;
-}) {
+function trimUrlForHref(raw: string): string {
+  return raw.replace(/[),.;!?]+$/g, "");
+}
+
+function bareUrlLinkLabel(href: string): string {
+  const cleaned = trimUrlForHref(href);
+  try {
+    const u = new URL(cleaned);
+    const host = u.hostname.replace(/^www\./i, "");
+    return host || cleaned;
+  } catch {
+    return cleaned.length > 48 ? `${cleaned.slice(0, 45)}…` : cleaned;
+  }
+}
+
+/** Renders `label: https://...` as a single inline link showing only `label`. */
+function LineWithLinks({ line }: { line: string }) {
+  const labelUrl = /^(.*): (https?:\/\/\S+)$/;
+  const m = line.match(labelUrl);
+  if (m) {
+    const href = trimUrlForHref(m[2]);
+    const label = m[1].trim() || bareUrlLinkLabel(href);
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary underline break-words"
+      >
+        {label}
+      </a>
+    );
+  }
+
   const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
+  const parts = line.split(urlRegex);
   return (
     <>
       {parts.map((part, i) =>
         part.startsWith("http://") || part.startsWith("https://") ? (
           <a
             key={i}
-            href={part}
+            href={trimUrlForHref(part)}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary underline break-all"
+            className="text-primary underline break-words"
           >
-            {part}
+            {bareUrlLinkLabel(part)}
           </a>
         ) : (
           <span key={i}>{part}</span>
         ),
       )}
+    </>
+  );
+}
+
+const MessageContent = memo(function MessageContent({
+  text,
+}: {
+  text: string;
+}) {
+  const lines = text.split("\n");
+  return (
+    <>
+      {lines.map((line, i) => (
+        <Fragment key={i}>
+          {i > 0 ? <br /> : null}
+          <LineWithLinks line={line} />
+        </Fragment>
+      ))}
     </>
   );
 });
@@ -987,6 +1034,11 @@ export default function MessagesCenter() {
           return;
         }
         if (url) urls.push(`${file.name}: ${url}`);
+      }
+      if (urls.length !== attachmentFiles.length) {
+        setError("Attachment upload did not finish. Check your connection and try again.");
+        setSending(false);
+        return;
       }
       const attachmentLines = urls.join("\n");
       messageText = messageText
