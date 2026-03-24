@@ -452,11 +452,7 @@ export default function MessagesCenter() {
       senderId: user.id,
       senderName: profile?.full_name?.trim() || profile?.email || "Someone",
     };
-    void channel.send({
-      type: "broadcast",
-      event,
-      payload,
-    });
+    void channel.httpSend(event, payload).catch(() => {});
   };
 
   useEffect(() => {
@@ -942,14 +938,12 @@ export default function MessagesCenter() {
 
       const typingChannel = typingChannelRef.current;
       if (typingChannel) {
-        void typingChannel.send({
-          type: "broadcast",
-          event: "presence-update",
-          payload: {
+        void typingChannel
+          .httpSend("presence-update", {
             senderId: user.id,
             lastActiveAt: nowIso,
-          } satisfies PresenceBroadcastPayload,
-        });
+          } satisfies PresenceBroadcastPayload)
+          .catch(() => {});
       }
     };
 

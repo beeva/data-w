@@ -5,6 +5,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "next-themes";
 import { StoreProvider } from "@/lib/store/StoreProvider";
 import GlobalCompactFooter from "@/components/GlobalCompactFooter";
+import { DotlottieWasmDeprecationSilencer } from "@/components/DotlottieWasmDeprecationSilencer";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <StoreProvider>
             <AuthProvider>
+              <DotlottieWasmDeprecationSilencer />
               <main className="flex-1">{children}</main>
             </AuthProvider>
           </StoreProvider>

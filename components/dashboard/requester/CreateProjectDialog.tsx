@@ -9,6 +9,7 @@ import type { Project, ProjectFormData } from "@/types/project";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -758,9 +759,16 @@ export default function CreateProjectDialog({
 
             {/* Header */}
             <DialogHeader className="shrink-0 flex-row items-center justify-between space-y-0 py-4 px-6 mt-4 bg-white dark:bg-[#0a0a0a] rounded-t-xl">
-              <DialogTitle className="text-base font-semibold text-black dark:text-white">
-                {isEditMode ? "Edit Project" : "Create Project"}
-              </DialogTitle>
+              <div className="space-y-1">
+                <DialogTitle className="text-base font-semibold text-black dark:text-white">
+                  {isEditMode ? "Edit Project" : "Create Project"}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  {isEditMode
+                    ? "Update your project details, requirements, and location."
+                    : "Create a new project by filling out each step and submitting the form."}
+                </DialogDescription>
+              </div>
               {phase === "form" && (
                 <span className="text-xs text-black dark:text-white/50">
                   Step {stepIndex + 1} of {TOTAL_STEPS}

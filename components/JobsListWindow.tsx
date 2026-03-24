@@ -570,7 +570,7 @@ export function JobsListWindow({ className }: JobsListWindowProps = {}) {
       >
         {/* Mouse cursor: search → filter/check → first job card (hand) → drawer (arrow) → submit (hand) */}
         <div
-          className="pointer-events-none absolute z-40 transition-all duration-[400ms] ease-out"
+          className="pointer-events-none absolute z-40 transition-all [transition-duration:400ms] ease-out"
           style={{
             left: cursorAtSubmitButton
               ? 468

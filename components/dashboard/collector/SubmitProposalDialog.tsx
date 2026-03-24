@@ -8,6 +8,7 @@ import type { Project, CreateProposalInput } from "@/types";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -524,9 +525,14 @@ export default function SubmitProposalDialog({
 
             {/* Header */}
             <DialogHeader className="shrink-0 flex-row items-center justify-between space-y-0 py-4 px-6 mt-4 bg-white dark:bg-[#0a0a0a] rounded-t-xl">
-              <DialogTitle className="text-base font-semibold text-black dark:text-white">
-                Submit Proposal
-              </DialogTitle>
+              <div className="space-y-1">
+                <DialogTitle className="text-base font-semibold text-black dark:text-white">
+                  Submit Proposal
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Complete each step to submit your proposal for this project.
+                </DialogDescription>
+              </div>
               {phase === "form" && (
                 <span className="text-xs text-black dark:text-white/50">
                   Step {stepIndex + 1} of {TOTAL_STEPS}
