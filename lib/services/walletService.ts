@@ -57,9 +57,9 @@ export async function getWalletTransactions(
   try {
     const { data, error } = await supabase
       .from("transactions")
-      .select(
-        "*, requester:profiles!transactions_requester_id_fkey(full_name, email, avatar_url), collector:profiles!transactions_collector_id_fkey(full_name, email, avatar_url)"
-      )
+      // Avoid embedded profile joins here; strict profile RLS can suppress rows
+      // for requester accounts even when the base transaction is visible.
+      .select("*")
       .or(`requester_id.eq.${userId},collector_id.eq.${userId}`)
       .order("created_at", { ascending: false })
       .limit(limit);

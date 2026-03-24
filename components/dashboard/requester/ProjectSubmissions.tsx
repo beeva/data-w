@@ -6,6 +6,7 @@ import {
   getSubmissionsByProject,
   getDataItemsBySubmission,
   updateSubmissionStatus,
+  validateSubmissionAndCreditCollector,
 } from "@/lib/services/submissionService";
 import type { SubmissionWithCollector, DataItem } from "@/types/submission";
 import type { SubmissionStatus } from "@/types/submission";
@@ -787,15 +788,14 @@ export default function ProjectSubmissions({
     if (!user) return;
     try {
       setProcessing(submissionId);
-      const { error: updateError } = await updateSubmissionStatus(
+      const { error: updateError } = await validateSubmissionAndCreditCollector(
         submissionId,
-        "validated",
         user.id,
       );
       if (updateError) throw updateError;
       setToast({
         title: "Submission validated",
-        message: "The submission has been marked as validated.",
+        message: "The submission was validated and collector payout was processed.",
         type: "success",
       });
       await fetchData();
