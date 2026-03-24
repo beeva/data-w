@@ -1,4 +1,4 @@
-type GoogleLibrary = "places";
+type GoogleLibrary = "places" | "marker";
 
 declare global {
   interface Window {
@@ -14,8 +14,11 @@ function hasRequestedLibraries(libraries: GoogleLibrary[]) {
   const placesLoaded =
     typeof window !== "undefined" &&
     Boolean(window.google?.maps?.places);
+  const markerLoaded =
+    typeof window !== "undefined" &&
+    Boolean(window.google?.maps?.marker?.AdvancedMarkerElement);
   return libraries.every((library) =>
-    library === "places" ? placesLoaded : true,
+    library === "places" ? placesLoaded : markerLoaded,
   );
 }
 
@@ -35,35 +38,103 @@ export function loadGoogleMaps(
     return Promise.resolve(window.google);
   }
 
+  const ensureRequestedLibraries = async (maps: typeof google) => {
+    if (!libraries.length || hasRequestedLibraries(libraries)) {
+      return maps;
+    }
+
+    if (typeof window.google?.maps?.importLibrary === "function") {
+      await Promise.all(
+        libraries.map((library) => window.google!.maps.importLibrary(library)),
+      );
+      if (hasRequestedLibraries(libraries)) {
+        return maps;
+      }
+    }
+
+    throw new Error("Google Maps loaded without required libraries");
+  };
+
   if (window.__googleMapsLoadPromise) {
-    return window.__googleMapsLoadPromise;
+    return window.__googleMapsLoadPromise.then(ensureRequestedLibraries);
   }
 
   const librariesQuery = libraries.length
     ? `&libraries=${encodeURIComponent(libraries.join(","))}`
     : "";
-  const scriptSrc = `${GOOGLE_MAPS_BASE}?key=${encodeURIComponent(apiKey)}${librariesQuery}`;
+  const scriptSrc = `${GOOGLE_MAPS_BASE}?key=${encodeURIComponent(apiKey)}&loading=async${librariesQuery}`;
 
   window.__googleMapsLoadPromise = new Promise<typeof google>(
     (resolve, reject) => {
+      const fail = (message: string) => {
+        window.__googleMapsLoadPromise = null;
+        reject(new Error(message));
+      };
+
+      const waitForLegacyLibraries = async (
+        requestedLibraries: GoogleLibrary[],
+        timeoutMs = 3000,
+      ) => {
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+          if (hasRequestedLibraries(requestedLibraries)) return true;
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        return hasRequestedLibraries(requestedLibraries);
+      };
+
+      const resolveWithLibraries = async () => {
+        if (!window.google?.maps) {
+          fail("Google Maps loaded but maps object is unavailable");
+          return;
+        }
+        if (!libraries.length) {
+          resolve(window.google);
+          return;
+        }
+
+        if (hasRequestedLibraries(libraries)) {
+          resolve(window.google);
+          return;
+        }
+
+        if (typeof window.google.maps.importLibrary === "function") {
+          try {
+            await ensureRequestedLibraries(window.google);
+            resolve(window.google);
+            return;
+          } catch {
+            fail("Google Maps loaded but required libraries failed to initialize");
+            return;
+          }
+        }
+
+        const librariesReady = await waitForLegacyLibraries(libraries);
+        if (librariesReady) {
+          resolve(window.google);
+          return;
+        }
+
+        fail("Google Maps loaded without required libraries");
+      };
+
       const existingScript = document.querySelector(
         'script[data-google-maps-loader="true"]',
       ) as HTMLScriptElement | null;
 
       const handleLoaded = () => {
-        if (window.google?.maps && hasRequestedLibraries(libraries)) {
-          resolve(window.google);
-          return;
-        }
-        reject(new Error("Google Maps loaded without required libraries"));
+        void resolveWithLibraries();
       };
 
       const handleError = () => {
-        window.__googleMapsLoadPromise = null;
-        reject(new Error("Failed to load Google Maps JavaScript API"));
+        fail("Failed to load Google Maps JavaScript API");
       };
 
       if (existingScript) {
+        if (window.google?.maps) {
+          void resolveWithLibraries();
+          return;
+        }
         existingScript.addEventListener("load", handleLoaded, { once: true });
         existingScript.addEventListener("error", handleError, { once: true });
         return;

@@ -361,6 +361,7 @@ export default function RequesterHeader() {
               alt="DataW"
               width={120}
               height={48}
+              loading="eager"
               className="hidden dark:block h-10 w-auto"
             />
           </Link>

@@ -101,6 +101,7 @@ export default function Login() {
                     alt="DataW"
                     width={140}
                     height={38}
+                    loading="eager"
                     className="h-9 w-auto"
                     priority
                   />

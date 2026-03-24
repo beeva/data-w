@@ -259,12 +259,18 @@ export function LocationMapPreview({
   className = "",
   forceDarkMode = false,
 }: LocationMapPreviewProps) {
+  const googleMapsMapId =
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "DEMO_MAP_ID";
+  const shouldUseCloudMapStyling = Boolean(googleMapsMapId);
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const userMarkerRef = useRef<google.maps.Marker | null>(null);
+  const userMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(
+    null,
+  );
   const circleRef = useRef<google.maps.Circle | null>(null);
-  const jobMarkersRef = useRef<google.maps.Marker[]>([]);
-  const rippleMarkerRef = useRef<google.maps.Marker | null>(null);
+  const jobMarkersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const rippleMarkerRef =
+    useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const waveCirclesRef = useRef<google.maps.Circle[]>([]);
   const waveAnimRef = useRef<number | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
@@ -300,18 +306,18 @@ export function LocationMapPreview({
 
   // Apply map styles whenever theme (or forceDarkMode) changes
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!mapInstanceRef.current || shouldUseCloudMapStyling) return;
     mapInstanceRef.current.setOptions({
       styles: effectiveDark ? MAP_STYLES_DARK : MAP_STYLES_LIGHT,
     });
-  }, [effectiveDark]);
+  }, [effectiveDark, shouldUseCloudMapStyling]);
 
   // Load Google Maps script
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) return;
     let cancelled = false;
 
-    void loadGoogleMaps(["places"])
+    void loadGoogleMaps(["places", "marker"])
       .then(() => {
         if (!cancelled) {
           setMapsLoaded(true);
@@ -326,6 +332,24 @@ export function LocationMapPreview({
     };
   }, []);
 
+  const createMarkerImage = (
+    url: string,
+    width: number,
+    height: number,
+    anchorX: number,
+    anchorY: number,
+  ) => {
+    const img = document.createElement("img");
+    img.src = url;
+    img.width = width;
+    img.height = height;
+    img.style.width = `${width}px`;
+    img.style.height = `${height}px`;
+    img.style.transform = `translate(${-anchorX}px, ${-anchorY}px)`;
+    img.style.pointerEvents = "none";
+    return img;
+  };
+
   // Init map + user marker + radius circle
   useEffect(() => {
     if (!mapsLoaded || !mapRef.current || !window.google?.maps) return;
@@ -334,7 +358,7 @@ export function LocationMapPreview({
     const radiusMeters = Math.max(radiusKm, 0) * 1000;
 
     if (!mapInstanceRef.current) {
-      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+      const mapOptions: google.maps.MapOptions = {
         center,
         zoom: radiusToZoom(radiusKm),
         mapTypeControl: false,
@@ -343,20 +367,25 @@ export function LocationMapPreview({
         zoomControl: false,
         gestureHandling: "greedy",
         keyboardShortcuts: false,
-        styles: effectiveDark ? MAP_STYLES_DARK : MAP_STYLES_LIGHT,
+      };
+      if (shouldUseCloudMapStyling) {
+        mapOptions.mapId = googleMapsMapId;
+      } else {
+        mapOptions.styles = effectiveDark ? MAP_STYLES_DARK : MAP_STYLES_LIGHT;
+      }
+      mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
+        ...mapOptions,
       });
 
-      userMarkerRef.current = new window.google.maps.Marker({
-        map: mapInstanceRef.current,
-        position: center,
-        zIndex: 200,
-        icon: {
-          url: USER_MARKER_URL,
-          scaledSize: new window.google.maps.Size(30, 30),
-          anchor: new window.google.maps.Point(15, 15),
+      userMarkerRef.current = new window.google.maps.marker.AdvancedMarkerElement(
+        {
+          map: mapInstanceRef.current,
+          position: center,
+          zIndex: 200,
+          content: createMarkerImage(USER_MARKER_URL, 30, 30, 15, 15),
+          title: "Your location",
         },
-        title: "Your location",
-      });
+      );
 
       circleRef.current = new window.google.maps.Circle({
         map: mapInstanceRef.current,
@@ -385,7 +414,7 @@ export function LocationMapPreview({
         document.head.appendChild(style);
       }
     } else {
-      userMarkerRef.current?.setPosition(center);
+      userMarkerRef.current!.position = center;
       circleRef.current?.setCenter(center);
       circleRef.current?.setRadius(radiusMeters);
       mapInstanceRef.current.setCenter(center);
@@ -454,9 +483,13 @@ export function LocationMapPreview({
     if (!mapsLoaded || !mapInstanceRef.current || !window.google?.maps) return;
 
     // Remove old job markers and any active ripple
-    jobMarkersRef.current.forEach((m) => m.setMap(null));
+    jobMarkersRef.current.forEach((m) => {
+      m.map = null;
+    });
     jobMarkersRef.current = [];
-    rippleMarkerRef.current?.setMap(null);
+    if (rippleMarkerRef.current) {
+      rippleMarkerRef.current.map = null;
+    }
     rippleMarkerRef.current = null;
 
     const map = mapInstanceRef.current;
@@ -465,33 +498,34 @@ export function LocationMapPreview({
     );
 
     validPins.forEach((pin, i) => {
-      const marker = new window.google.maps.Marker({
+      const marker = new window.google.maps.marker.AdvancedMarkerElement({
         map,
         position: { lat: pin.lat, lng: pin.lng },
         zIndex: 10 + i,
-        icon: {
-          url: makeJobMarkerUrl(pin.category, effectiveDark),
-          scaledSize: new window.google.maps.Size(28, 36),
-          anchor: new window.google.maps.Point(14, 36),
-        },
+        content: createMarkerImage(
+          makeJobMarkerUrl(pin.category, effectiveDark),
+          28,
+          36,
+          14,
+          36,
+        ),
         title: pin.title,
       });
 
-      marker.addListener("click", () => {
+      marker.addListener("gmp-click", () => {
         // Swap ripple to this pin
-        rippleMarkerRef.current?.setMap(null);
-        rippleMarkerRef.current = new window.google.maps.Marker({
-          map,
-          position: { lat: pin.lat, lng: pin.lng },
-          zIndex: 9 + i,
-          clickable: false,
-          icon: {
-            url: makeRippleUrl(pin.category),
-            scaledSize: new window.google.maps.Size(64, 64),
-            // center the ripple (32,32) exactly on the geographic position = pin tip
-            anchor: new window.google.maps.Point(32, 32),
+        if (rippleMarkerRef.current) {
+          rippleMarkerRef.current.map = null;
+        }
+        rippleMarkerRef.current = new window.google.maps.marker.AdvancedMarkerElement(
+          {
+            map,
+            position: { lat: pin.lat, lng: pin.lng },
+            zIndex: 9 + i,
+            content: createMarkerImage(makeRippleUrl(pin.category), 64, 64, 32, 32),
+            gmpClickable: false,
           },
-        });
+        );
 
         if (infoWindowRef.current) {
           const { svg: fallbackSvg, bg: iconBg } = getCategoryIcon(pin.category);
@@ -533,7 +567,9 @@ export function LocationMapPreview({
 
           // Clear ripple when the info window is dismissed
           infoWindowRef.current.addListener("closeclick", () => {
-            rippleMarkerRef.current?.setMap(null);
+            if (rippleMarkerRef.current) {
+              rippleMarkerRef.current.map = null;
+            }
             rippleMarkerRef.current = null;
           });
         }

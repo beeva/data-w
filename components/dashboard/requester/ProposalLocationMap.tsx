@@ -54,10 +54,22 @@ export function ProposalLocationMap({
   requesterLng,
   className = "",
 }: ProposalLocationMapProps) {
+  const googleMapsMapId =
+    process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID || "DEMO_MAP_ID";
   const mapRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const [mapsLoaded, setMapsLoaded] = useState(false);
+
+  const createMarkerContent = (url: string) => {
+    const img = document.createElement("img");
+    img.src = url;
+    img.width = 28;
+    img.height = 35;
+    img.style.width = "28px";
+    img.style.height = "35px";
+    return img;
+  };
 
   const hasCollector = isValidCoord(collectorLat, collectorLng);
   const hasRequester = isValidCoord(requesterLat, requesterLng);
@@ -66,7 +78,7 @@ export function ProposalLocationMap({
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) return;
     let cancelled = false;
-    loadGoogleMaps([])
+    loadGoogleMaps(["marker"])
       .then(() => {
         if (!cancelled) setMapsLoaded(true);
       })
@@ -94,6 +106,7 @@ export function ProposalLocationMap({
       mapInstanceRef.current = new window.google.maps.Map(mapRef.current, {
         center,
         zoom: 10,
+        mapId: googleMapsMapId,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
@@ -105,32 +118,26 @@ export function ProposalLocationMap({
     }
 
     const map = mapInstanceRef.current;
-    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current.forEach((m) => {
+      m.map = null;
+    });
     markersRef.current = [];
 
     if (collectorPos) {
-      const m = new window.google.maps.Marker({
+      const m = new window.google.maps.marker.AdvancedMarkerElement({
         map,
         position: collectorPos,
-        icon: {
-          url: COLLECTOR_PIN,
-          scaledSize: new window.google.maps.Size(28, 35),
-          anchor: new window.google.maps.Point(14, 35),
-        },
+        content: createMarkerContent(COLLECTOR_PIN),
         title: "Collector",
         zIndex: 2,
       });
       markersRef.current.push(m);
     }
     if (requesterPos) {
-      const m = new window.google.maps.Marker({
+      const m = new window.google.maps.marker.AdvancedMarkerElement({
         map,
         position: requesterPos,
-        icon: {
-          url: REQUESTER_PIN,
-          scaledSize: new window.google.maps.Size(28, 35),
-          anchor: new window.google.maps.Point(14, 35),
-        },
+        content: createMarkerContent(REQUESTER_PIN),
         title: "Requester / Project",
         zIndex: 1,
       });

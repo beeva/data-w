@@ -39,16 +39,14 @@ export function AddressAutocomplete({
   disabled = false,
 }: AddressAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<
-    google.maps.places.AutocompletePrediction[]
+    google.maps.places.PlacePrediction[]
   >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isGoogleLoaded, setIsGoogleLoaded] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const autocompleteService =
-    useRef<google.maps.places.AutocompleteService | null>(null);
-  const placesService = useRef<google.maps.places.PlacesService | null>(null);
-  const placesDiv = useRef<HTMLDivElement | null>(null);
+  const autocompleteSessionToken =
+    useRef<google.maps.places.AutocompleteSessionToken | null>(null);
   const debounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Load Google Places API
@@ -65,12 +63,8 @@ export function AddressAutocomplete({
       .then(() => {
         if (cancelled || !window.google?.maps?.places) return;
         setIsGoogleLoaded(true);
-        autocompleteService.current =
-          new window.google.maps.places.AutocompleteService();
-        placesDiv.current = document.createElement("div");
-        placesService.current = new window.google.maps.places.PlacesService(
-          placesDiv.current,
-        );
+        autocompleteSessionToken.current =
+          new window.google.maps.places.AutocompleteSessionToken();
       })
       .catch((err) => {
         console.error("Failed to load Google Maps API", err);
@@ -97,7 +91,7 @@ export function AddressAutocomplete({
   }, []);
 
   const searchAddress = useCallback(async (input: string) => {
-    if (!input || input.length < 3 || !autocompleteService.current) {
+    if (!input || input.length < 3 || !window.google?.maps?.places) {
       setSuggestions([]);
       return;
     }
@@ -105,25 +99,35 @@ export function AddressAutocomplete({
     setIsLoading(true);
 
     try {
-      autocompleteService.current.getPlacePredictions(
-        {
+      if (!autocompleteSessionToken.current) {
+        autocompleteSessionToken.current =
+          new window.google.maps.places.AutocompleteSessionToken();
+      }
+
+      const { AutocompleteSuggestion } = (await window.google.maps.importLibrary(
+        "places",
+      )) as google.maps.PlacesLibrary;
+
+      const { suggestions: nextSuggestions } =
+        await AutocompleteSuggestion.fetchAutocompleteSuggestions({
           input,
-          types: ["address"],
-        },
-        (predictions, status) => {
-          setIsLoading(false);
-          if (status === "OK" && predictions) {
-            setSuggestions(predictions);
-            setShowSuggestions(true);
-          } else {
-            setSuggestions([]);
-          }
-        },
-      );
+          includedPrimaryTypes: ["street_address", "premise", "route"],
+          sessionToken: autocompleteSessionToken.current,
+        });
+
+      const predictions = nextSuggestions
+        .map((suggestion) => suggestion.placePrediction)
+        .filter((prediction): prediction is google.maps.places.PlacePrediction =>
+          Boolean(prediction),
+        );
+      setSuggestions(predictions);
+      setShowSuggestions(predictions.length > 0);
     } catch (error) {
       console.error("Error fetching address suggestions:", error);
-      setIsLoading(false);
       setSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
@@ -144,54 +148,59 @@ export function AddressAutocomplete({
   };
 
   const handleSelectSuggestion = (
-    prediction: google.maps.places.AutocompletePrediction,
+    prediction: google.maps.places.PlacePrediction,
   ) => {
-    onChange(prediction.description);
+    onChange(prediction.text.text);
     setShowSuggestions(false);
     setSuggestions([]);
 
-    // Get place details for city, country, and coordinates
-    if (placesService.current && onSelect) {
-      placesService.current.getDetails(
-        {
-          placeId: prediction.place_id,
-          fields: ["address_components", "geometry", "formatted_address"],
-        },
-        (place, status) => {
-          if (status === "OK" && place) {
-            const result: AddressResult = {
-              address: place.formatted_address || prediction.description,
-              city: "",
-              country: "",
-              placeId: prediction.place_id,
-            };
+    if (!onSelect) return;
 
-            // Extract city and country from address components
-            place.address_components?.forEach((component) => {
-              if (component.types.includes("locality")) {
-                result.city = component.long_name;
-              } else if (
-                component.types.includes("administrative_area_level_1") &&
-                !result.city
-              ) {
-                result.city = component.long_name;
-              }
-              if (component.types.includes("country")) {
-                result.country = component.long_name;
-              }
-            });
+    const selectedPrediction = prediction;
+    void (async () => {
+      try {
+        const place = selectedPrediction.toPlace();
+        await place.fetchFields({
+          fields: ["formattedAddress", "addressComponents", "location"],
+        });
 
-            // Get coordinates
-            if (place.geometry?.location) {
-              result.lat = place.geometry.location.lat();
-              result.lng = place.geometry.location.lng();
-            }
+        const result: AddressResult = {
+          address:
+            place.formattedAddress ||
+            selectedPrediction.text.text ||
+            value,
+          city: "",
+          country: "",
+          placeId: selectedPrediction.placeId,
+        };
 
-            onSelect(result);
+        place.addressComponents?.forEach((component) => {
+          const componentText = component.longText || component.shortText || "";
+          if (component.types.includes("locality")) {
+            result.city = componentText;
+          } else if (
+            component.types.includes("administrative_area_level_1") &&
+            !result.city
+          ) {
+            result.city = componentText;
           }
-        },
-      );
-    }
+          if (component.types.includes("country")) {
+            result.country = componentText;
+          }
+        });
+
+        if (place.location) {
+          result.lat = place.location.lat();
+          result.lng = place.location.lng();
+        }
+
+        onSelect(result);
+        autocompleteSessionToken.current =
+          new window.google.maps.places.AutocompleteSessionToken();
+      } catch (error) {
+        console.error("Error fetching selected place details:", error);
+      }
+    })();
   };
 
   return (
@@ -219,7 +228,7 @@ export function AddressAutocomplete({
         <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-gray-700 hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground/40">
           {suggestions.map((suggestion) => (
             <button
-              key={suggestion.place_id}
+              key={suggestion.placeId}
               type="button"
               onClick={() => handleSelectSuggestion(suggestion)}
               className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-start gap-2"
@@ -227,10 +236,10 @@ export function AddressAutocomplete({
               <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
               <div>
                 <p className="font-medium text-foreground">
-                  {suggestion.structured_formatting.main_text}
+                  {suggestion.mainText?.text || suggestion.text.text}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {suggestion.structured_formatting.secondary_text}
+                  {suggestion.secondaryText?.text || ""}
                 </p>
               </div>
             </button>

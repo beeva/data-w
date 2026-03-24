@@ -48,6 +48,7 @@ export default function Header() {
                 alt="Logo"
                 width={140}
                 height={100}
+                loading="eager"
                 className="w-24 sm:w-32 md:w-36 h-auto"
               />
             </Link>

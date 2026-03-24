@@ -163,6 +163,7 @@ export default function DashboardSidebar({
               alt="DataW"
               width={100}
               height={100}
+              loading="eager"
               className="hidden dark:block"
             />
           </>
