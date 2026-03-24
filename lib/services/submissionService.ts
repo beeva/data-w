@@ -3,6 +3,8 @@
  */
 
 import { supabase } from "@/lib/supabase/client";
+import { getProjectById } from "@/lib/services/projectService";
+import { creditCollector } from "@/lib/services/walletService";
 import type {
   Submission,
   SubmissionWithCollector,
@@ -212,6 +214,90 @@ export async function updateSubmissionStatus(
         err instanceof Error
           ? err
           : new Error("Failed to update submission status"),
+    };
+  }
+}
+
+/**
+ * Validate a submission and credit the collector's wallet.
+ * Uses project budget allocation per expected submission unit.
+ */
+export async function validateSubmissionAndCreditCollector(
+  submissionId: string,
+  validatorId: string
+): Promise<{ data: Submission | null; error: Error | null }> {
+  try {
+    const { data: submissionRow, error: submissionError } = await supabase
+      .from("submissions")
+      .select("id, request_id, collector_id, status")
+      .eq("id", submissionId)
+      .single();
+
+    if (submissionError || !submissionRow) {
+      return { data: null, error: new Error(submissionError?.message || "Submission not found") };
+    }
+
+    const currentStatus = submissionRow.status as Submission["status"];
+    if (currentStatus === "validated") {
+      return { data: null, error: new Error("Submission is already validated.") };
+    }
+    if (currentStatus !== "pending") {
+      return {
+        data: null,
+        error: new Error("Only pending submissions can be validated."),
+      };
+    }
+
+    const { data: project, error: projectError } = await getProjectById(
+      submissionRow.request_id
+    );
+    if (projectError || !project) {
+      return { data: null, error: new Error(projectError?.message || "Project not found") };
+    }
+
+    const { count: existingPayouts, error: payoutCheckError } = await supabase
+      .from("transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("submission_id", submissionId)
+      .eq("status", "completed");
+
+    if (payoutCheckError) {
+      return { data: null, error: new Error(payoutCheckError.message) };
+    }
+    if ((existingPayouts ?? 0) > 0) {
+      return {
+        data: null,
+        error: new Error("This submission has already been paid out."),
+      };
+    }
+
+    const totalTarget = Math.max((project.max_collectors || 1) * 10, 1);
+    const payoutAmount = Number(project.budget) / totalTarget;
+    if (!Number.isFinite(payoutAmount) || payoutAmount <= 0) {
+      return { data: null, error: new Error("Invalid payout amount for this project.") };
+    }
+
+    const { transactionId, error: creditError } = await creditCollector(
+      project.requester_id,
+      submissionRow.collector_id,
+      submissionId,
+      payoutAmount
+    );
+    if (creditError || !transactionId) {
+      return {
+        data: null,
+        error: new Error(creditError?.message || "Failed to credit collector"),
+      };
+    }
+
+    return updateSubmissionStatus(submissionId, "validated", validatorId);
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to validate and credit collector"),
     };
   }
 }
