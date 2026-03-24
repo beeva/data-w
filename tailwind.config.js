@@ -10,7 +10,7 @@ module.exports = {
   	extend: {
   		fontFamily: {
   			sans: [
-  				'var(--font-poppins)',
+					'"Poppins"',
   				'system-ui',
   				'"Segoe UI"',
   				'Roboto',
