@@ -5,7 +5,6 @@ type DataPoolRow = {
   id: string;
   title: string;
   category: string;
-  is_public: boolean;
   price: number | null;
   owner: string | null;
   description: string | null;
@@ -27,7 +26,6 @@ export async function getDataPoolItems(): Promise<{
       title: row.title,
       category: row.category || "Other",
       thumbnail: "/api/placeholder/300/200",
-      isPublic: row.is_public,
       price: row.price ?? undefined,
       owner: row.owner || undefined,
       description: row.description || undefined,

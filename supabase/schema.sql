@@ -364,7 +364,6 @@ CREATE TABLE data_items (
   file_size BIGINT,
   mime_type TEXT,
   thumbnail_url TEXT,
-  visibility TEXT CHECK (visibility IN ('public', 'private')),
   price DECIMAL(10, 2),
   metadata JSONB, -- EXIF data, duration, dimensions, etc.
   created_at TIMESTAMPTZ DEFAULT NOW()

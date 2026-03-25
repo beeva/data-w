@@ -9,7 +9,6 @@ import type {
   Submission,
   SubmissionWithCollector,
   DataItem,
-  DataVisibility,
   Validation,
   ProjectStats,
   SubmissionMetadata,
@@ -594,19 +593,17 @@ export async function createDataItem(
 }
 
 /**
- * Update a data item's visibility and price.
- * Intended for collectors after project completion.
+ * Update a data item's price.
+ * Intended for collectors after project completion (pricing is optional).
  */
 export async function updateDataItemAccess(
   dataItemId: string,
-  visibility: DataVisibility,
   price: number
 ): Promise<{ data: DataItem | null; error: Error | null }> {
   try {
     const { data, error } = await supabase
       .from("data_items")
       .update({
-        visibility,
         price,
       })
       .eq("id", dataItemId)
