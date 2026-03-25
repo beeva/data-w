@@ -1037,7 +1037,7 @@ export default function BillingContent() {
               </div>
 
               {/* Compare features table */}
-              <div className="rounded-xl border border-border overflow-hidden bg-white dark:bg-gray-800/50">
+              {/* <div className="rounded-xl border border-border overflow-hidden bg-white dark:bg-gray-800/50">
                 <div className="px-6 py-4 border-b border-border">
                   <h3 className="text-sm font-semibold text-foreground">
                     Compare features by plan
@@ -1166,7 +1166,7 @@ export default function BillingContent() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </div> */}
             </TabsContent>
 
             {/* ── Usage Tab ── */}
