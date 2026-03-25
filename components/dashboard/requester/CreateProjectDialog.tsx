@@ -479,6 +479,30 @@ export default function CreateProjectDialog({
     setStepIndex((i) => Math.max(0, i - 1));
   }
 
+  function handleStepKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== "Enter") return;
+    if (e.shiftKey) return;
+    if (e.isComposing) return;
+    if (phase !== "form") return;
+
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    const tag = target.tagName?.toLowerCase();
+    if (tag === "textarea") {
+      // Specific textarea steps: Enter should advance; Shift+Enter is handled above.
+      if (currentStepId !== "description" && currentStepId !== "specifications")
+        return;
+    }
+    if (tag === "button") return;
+
+    // Allow native submit/selection behaviors for selects/autocomplete.
+    if (target.getAttribute("role") === "combobox") return;
+
+    e.preventDefault();
+    handleNext();
+  }
+
   async function handleSubmit() {
     setError("");
     if (!user || !profile) {
@@ -735,6 +759,7 @@ export default function CreateProjectDialog({
             className="sm:max-w-4xl h-[80vh] overflow-hidden rounded-2xl border-0 bg-transparent shadow-none flex flex-col p-0 gap-0"
             onInteractOutside={(e) => e.preventDefault()}
             onEscapeKeyDown={(e) => e.preventDefault()}
+            onKeyDown={handleStepKeyDown}
           >
             {/* Top info bar */}
             <div className="mx-6">
