@@ -306,13 +306,15 @@ export default function Testimonials() {
                     {t.content}
                   </p>
                   <div className="flex items-center gap-3">
-                    <Image
-                      src={t.image}
-                      alt={t.name}
-                      width={40}
-                      height={40}
-                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                    />
+                    <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full">
+                      <Image
+                        src={t.image}
+                        alt={t.name}
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                      />
+                    </div>
                     <div>
                       <div className="font-semibold text-white text-sm">
                         {t.name}
@@ -336,13 +338,15 @@ export default function Testimonials() {
                     {t.content}
                   </p>
                   <div className="flex items-center gap-3">
-                    <Image
-                      src={t.image}
-                      alt={t.name}
-                      width={40}
-                      height={40}
-                      className="w-10 h-10 rounded-full object-cover flex-shrink-0"
-                    />
+                    <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full">
+                      <Image
+                        src={t.image}
+                        alt={t.name}
+                        fill
+                        className="object-cover"
+                        sizes="40px"
+                      />
+                    </div>
                     <div>
                       <div className="font-semibold text-white text-sm">
                         {t.name}

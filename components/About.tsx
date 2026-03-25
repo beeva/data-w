@@ -683,6 +683,7 @@ export default function About() {
                       src={member.image}
                       alt={member.name}
                       fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="object-cover transition-transform duration-500 ease-out -translate-x-12 group-hover:translate-x-0"
                     />
                     {/* Glasses sweep effect */}

@@ -96,15 +96,17 @@ export default function Login() {
                   href="/"
                   className="inline-flex hover:opacity-90 transition-opacity"
                 >
-                  <Image
-                    src="/logo.png"
-                    alt="DataW"
-                    width={140}
-                    height={38}
-                    loading="eager"
-                    className="h-9 w-auto"
-                    priority
-                  />
+                  <div className="relative h-9 w-[140px]">
+                    <Image
+                      src="/logo.png"
+                      alt="DataW"
+                      fill
+                      className="object-contain object-left"
+                      sizes="140px"
+                      loading="eager"
+                      priority
+                    />
+                  </div>
                 </Link>
                 <div className="space-y-6 max-w-sm">
                   <h2 className="text-2xl xl:text-3xl font-semibold text-white tracking-tight leading-tight">
@@ -131,14 +133,16 @@ export default function Login() {
                     href="/"
                     className="inline-flex hover:opacity-90 transition-opacity"
                   >
-                    <Image
-                      src="/logo-dark.png"
-                      alt="DataW"
-                      width={140}
-                      height={38}
-                      className="h-9 w-auto"
-                      priority
-                    />
+                    <div className="relative h-9 w-[140px]">
+                      <Image
+                        src="/logo-dark.png"
+                        alt="DataW"
+                        fill
+                        className="object-contain object-left"
+                        sizes="140px"
+                        priority
+                      />
+                    </div>
                   </Link>
                 </div>
 

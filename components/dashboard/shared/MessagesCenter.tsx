@@ -1153,15 +1153,6 @@ export default function MessagesCenter() {
                   placeholder="Search messages or projects..."
                 />
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="btn-gelatine h-10 w-10 shrink-0 rounded-2xl border-none bg-slate-100 text-muted-foreground hover:text-foreground shadow-sm dark:bg-slate-800"
-                aria-label="Filter conversations"
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
             </div>
 
             <div className="flex-1 overflow-y-auto pr-1 dashboard-scrollbar">

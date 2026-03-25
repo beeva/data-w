@@ -142,15 +142,17 @@ export default function SignUp() {
                   href="/"
                   className="inline-flex hover:opacity-90 transition-opacity"
                 >
-                  <Image
-                    src="/logo.png"
-                    alt="DataW"
-                    width={140}
-                    height={38}
-                    loading="eager"
-                    className="h-9 w-auto"
-                    priority
-                  />
+                  <div className="relative h-9 w-[140px]">
+                    <Image
+                      src="/logo.png"
+                      alt="DataW"
+                      fill
+                      className="object-contain object-left"
+                      sizes="140px"
+                      loading="eager"
+                      priority
+                    />
+                  </div>
                 </Link>
                 <div className="space-y-6 max-w-sm">
                   <h2 className="text-2xl xl:text-3xl font-semibold text-white tracking-tight leading-tight">
@@ -177,14 +179,16 @@ export default function SignUp() {
                     href="/"
                     className="inline-flex hover:opacity-90 transition-opacity"
                   >
-                    <Image
-                      src="/logo-dark.png"
-                      alt="DataW"
-                      width={140}
-                      height={38}
-                      className="h-9 w-auto"
-                      priority
-                    />
+                    <div className="relative h-9 w-[140px]">
+                      <Image
+                        src="/logo-dark.png"
+                        alt="DataW"
+                        fill
+                        className="object-contain object-left"
+                        sizes="140px"
+                        priority
+                      />
+                    </div>
                   </Link>
                 </div>
 
@@ -350,20 +354,24 @@ export default function SignUp() {
                                 fill
                                 className="role-hero-cover object-cover"
                                 sizes="(max-width: 160px) 100vw, 133px"
+                                priority={formData.role === role.value}
                               />
                             </div>
                           </div>
                           <span className="role-hero-title">
                             {role.label}
                           </span>
-                          <Image
-                            src={`/characters/${role.value}.png`}
-                            alt=""
-                            width={192}
-                            height={192}
-                            className="role-hero-character object-contain"
-                            aria-hidden
-                          />
+                          <div className="role-hero-character">
+                            <Image
+                              src={`/characters/${role.value}.png`}
+                              alt=""
+                              fill
+                              className="object-contain"
+                              sizes="192px"
+                              aria-hidden
+                              priority={formData.role === role.value}
+                            />
+                          </div>
                         </button>
                       ))}
                     </div>
