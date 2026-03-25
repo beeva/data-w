@@ -930,8 +930,8 @@ export default function AccountSettings() {
                     </div>
                   </form>
 
-                  {/* <Separator className="my-6" />
-                  <PhoneTwoFactorAuth defaultPhone={profile?.phone || ""} /> */}
+                  <Separator className="my-6" />
+                  <PhoneTwoFactorAuth defaultPhone={profile?.phone || ""} />
                 </CardContent>
               </Card>
             )}
