@@ -482,7 +482,7 @@ export default function CreateProjectDialog({
   function handleStepKeyDown(e: React.KeyboardEvent) {
     if (e.key !== "Enter") return;
     if (e.shiftKey) return;
-    if (e.isComposing) return;
+    if (e.nativeEvent.isComposing) return;
     if (phase !== "form") return;
 
     const target = e.target as HTMLElement | null;

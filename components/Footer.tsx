@@ -44,20 +44,24 @@ export default function Footer({ compact = false }: FooterProps) {
         <div className="container mx-auto h-full px-4 sm:px-6">
           <div className="flex h-full items-center justify-between gap-4">
             <div className="flex justify-center">
-              <Image
-                src="/logo-dark.png"
-                alt="DataW"
-                width={140}
-                height={100}
-                className="w-20 sm:w-24 h-auto dark:hidden"
-              />
-              <Image
-                src="/logo.png"
-                alt="DataW"
-                width={140}
-                height={100}
-                className="hidden w-20 sm:w-24 h-auto dark:block"
-              />
+              <div className="relative w-20 sm:w-24 aspect-[7/5] dark:hidden">
+                <Image
+                  src="/logo-dark.png"
+                  alt="DataW"
+                  fill
+                  className="object-contain"
+                  sizes="(max-width: 640px) 80px, 96px"
+                />
+              </div>
+              <div className="relative hidden w-20 sm:w-24 aspect-[7/5] dark:block">
+                <Image
+                  src="/logo.png"
+                  alt="DataW"
+                  fill
+                  className="object-contain"
+                  sizes="(max-width: 640px) 80px, 96px"
+                />
+              </div>
             </div>
             <div className="text-muted-foreground text-xs text-right">
               © {new Date().getFullYear()} DataW. All rights reserved.
@@ -322,13 +326,15 @@ export default function Footer({ compact = false }: FooterProps) {
         <div className="border-t border-white/10 pt-6 sm:pt-8 mt-8 sm:mt-12">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 sm:gap-6">
             <div className="flex justify-center">
-              <Image
-                src="/logo.png"
-                alt="DataW"
-                width={140}
-                height={100}
-                className="w-24 sm:w-32 md:w-36 h-auto"
-              />
+              <div className="relative w-24 sm:w-32 md:w-36 aspect-[7/5]">
+                <Image
+                  src="/logo.png"
+                  alt="DataW"
+                  fill
+                  className="object-contain"
+                  sizes="(max-width: 640px) 96px, (max-width: 768px) 128px, 144px"
+                />
+              </div>
             </div>
             <div className="text-white/50 text-xs sm:text-sm text-center md:text-left">
               © {new Date().getFullYear()} DataW. All rights reserved.

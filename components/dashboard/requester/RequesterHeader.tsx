@@ -349,21 +349,25 @@ export default function RequesterHeader() {
             href="/dashboard/home"
             className="btn-gelatine shrink-0 flex items-center"
           >
-            <Image
-              src="/logo-dark.png"
-              alt="DataW"
-              width={120}
-              height={48}
-              className="dark:hidden h-10 w-auto"
-            />
-            <Image
-              src="/logo.png"
-              alt="DataW"
-              width={120}
-              height={48}
-              loading="eager"
-              className="hidden dark:block h-10 w-auto"
-            />
+            <div className="relative h-10 w-[120px] dark:hidden">
+              <Image
+                src="/logo-dark.png"
+                alt="DataW"
+                fill
+                className="object-contain object-left"
+                sizes="120px"
+              />
+            </div>
+            <div className="relative hidden h-10 w-[120px] dark:block">
+              <Image
+                src="/logo.png"
+                alt="DataW"
+                fill
+                className="object-contain object-left"
+                sizes="120px"
+                loading="eager"
+              />
+            </div>
           </Link>
 
           <nav className="hidden lg:flex items-center gap-0.5">

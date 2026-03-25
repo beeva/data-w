@@ -134,38 +134,46 @@ export default function DashboardSidebar({
       >
         {collapsed ? (
           <>
-            <Image
-              src="/icon-dark.png"
-              alt="DataW"
-              width={32}
-              height={32}
-              className="dark:hidden"
-            />
-            <Image
-              src="/icon.png"
-              alt="DataW"
-              width={32}
-              height={32}
-              className="hidden dark:block"
-            />
+            <div className="relative h-8 w-8 shrink-0 dark:hidden">
+              <Image
+                src="/icon-dark.png"
+                alt="DataW"
+                fill
+                className="object-contain"
+                sizes="32px"
+              />
+            </div>
+            <div className="relative hidden h-8 w-8 shrink-0 dark:block">
+              <Image
+                src="/icon.png"
+                alt="DataW"
+                fill
+                className="object-contain"
+                sizes="32px"
+              />
+            </div>
           </>
         ) : (
           <>
-            <Image
-              src="/logo-dark.png"
-              alt="DataW"
-              width={100}
-              height={100}
-              className="dark:hidden"
-            />
-            <Image
-              src="/logo.png"
-              alt="DataW"
-              width={100}
-              height={100}
-              loading="eager"
-              className="hidden dark:block"
-            />
+            <div className="relative h-[100px] w-[100px] shrink-0 dark:hidden">
+              <Image
+                src="/logo-dark.png"
+                alt="DataW"
+                fill
+                className="object-contain object-left"
+                sizes="100px"
+              />
+            </div>
+            <div className="relative hidden h-[100px] w-[100px] shrink-0 dark:block">
+              <Image
+                src="/logo.png"
+                alt="DataW"
+                fill
+                className="object-contain object-left"
+                sizes="100px"
+                loading="eager"
+              />
+            </div>
           </>
         )}
       </div>

@@ -43,14 +43,16 @@ export default function Header() {
           <div className="flex items-center gap-6 xl:gap-8">
             {/* Logo */}
             <Link href="/" className="flex-shrink-0">
-              <Image
-                src="/logo.png"
-                alt="Logo"
-                width={140}
-                height={100}
-                loading="eager"
-                className="w-24 sm:w-32 md:w-36 h-auto"
-              />
+              <div className="relative w-24 sm:w-32 md:w-36 aspect-[7/5]">
+                <Image
+                  src="/logo.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain object-left"
+                  sizes="(max-width: 640px) 96px, (max-width: 768px) 128px, 144px"
+                  loading="eager"
+                />
+              </div>
             </Link>
 
             {/* Desktop Navigation */}
