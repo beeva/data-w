@@ -30,6 +30,15 @@ declare global {
   }
 }
 
+declare global {
+  namespace google.maps.marker {
+    interface AdvancedMarkerElementOptions {
+      anchorLeft?: string;
+      anchorTop?: string;
+    }
+  }
+}
+
 const MAP_STYLES_LIGHT: google.maps.MapTypeStyle[] = [
   { elementType: "geometry", stylers: [{ color: "#f0f4f8" }] },
   { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
@@ -336,8 +345,8 @@ export function LocationMapPreview({
     url: string,
     width: number,
     height: number,
-    anchorX: number,
-    anchorY: number,
+    offsetX = 0,
+    offsetY = 0,
   ) => {
     const img = document.createElement("img");
     img.src = url;
@@ -345,7 +354,9 @@ export function LocationMapPreview({
     img.height = height;
     img.style.width = `${width}px`;
     img.style.height = `${height}px`;
-    img.style.transform = `translate(${-anchorX}px, ${-anchorY}px)`;
+    if (offsetX !== 0 || offsetY !== 0) {
+      img.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    }
     img.style.pointerEvents = "none";
     return img;
   };
@@ -382,7 +393,10 @@ export function LocationMapPreview({
           map: mapInstanceRef.current,
           position: center,
           zIndex: 200,
-          content: createMarkerImage(USER_MARKER_URL, 30, 30, 15, 15),
+          content: createMarkerImage(USER_MARKER_URL, 30, 30),
+          // Keep the marker centered exactly on LatLng.
+          anchorLeft: "-15px",
+          anchorTop: "-15px",
           title: "Your location",
         },
       );
@@ -506,8 +520,8 @@ export function LocationMapPreview({
           makeJobMarkerUrl(pin.category, effectiveDark),
           28,
           36,
-          14,
-          36,
+          0,
+          0,
         ),
         title: pin.title,
       });
@@ -522,7 +536,8 @@ export function LocationMapPreview({
             map,
             position: { lat: pin.lat, lng: pin.lng },
             zIndex: 9 + i,
-            content: createMarkerImage(makeRippleUrl(pin.category), 64, 64, 32, 32),
+            // Keep map anchor at pin tip, then shift ripple up to align with pin head center.
+            content: createMarkerImage(makeRippleUrl(pin.category), 64, 64, 0, -10),
             gmpClickable: false,
           },
         );
