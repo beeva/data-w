@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createProject, updateProject } from "@/lib/services/projectService";
 import { deductProjectBudget } from "@/lib/services/walletService";
 import type { Project, ProjectFormData } from "@/types/project";
+import { isRequesterLikeRole } from "@/types/user";
 import {
   Dialog,
   DialogContent,

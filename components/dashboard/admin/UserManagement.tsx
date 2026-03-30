@@ -28,7 +28,13 @@ import {
 } from "lucide-react";
 import ToastNotification from "@/components/ui/toast-notification";
 
-type UserRole = "requester" | "collector" | "agent" | "admin";
+type UserRole =
+  | "requester"
+  | "collector"
+  | "agent"
+  | "admin"
+  | "company"
+  | "personal";
 
 interface UserRow {
   id: string;
@@ -45,7 +51,14 @@ interface UserRow {
   rating: number;
 }
 
-const ROLES: UserRole[] = ["requester", "collector", "agent", "admin"];
+const ROLES: UserRole[] = [
+  "requester",
+  "collector",
+  "agent",
+  "admin",
+  "company",
+  "personal",
+];
 
 const ROLE_COLORS: Record<string, string> = {
   requester: "bg-blue-500",

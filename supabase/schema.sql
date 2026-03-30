@@ -3,7 +3,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "postgis";
 
 -- User Roles Enum
-CREATE TYPE user_role AS ENUM ('requester', 'collector', 'agent', 'admin');
+CREATE TYPE user_role AS ENUM ('requester', 'collector', 'agent', 'admin', 'company', 'personal');
 
 -- User Verification Tier Enum
 CREATE TYPE verification_tier AS ENUM ('bronze', 'silver', 'gold', 'platinum');
@@ -924,7 +924,7 @@ BEGIN
     RAISE EXCEPTION 'Access denied: admin only';
   END IF;
 
-  IF new_role NOT IN ('requester', 'collector', 'agent', 'admin') THEN
+  IF new_role NOT IN ('requester', 'collector', 'agent', 'admin', 'company', 'personal') THEN
     RAISE EXCEPTION 'Invalid role: %', new_role;
   END IF;
 
