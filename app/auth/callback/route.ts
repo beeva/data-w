@@ -1,7 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const ALLOWED_ROLES = new Set(["requester", "collector", "agent"]);
+const ALLOWED_ROLES = new Set([
+  "requester",
+  "collector",
+  "agent",
+  "company",
+  "personal",
+]);
 
 function getSafeNextPath(nextPath: string | null): string {
   if (!nextPath) return "/dashboard/home";

@@ -8,25 +8,82 @@ import { supabase } from "@/lib/supabase/client";
 import DataTunnelCanvas from "@/components/DataTunnelCanvas";
 import EmailVerification from "@/components/EmailVerification";
 
-type UserRole = "requester" | "collector" | "agent";
+const SIGNUP_ROLES = [
+  "collector",
+  "requester",
+  "agent",
+  "company",
+  "personal",
+] as const;
+
+type SignupRole = (typeof SIGNUP_ROLES)[number];
+
+function isSignupRole(value: string | null): value is SignupRole {
+  return (
+    value !== null && (SIGNUP_ROLES as readonly string[]).includes(value)
+  );
+}
+
+/** Hero art filenames exist for collector / requester / agent only for now. */
+type RoleHeroAssetKey = "collector" | "requester" | "agent";
+
+function roleHeroAssetKey(role: SignupRole): RoleHeroAssetKey {
+  switch (role) {
+    case "company":
+      return "requester";
+    case "personal":
+      return "collector";
+    default:
+      return role;
+  }
+}
+
+const ROLE_OPTIONS: {
+  value: SignupRole;
+  label: string;
+  desc: string;
+}[] = [
+  {
+    value: "collector",
+    label: "Collector",
+    desc: "Collect data and earn",
+  },
+  {
+    value: "requester",
+    label: "Requester",
+    desc: "Request data collection",
+  },
+  {
+    value: "agent",
+    label: "Agent",
+    desc: "Help validate data",
+  },
+  {
+    value: "company",
+    label: "Company",
+    desc: "Business or team account",
+  },
+  {
+    value: "personal",
+    label: "Personal",
+    desc: "Individual account",
+  },
+];
 
 export default function SignUp() {
   const searchParams = useSearchParams();
-  const roleParam = searchParams.get("role") as UserRole | null;
+  const roleParam = searchParams.get("role");
 
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
     fullName: "",
-    role: (roleParam && ["requester", "collector", "agent"].includes(roleParam)
-      ? roleParam
-      : "collector") as UserRole,
+    role: (isSignupRole(roleParam) ? roleParam : "collector") as SignupRole,
   });
 
-  // Update role when URL param changes
   useEffect(() => {
-    if (roleParam && ["requester", "collector", "agent"].includes(roleParam)) {
+    if (isSignupRole(roleParam)) {
       setFormData((prev) => ({ ...prev, role: roleParam }));
     }
   }, [roleParam]);
@@ -79,9 +136,10 @@ export default function SignUp() {
 
       if (signUpError) throw signUpError;
       setVerificationStep(true);
-    } catch(error: any) {
-      setError(error.message);
-      console.error(error);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : "Something went wrong";
+      setError(message);
     }
     finally {
       setLoading(false);
@@ -121,8 +179,12 @@ export default function SignUp() {
       });
 
       if (oauthError) throw oauthError;
-    } catch (oauthError: any) {
-      setError(oauthError.message || "Failed to continue with Google");
+    } catch (oauthError: unknown) {
+      const msg =
+        oauthError instanceof Error
+          ? oauthError.message
+          : "Failed to continue with Google";
+      setError(msg);
       setGoogleLoading(false);
     }
   };
@@ -156,12 +218,12 @@ export default function SignUp() {
                 </Link>
                 <div className="space-y-6 max-w-sm">
                   <h2 className="text-2xl xl:text-3xl font-semibold text-white tracking-tight leading-tight">
-                    Join DataW and start collecting or requesting data with your
-                    team.
+                    Join DataW as a collector, requester, or with a company or
+                    personal account.
                   </h2>
                   <p className="text-slate-400 text-sm leading-relaxed">
-                    Create an account to access projects, earn as a collector,
-                    or request data collection.
+                    Pick how you will use the platform, then sign up with email
+                    or Google. You can fine-tune your profile after you verify.
                   </p>
                 </div>
                 <p className="text-slate-500 text-xs">
@@ -308,72 +370,60 @@ export default function SignUp() {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-3">
-                      I want to
+                      How will you use DataW?
                     </label>
                     <input
                       type="hidden"
                       name="role"
                       value={formData.role}
                     />
-                    <div className="flex flex-wrap justify-center gap-6">
-                      {[
-                        {
-                          value: "collector" as const,
-                          label: "Collector",
-                          desc: "Collect data and earn",
-                        },
-                        {
-                          value: "requester" as const,
-                          label: "Requester",
-                          desc: "Request data collection",
-                        },
-                        {
-                          value: "agent" as const,
-                          label: "Agent",
-                          desc: "Help validate data",
-                        },
-                      ].map((role) => (
-                        <button
-                          key={role.value}
-                          type="button"
-                          onClick={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              role: role.value,
-                            }))
-                          }
-                          className={`role-hero-card focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 rounded-xl ${formData.role === role.value ? "selected" : ""}`}
-                          aria-pressed={formData.role === role.value}
-                          aria-label={`Select ${role.label}: ${role.desc}`}
-                        >
-                          <div className="role-hero-wrapper">
-                            <div className="relative w-full h-full rounded-xl overflow-hidden">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-5 justify-items-center max-w-4xl mx-auto">
+                      {ROLE_OPTIONS.map((role) => {
+                        const art = roleHeroAssetKey(role.value);
+                        return (
+                          <button
+                            key={role.value}
+                            type="button"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                role: role.value,
+                              }))
+                            }
+                            className={`role-hero-card focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 rounded-xl ${formData.role === role.value ? "selected" : ""}`}
+                            aria-pressed={formData.role === role.value}
+                            aria-label={`Select ${role.label}: ${role.desc}`}
+                            title={role.desc}
+                          >
+                            <div className="role-hero-wrapper">
+                              <div className="relative w-full h-full rounded-xl overflow-hidden">
+                                <Image
+                                  src={`/characters/${art}-bg.webp`}
+                                  alt=""
+                                  fill
+                                  className="role-hero-cover object-cover"
+                                  sizes="(max-width: 160px) 100vw, 133px"
+                                  priority={formData.role === role.value}
+                                />
+                              </div>
+                            </div>
+                            <span className="role-hero-title">
+                              {role.label}
+                            </span>
+                            <div className="role-hero-character">
                               <Image
-                                src={`/characters/${role.value}-bg.webp`}
+                                src={`/characters/${art}.png`}
                                 alt=""
                                 fill
-                                className="role-hero-cover object-cover"
-                                sizes="(max-width: 160px) 100vw, 133px"
+                                className="object-contain"
+                                sizes="192px"
+                                aria-hidden
                                 priority={formData.role === role.value}
                               />
                             </div>
-                          </div>
-                          <span className="role-hero-title">
-                            {role.label}
-                          </span>
-                          <div className="role-hero-character">
-                            <Image
-                              src={`/characters/${role.value}.png`}
-                              alt=""
-                              fill
-                              className="object-contain"
-                              sizes="192px"
-                              aria-hidden
-                              priority={formData.role === role.value}
-                            />
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
