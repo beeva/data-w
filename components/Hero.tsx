@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Lottie from "lottie-react";
 import heroAnimation from "@/lib/assets/lottie/hero.json";
+import { supabase } from "@/lib/supabase/client";
 import { GlobeConnectSvg } from "./svg/GlobeConnectSvg";
 import { IncomeSvg } from "./svg/IncomeSvg";
 import { EarthSvg } from "./svg/EarthSvg";
@@ -15,6 +17,7 @@ export default function Hero() {
   const tubesAppRef = useRef<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<HeroTab>("requester");
+  const router = useRouter();
 
   // Tubes Cursor Animation
   useEffect(() => {
@@ -70,10 +73,32 @@ export default function Hero() {
     };
   }, []);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Redirect to data pool page
-    window.location.href = "/datapool";
+    const trimmedQuery = searchQuery.trim();
+    const requestParams = new URLSearchParams();
+
+    if (trimmedQuery) {
+      requestParams.set("request", trimmedQuery);
+    }
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session) {
+      const datapoolUrl = requestParams.toString()
+        ? `/datapool?${requestParams.toString()}`
+        : "/datapool";
+      router.push(datapoolUrl);
+      return;
+    }
+
+    const signupParams = new URLSearchParams({ role: "requester" });
+    if (trimmedQuery) {
+      signupParams.set("request", trimmedQuery);
+    }
+    router.push(`/signup?${signupParams.toString()}`);
   };
 
   return (
