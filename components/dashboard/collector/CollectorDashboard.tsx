@@ -20,13 +20,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Clock,
@@ -54,6 +47,7 @@ import {
   BookOpen,
 } from "lucide-react";
 import ProjectDetailsSheet from "./ProjectDetailsSheet";
+import JobsTabsBar from "./JobsTabsBar";
 import {
   LocationMapPreview,
   type MapJobPin,
@@ -672,16 +666,6 @@ export default function CollectorDashboard() {
     fetchData();
   }, [userId]);
 
-  const distanceOptions = [
-    { value: "0", label: "All distances" },
-    { value: "5", label: "Within 5 km" },
-    { value: "10", label: "Within 10 km" },
-    { value: "25", label: "Within 25 km" },
-    { value: "50", label: "Within 50 km" },
-    { value: "100", label: "Within 100 km" },
-    { value: "250", label: "Within 250 km" },
-  ];
-
   const getRawDistanceKm = (project: Project): number | null => {
     if (!hasLocation) return null;
     const pLat = project.location?.lat;
@@ -1207,73 +1191,16 @@ export default function CollectorDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="py-0 px-0">
-            <div className="flex items-center justify-between px-6 py-3">
-              {/* Tab buttons */}
-              <div className="flex items-center gap-5 text-sm">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("best")}
-                  className={`py-1 border-b-2 transition-colors font-medium ${
-                    activeTab === "best"
-                      ? "border-cyan-500 text-cyan-600 dark:text-cyan-400"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Best Matches
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("recent")}
-                  className={`py-1 border-b-2 transition-colors font-medium ${
-                    activeTab === "recent"
-                      ? "border-cyan-500 text-cyan-600 dark:text-cyan-400"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Recent Jobs
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("saved")}
-                  className={`py-1 border-b-2 transition-colors font-medium ${
-                    activeTab === "saved"
-                      ? "border-cyan-500 text-cyan-600 dark:text-cyan-400"
-                      : "border-transparent text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Saved Jobs
-                  {savedProjects.length > 0 && (
-                    <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400 text-xs font-semibold">
-                      {savedProjects.length}
-                    </span>
-                  )}
-                </button>
-              </div>
-
-              {/* Filter + View All */}
-              <div className="flex items-center gap-2">
-                {showBestMatchesExtras && hasLocation && (
-                  <Select
-                    value={String(maxDistance)}
-                    onValueChange={(val) => setMaxDistance(Number(val))}
-                  >
-                    <SelectTrigger className="h-7 w-[130px] text-xs bg-white dark:bg-gray-800 border dark:border-none shadow-none">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-gray-800 border dark:border-none shadow-none">
-                      {distanceOptions.map((opt) => (
-                        <SelectItem
-                          key={opt.value}
-                          value={opt.value}
-                          className="text-xs hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer"
-                        >
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
+            <div className="px-6 py-3">
+              <JobsTabsBar
+                activeTab={activeTab}
+                onChangeTab={setActiveTab}
+                savedCount={savedProjects.length}
+                showDistanceSelect={showBestMatchesExtras && hasLocation}
+                maxDistance={maxDistance}
+                onChangeDistance={setMaxDistance}
+                compact
+              />
             </div>
 
             {/* Best Matches: two-column layout (map left, jobs right) */}

@@ -49,6 +49,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import ProjectDetailsSheet from "./ProjectDetailsSheet";
+import JobsTabsBar from "./JobsTabsBar";
 import { cn, getCategoryColor } from "@/lib/utils";
 import {
   getProposalsByCollector,
@@ -600,7 +601,7 @@ function CountrySelect({
 }
 
 export default function FindProjects() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [proposalStatuses, setProposalStatuses] = useState<
@@ -626,6 +627,10 @@ export default function FindProjects() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [savedProjectIds, setSavedProjectIds] = useState<string[]>([]);
   const [showSavedOnly, setShowSavedOnly] = useState(false);
+  const [activeTab, setActiveTab] = useState<"best" | "recent" | "saved">(
+    "best",
+  );
+  const [maxDistance, setMaxDistance] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -637,6 +642,30 @@ export default function FindProjects() {
   });
 
   const userId = user?.id;
+  const collectorLat = profile?.location?.lat;
+  const collectorLng = profile?.location?.lng;
+  const hasLocation =
+    typeof collectorLat === "number" && typeof collectorLng === "number";
+
+  const getRawDistanceKm = (project: Project): number | null => {
+    if (!hasLocation) return null;
+    const pLat = project.location?.lat;
+    const pLng = project.location?.lng;
+    if (typeof pLat !== "number" || typeof pLng !== "number") return null;
+
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const earthRadiusKm = 6371;
+    const dLat = toRad(pLat - collectorLat!);
+    const dLng = toRad(pLng - collectorLng!);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(collectorLat!)) *
+        Math.cos(toRad(pLat)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  };
 
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 300);
@@ -792,6 +821,69 @@ export default function FindProjects() {
     budgetRange.max < 100000 ||
     showSavedOnly;
 
+  const savedProjects = useMemo(() => {
+    const savedSet = new Set(savedProjectIds);
+    return projects
+      .filter((project) => savedSet.has(project.id))
+      .filter((project) => {
+        const proposal = proposalStatuses[project.id];
+        return !(proposal && proposal.status === "accepted");
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+  }, [projects, proposalStatuses, savedProjectIds]);
+
+  const tabProjects = useMemo(() => {
+    const nonAccepted = projects.filter((project) => {
+      const proposal = proposalStatuses[project.id];
+      return !(proposal && proposal.status === "accepted");
+    });
+
+    if (activeTab === "saved") {
+      return savedProjects;
+    }
+
+    if (activeTab === "recent") {
+      const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+      return nonAccepted
+        .filter(
+          (project) => new Date(project.created_at).getTime() >= twoWeeksAgo,
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+    }
+
+    const best = nonAccepted.filter((project) => {
+      if (!hasLocation || maxDistance === 0) return true;
+      const dist = getRawDistanceKm(project);
+      return dist !== null && dist <= maxDistance;
+    });
+
+    if (!hasLocation) {
+      return best.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+    }
+
+    return best.sort((a, b) => {
+      const aDist = getRawDistanceKm(a) ?? Number.POSITIVE_INFINITY;
+      const bDist = getRawDistanceKm(b) ?? Number.POSITIVE_INFINITY;
+      return aDist - bDist;
+    });
+  }, [
+    projects,
+    proposalStatuses,
+    activeTab,
+    hasLocation,
+    maxDistance,
+    savedProjects,
+  ]);
+
   const totalPages = Math.max(
     1,
     Math.ceil(filteredProjects.length / itemsPerPage),
@@ -803,7 +895,7 @@ export default function FindProjects() {
 
   const availableCountries = Array.from(
     new Set(
-      projects
+      tabProjects
         .map((p) => {
           const addr = p.location?.address;
           if (!addr) return null;
@@ -819,15 +911,15 @@ export default function FindProjects() {
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    projects.forEach((p) => {
+    tabProjects.forEach((p) => {
       counts[p.category] = (counts[p.category] || 0) + 1;
     });
     return counts;
-  }, [projects]);
+  }, [tabProjects]);
 
   const dataTypeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    projects.forEach((p) => {
+    tabProjects.forEach((p) => {
       p.requirements.data_types.forEach((type) => {
         dataTypes.forEach((dt) => {
           if (type.toLowerCase().includes(dt.toLowerCase())) {
@@ -837,10 +929,10 @@ export default function FindProjects() {
       });
     });
     return counts;
-  }, [projects]);
+  }, [tabProjects]);
 
   useEffect(() => {
-    let filtered = [...projects];
+    let filtered = [...tabProjects];
 
     if (searchTerm) {
       filtered = filtered.filter(
@@ -916,7 +1008,7 @@ export default function FindProjects() {
     selectedCountries,
     budgetRange,
     sortBy,
-    projects,
+    tabProjects,
     showSavedOnly,
     savedProjectIds,
     itemsPerPage,
@@ -1421,84 +1513,99 @@ export default function FindProjects() {
           {/* Project list card */}
           <Card className="dark:bg-gray-800/50 border-none shadow-sm">
             <CardHeader className="px-6">
-              <div className="flex items-center justify-between gap-6">
-                {/* Search bar */}
-                <span className="text-sm text-muted-foreground">
-                  {hasActiveFilters
-                    ? `${filteredProjects.length} result${filteredProjects.length !== 1 ? "s" : ""} found`
-                    : `${filteredProjects.length} project${filteredProjects.length !== 1 ? "s" : ""}`}
-                </span>
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search projects by title or description..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10 bg-gray-50 dark:bg-gray-800/50 border-none text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
+              <div className="space-y-3">
+                <JobsTabsBar
+                  activeTab={activeTab}
+                  onChangeTab={setActiveTab}
+                  savedCount={savedProjects.length}
+                  showDistanceSelect={activeTab === "best" && hasLocation}
+                  maxDistance={maxDistance}
+                  onChangeDistance={setMaxDistance}
+                />
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowSavedOnly((prev) => !prev)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 h-10 px-3 rounded-md text-sm font-medium transition-colors",
-                      showSavedOnly
-                        ? "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
-                        : "bg-gray-50 dark:bg-gray-800/50 text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800",
-                    )}
-                  >
-                    <Bookmark
-                      className={cn("w-4 h-4", showSavedOnly && "fill-current")}
+                <div className="flex items-center justify-between gap-6">
+                  <span className="text-sm text-muted-foreground">
+                    {hasActiveFilters
+                      ? `${filteredProjects.length} result${filteredProjects.length !== 1 ? "s" : ""} found`
+                      : `${filteredProjects.length} project${filteredProjects.length !== 1 ? "s" : ""}`}
+                  </span>
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search projects by title or description..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 h-10 bg-gray-50 dark:bg-gray-800/50 border-none text-foreground placeholder:text-muted-foreground"
                     />
-                    Saved Jobs
-                    {savedProjectIds.length > 0 && (
-                      <span
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {activeTab !== "saved" && (
+                      <button
+                        onClick={() => setShowSavedOnly((prev) => !prev)}
                         className={cn(
-                          "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                          "inline-flex items-center gap-1.5 h-10 px-3 rounded-md text-sm font-medium transition-colors",
                           showSavedOnly
-                            ? "bg-cyan-200 dark:bg-cyan-800 text-cyan-800 dark:text-cyan-200"
-                            : "bg-gray-200 dark:bg-gray-700 text-muted-foreground",
+                            ? "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
+                            : "bg-gray-50 dark:bg-gray-800/50 text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800",
                         )}
                       >
-                        {savedProjectIds.length}
-                      </span>
+                        <Bookmark
+                          className={cn(
+                            "w-4 h-4",
+                            showSavedOnly && "fill-current",
+                          )}
+                        />
+                        Saved Jobs
+                        {savedProjectIds.length > 0 && (
+                          <span
+                            className={cn(
+                              "ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                              showSavedOnly
+                                ? "bg-cyan-200 dark:bg-cyan-800 text-cyan-800 dark:text-cyan-200"
+                                : "bg-gray-200 dark:bg-gray-700 text-muted-foreground",
+                            )}
+                          >
+                            {savedProjectIds.length}
+                          </span>
+                        )}
+                      </button>
                     )}
-                  </button>
-                  <Select
-                    value={sortBy}
-                    onValueChange={(v) => setSortBy(v as typeof sortBy)}
-                  >
-                    <SelectTrigger className="!h-10 w-44 text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground">
-                      <SelectValue placeholder="Sort by" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-50 dark:bg-[#111827] text-foreground border-none dark:border-gray-700">
-                      <SelectItem
-                        value="newest"
-                        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
-                      >
-                        Newest First
-                      </SelectItem>
-                      <SelectItem
-                        value="budget_high"
-                        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
-                      >
-                        Budget: High → Low
-                      </SelectItem>
-                      <SelectItem
-                        value="budget_low"
-                        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
-                      >
-                        Budget: Low → High
-                      </SelectItem>
-                      <SelectItem
-                        value="deadline"
-                        className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
-                      >
-                        Deadline: Soonest
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                    <Select
+                      value={sortBy}
+                      onValueChange={(v) => setSortBy(v as typeof sortBy)}
+                    >
+                      <SelectTrigger className="!h-10 w-44 text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground">
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-50 dark:bg-[#111827] text-foreground border-none dark:border-gray-700">
+                        <SelectItem
+                          value="newest"
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
+                        >
+                          Newest First
+                        </SelectItem>
+                        <SelectItem
+                          value="budget_high"
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
+                        >
+                          Budget: High → Low
+                        </SelectItem>
+                        <SelectItem
+                          value="budget_low"
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
+                        >
+                          Budget: Low → High
+                        </SelectItem>
+                        <SelectItem
+                          value="deadline"
+                          className="cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50"
+                        >
+                          Deadline: Soonest
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
             </CardHeader>
