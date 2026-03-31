@@ -2,7 +2,13 @@
  * User and Profile related types and interfaces
  */
 
-export type UserRole = "requester" | "collector" | "agent" | "admin";
+export type UserRole =
+  | "requester"
+  | "collector"
+  | "agent"
+  | "admin"
+  | "company"
+  | "personal";
 
 export type VerificationTier = "bronze" | "silver" | "gold" | "platinum";
 

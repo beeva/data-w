@@ -239,18 +239,18 @@ export default function About() {
   ];
 
   const timeline = [
-    {
-      year: "2023",
-      title: "The Beginning",
-      description:
-        "DataW was founded with a mission to democratize data collection and create economic opportunities globally.",
-    },
-    {
-      year: "2024",
-      title: "Platform Launch",
-      description:
-        "Launched our beta platform with 1,000 data collectors across 30 countries.",
-    },
+    // {
+    //   year: "2023",
+    //   title: "The Beginning",
+    //   description:
+    //     "DataW was founded with a mission to democratize data collection and create economic opportunities globally.",
+    // },
+    // {
+    //   year: "2024",
+    //   title: "Platform Launch",
+    //   description:
+    //     "Launched our beta platform with 1,000 data collectors across 30 countries.",
+    // },
     {
       year: "2025",
       title: "DTW Token",

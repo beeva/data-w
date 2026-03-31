@@ -32,7 +32,13 @@ export const GridIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export type UserRole = "requester" | "collector" | "agent" | "admin";
+export type UserRole =
+  | "requester"
+  | "collector"
+  | "agent"
+  | "admin"
+  | "company"
+  | "personal";
 
 export interface SubMenuItem {
   name: string;
