@@ -48,12 +48,14 @@ import {
   AlertCircle,
   LogIn,
   ArrowUpToLine,
+  Bookmark,
 } from "lucide-react";
 import PageHero from "./PageHero";
 import { JobsListWindow } from "./JobsListWindow";
 import Footer from "./Footer";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import JobsTabsBar from "@/components/shared/JobsTabsBar";
 import { Photography1Svg } from "@/components/svg/photography/photography_1";
 import { Photography2Svg } from "@/components/svg/photography/photography_2";
 import { Photography3Svg } from "@/components/svg/photography/photography_3";
@@ -220,6 +222,8 @@ interface ProjectCardProps {
   formatDate: (date: string | null) => string;
   getDaysLeft: (deadline: string | null) => number | null;
   onApplyClick: (project: Project) => void;
+  isSaved: boolean;
+  onToggleSave: (projectId: string) => void;
 }
 
 function ProjectCard({
@@ -227,6 +231,8 @@ function ProjectCard({
   formatDate,
   getDaysLeft,
   onApplyClick,
+  isSaved,
+  onToggleSave,
 }: ProjectCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
@@ -253,6 +259,20 @@ function ProjectCard({
       className="group relative flex items-stretch gap-4 rounded-xl border border-white/10 bg-white/5 dark:bg-gray-800/50 hover:border-cyan-500/50 hover:bg-white/[0.07] dark:hover:border-gray-600 dark:hover:bg-gray-800 transition-all cursor-pointer p-4"
       onClick={() => onApplyClick(project)}
     >
+      <div className="absolute top-3 right-3 z-10">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleSave(project.id);
+          }}
+          className="inline-flex items-center justify-center rounded-md p-1.5 text-white/60 hover:text-cyan-300 hover:bg-white/10 transition-colors"
+          title={isSaved ? "Remove from saved jobs" : "Save this job"}
+          aria-label={isSaved ? "Remove from saved jobs" : "Save this job"}
+        >
+          <Bookmark className="w-4 h-4" fill={isSaved ? "currentColor" : "none"} />
+        </button>
+      </div>
       <div
         className={cn(
           "shrink-0 w-12 h-12 rounded-xl flex items-center justify-center mt-0.5",
@@ -559,7 +579,7 @@ function CountrySelect({
 }
 
 export default function Projects() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -572,6 +592,11 @@ export default function Projects() {
     useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [activeTab, setActiveTab] = useState<"best" | "recent" | "saved">(
+    "best",
+  );
+  const [savedProjectIds, setSavedProjectIds] = useState<string[]>([]);
+  const [maxDistance, setMaxDistance] = useState<number>(5);
 
   const searchParams = useSearchParams();
   const categoryFromUrl = searchParams.get("category");
@@ -595,6 +620,30 @@ export default function Projects() {
   const [sortBy, setSortBy] = useState<
     "newest" | "budget_high" | "budget_low" | "deadline"
   >("newest");
+  const collectorLat = profile?.location?.lat;
+  const collectorLng = profile?.location?.lng;
+  const hasLocation =
+    typeof collectorLat === "number" && typeof collectorLng === "number";
+
+  const getRawDistanceKm = (project: Project): number | null => {
+    if (!hasLocation) return null;
+    const pLat = project.location?.lat;
+    const pLng = project.location?.lng;
+    if (typeof pLat !== "number" || typeof pLng !== "number") return null;
+
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const earthRadiusKm = 6371;
+    const dLat = toRad(pLat - collectorLat!);
+    const dLng = toRad(pLng - collectorLng!);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(collectorLat!)) *
+        Math.cos(toRad(pLat)) *
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  };
 
   // Expand/collapse filter sections
   const [expandedSections, setExpandedSections] = useState({
@@ -619,6 +668,34 @@ export default function Projects() {
     fetchProjects();
   }, []);
 
+  useEffect(() => {
+    const savedKey = user?.id
+      ? `projects-saved-jobs-${user.id}`
+      : "projects-saved-jobs-guest";
+    const saved = localStorage.getItem(savedKey);
+    if (!saved) {
+      setSavedProjectIds([]);
+      return;
+    }
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        setSavedProjectIds(parsed.filter((id): id is string => typeof id === "string"));
+      } else {
+        setSavedProjectIds([]);
+      }
+    } catch {
+      setSavedProjectIds([]);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    const savedKey = user?.id
+      ? `projects-saved-jobs-${user.id}`
+      : "projects-saved-jobs-guest";
+    localStorage.setItem(savedKey, JSON.stringify(savedProjectIds));
+  }, [savedProjectIds, user?.id]);
+
   // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(10);
@@ -630,6 +707,8 @@ export default function Projects() {
     budgetRange.min,
     budgetRange.max,
     sortBy,
+    activeTab,
+    maxDistance,
   ]);
 
   // Scroll-to-top button visibility
@@ -639,11 +718,46 @@ export default function Projects() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const tabProjects = useMemo(() => {
+    const savedSet = new Set(savedProjectIds);
+    if (activeTab === "saved") {
+      return projects
+        .filter((p) => savedSet.has(p.id))
+        .sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+    }
+    if (activeTab === "recent") {
+      const twoWeeksAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+      return [...projects].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ).filter((project) => new Date(project.created_at).getTime() >= twoWeeksAgo);
+    }
+
+    if (!hasLocation) {
+      return projects;
+    }
+
+    return projects
+      .filter((p) => {
+        if (maxDistance === 0) return true;
+        const dist = getRawDistanceKm(p);
+        return dist !== null && dist <= maxDistance;
+      })
+      .sort((a, b) => {
+        const aDist = getRawDistanceKm(a) ?? Number.POSITIVE_INFINITY;
+        const bDist = getRawDistanceKm(b) ?? Number.POSITIVE_INFINITY;
+        return aDist - bDist;
+      });
+  }, [projects, activeTab, savedProjectIds, hasLocation, maxDistance]);
+
   const availableCountries = useMemo(
     () =>
       Array.from(
         new Set(
-          projects
+          tabProjects
             .map((p) => {
               const addr = p.location?.address;
               if (!addr) return null;
@@ -656,20 +770,20 @@ export default function Projects() {
             .filter((c): c is string => c !== null),
         ),
       ).sort(),
-    [projects],
+    [tabProjects],
   );
 
   const categoryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    projects.forEach((p) => {
+    tabProjects.forEach((p) => {
       counts[p.category] = (counts[p.category] || 0) + 1;
     });
     return counts;
-  }, [projects]);
+  }, [tabProjects]);
 
   const dataTypeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    projects.forEach((p) => {
+    tabProjects.forEach((p) => {
       p.requirements?.data_types?.forEach((type) => {
         dataTypes.forEach((dt) => {
           if (type.toLowerCase().includes(dt.toLowerCase())) {
@@ -679,7 +793,7 @@ export default function Projects() {
       });
     });
     return counts;
-  }, [projects]);
+  }, [tabProjects]);
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -728,7 +842,7 @@ export default function Projects() {
     (budgetRange.min > 0 || budgetRange.max < 100000 ? 1 : 0) +
     (searchQuery.length > 0 ? 1 : 0);
 
-  const filteredProjects = projects
+  const filteredProjects = tabProjects
     .filter((project) => {
       // Search filter
       const matchesSearch =
@@ -795,6 +909,14 @@ export default function Projects() {
           );
       }
     });
+
+  const toggleSaveProject = (projectId: string) => {
+    setSavedProjectIds((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId],
+    );
+  };
 
   const displayLimit = user ? visibleCount : 10;
   const visibleProjects = useMemo(
@@ -1112,6 +1234,18 @@ export default function Projects() {
 
             {/* Projects List */}
             <div className="flex-1 min-w-0">
+              <div className="mb-4">
+                <JobsTabsBar
+                  activeTab={activeTab}
+                  onChangeTab={setActiveTab}
+                  savedCount={savedProjectIds.length}
+                  showDistanceSelect={activeTab === "best" && hasLocation}
+                  maxDistance={maxDistance}
+                  onChangeDistance={setMaxDistance}
+                  variant="projects"
+                />
+              </div>
+
               {/* Sort and Results Count */}
               <div className="flex items-center justify-between mb-4">
                 <p className="text-white/60 text-sm">
@@ -1304,6 +1438,8 @@ export default function Projects() {
                             formatDate={formatDate}
                             getDaysLeft={getDaysLeft}
                             onApplyClick={handleApplyClick}
+                            isSaved={savedProjectIds.includes(project.id)}
+                            onToggleSave={toggleSaveProject}
                           />
                         ))}
                       </div>
