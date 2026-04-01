@@ -222,8 +222,8 @@ interface ProjectCardProps {
   formatDate: (date: string | null) => string;
   getDaysLeft: (deadline: string | null) => number | null;
   onApplyClick: (project: Project) => void;
-  isSaved: boolean;
-  onToggleSave: (projectId: string) => void;
+  isSaved?: boolean;
+  onToggleSave?: (projectId: string) => void;
 }
 
 function ProjectCard({
@@ -231,7 +231,7 @@ function ProjectCard({
   formatDate,
   getDaysLeft,
   onApplyClick,
-  isSaved,
+  isSaved = false,
   onToggleSave,
 }: ProjectCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -259,20 +259,25 @@ function ProjectCard({
       className="group relative flex items-stretch gap-4 rounded-xl border border-white/10 bg-white/5 dark:bg-gray-800/50 hover:border-cyan-500/50 hover:bg-white/[0.07] dark:hover:border-gray-600 dark:hover:bg-gray-800 transition-all cursor-pointer p-4"
       onClick={() => onApplyClick(project)}
     >
-      <div className="absolute top-3 right-3 z-10">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSave(project.id);
-          }}
-          className="inline-flex items-center justify-center rounded-md p-1.5 text-white/60 hover:text-cyan-300 hover:bg-white/10 transition-colors"
-          title={isSaved ? "Remove from saved jobs" : "Save this job"}
-          aria-label={isSaved ? "Remove from saved jobs" : "Save this job"}
-        >
-          <Bookmark className="w-4 h-4" fill={isSaved ? "currentColor" : "none"} />
-        </button>
-      </div>
+      {onToggleSave && (
+        <div className="absolute top-3 right-3 z-10">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSave(project.id);
+            }}
+            className="inline-flex items-center justify-center rounded-md p-1.5 text-white/60 hover:text-cyan-300 hover:bg-white/10 transition-colors"
+            title={isSaved ? "Remove from saved jobs" : "Save this job"}
+            aria-label={isSaved ? "Remove from saved jobs" : "Save this job"}
+          >
+            <Bookmark
+              className="w-4 h-4"
+              fill={isSaved ? "currentColor" : "none"}
+            />
+          </button>
+        </div>
+      )}
       <div
         className={cn(
           "shrink-0 w-12 h-12 rounded-xl flex items-center justify-center mt-0.5",
@@ -669,9 +674,11 @@ export default function Projects() {
   }, []);
 
   useEffect(() => {
-    const savedKey = user?.id
-      ? `projects-saved-jobs-${user.id}`
-      : "projects-saved-jobs-guest";
+    if (!user?.id) {
+      setSavedProjectIds([]);
+      return;
+    }
+    const savedKey = `projects-saved-jobs-${user.id}`;
     const saved = localStorage.getItem(savedKey);
     if (!saved) {
       setSavedProjectIds([]);
@@ -690,11 +697,16 @@ export default function Projects() {
   }, [user?.id]);
 
   useEffect(() => {
-    const savedKey = user?.id
-      ? `projects-saved-jobs-${user.id}`
-      : "projects-saved-jobs-guest";
+    if (!user?.id) return;
+    const savedKey = `projects-saved-jobs-${user.id}`;
     localStorage.setItem(savedKey, JSON.stringify(savedProjectIds));
   }, [savedProjectIds, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id && activeTab === "saved") {
+      setActiveTab("best");
+    }
+  }, [user?.id, activeTab]);
 
   // Reset visible count when filters change
   useEffect(() => {
@@ -1239,6 +1251,7 @@ export default function Projects() {
                   activeTab={activeTab}
                   onChangeTab={setActiveTab}
                   savedCount={savedProjectIds.length}
+                  showSavedTab={!!user}
                   showDistanceSelect={activeTab === "best" && hasLocation}
                   maxDistance={maxDistance}
                   onChangeDistance={setMaxDistance}
@@ -1439,7 +1452,7 @@ export default function Projects() {
                             getDaysLeft={getDaysLeft}
                             onApplyClick={handleApplyClick}
                             isSaved={savedProjectIds.includes(project.id)}
-                            onToggleSave={toggleSaveProject}
+                            onToggleSave={user ? toggleSaveProject : undefined}
                           />
                         ))}
                       </div>

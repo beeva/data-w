@@ -15,6 +15,7 @@ interface JobsTabsBarProps {
   activeTab: JobsTab;
   onChangeTab: (tab: JobsTab) => void;
   savedCount: number;
+  showSavedTab?: boolean;
   showDistanceSelect: boolean;
   maxDistance: number;
   onChangeDistance: (distance: number) => void;
@@ -35,6 +36,7 @@ export default function JobsTabsBar({
   activeTab,
   onChangeTab,
   savedCount,
+  showSavedTab = true,
   showDistanceSelect,
   maxDistance,
   onChangeDistance,
@@ -66,25 +68,30 @@ export default function JobsTabsBar({
         >
           Recent Jobs
         </button>
-        <button
-          type="button"
-          onClick={() => onChangeTab("saved")}
-          className={cn("py-1 border-b-2 transition-colors font-medium", activeTab === "saved" ? activeClass : inactiveClass)}
-        >
-          Saved Jobs
-          {savedCount > 0 && (
-            <span
-              className={cn(
-                "ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-semibold",
-                variant === "projects"
-                  ? "bg-cyan-500/20 text-cyan-300"
-                  : "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400",
-              )}
-            >
-              {savedCount}
-            </span>
-          )}
-        </button>
+        {showSavedTab && (
+          <button
+            type="button"
+            onClick={() => onChangeTab("saved")}
+            className={cn(
+              "py-1 border-b-2 transition-colors font-medium",
+              activeTab === "saved" ? activeClass : inactiveClass,
+            )}
+          >
+            Saved Jobs
+            {savedCount > 0 && (
+              <span
+                className={cn(
+                  "ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-xs font-semibold",
+                  variant === "projects"
+                    ? "bg-cyan-500/20 text-cyan-300"
+                    : "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-600 dark:text-cyan-400",
+                )}
+              >
+                {savedCount}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       {showDistanceSelect ? (
