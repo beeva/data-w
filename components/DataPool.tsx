@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Header from "./Header";
 import PageHero from "./PageHero";
 import DataItemCard, { DataItem } from "./DataItemCard";
@@ -10,6 +11,7 @@ import { LayoutGrid, List, Loader2 } from "lucide-react";
 import { getDataPoolItems } from "@/lib/services/dataPoolService";
 
 export default function DataPool() {
+  const searchParams = useSearchParams();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [dataItems, setDataItems] = useState<DataItem[]>([]);
@@ -54,6 +56,12 @@ export default function DataPool() {
 
     fetchDataPoolItems();
   }, []);
+
+  useEffect(() => {
+    const keyword = searchParams.get("keyword")?.trim();
+    if (!keyword) return;
+    setSearchQuery(keyword);
+  }, [searchParams]);
 
   const filteredItems = dataItems.filter((item) => {
     const matchesCategory =

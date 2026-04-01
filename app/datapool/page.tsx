@@ -1,6 +1,11 @@
-import DataPool from '@/components/DataPool'
+import { Suspense } from "react";
+import DataPool from "@/components/DataPool";
 
 export default function DataPoolPage() {
-  return <DataPool />
+  return (
+    <Suspense fallback={null}>
+      <DataPool />
+    </Suspense>
+  );
 }
 

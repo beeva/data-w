@@ -81,14 +81,14 @@ export default function Hero() {
     } = await supabase.auth.getSession();
 
     if (session) {
-      const findProjectsParams = new URLSearchParams();
+      const datapoolParams = new URLSearchParams();
       if (trimmedQuery) {
-        findProjectsParams.set("keyword", trimmedQuery);
+        datapoolParams.set("keyword", trimmedQuery);
       }
-      const findProjectsUrl = findProjectsParams.toString()
-        ? `/dashboard/projects/find?${findProjectsParams.toString()}`
-        : "/dashboard/projects/find";
-      router.push(findProjectsUrl);
+      const datapoolUrl = datapoolParams.toString()
+        ? `/datapool?${datapoolParams.toString()}`
+        : "/datapool";
+      router.push(datapoolUrl);
       return;
     }
 
