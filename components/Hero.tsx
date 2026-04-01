@@ -76,21 +76,19 @@ export default function Hero() {
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedQuery = searchQuery.trim();
-    const requestParams = new URLSearchParams();
-
-    if (trimmedQuery) {
-      requestParams.set("request", trimmedQuery);
-    }
-
     const {
       data: { session },
     } = await supabase.auth.getSession();
 
     if (session) {
-      const datapoolUrl = requestParams.toString()
-        ? `/datapool?${requestParams.toString()}`
-        : "/datapool";
-      router.push(datapoolUrl);
+      const findProjectsParams = new URLSearchParams();
+      if (trimmedQuery) {
+        findProjectsParams.set("keyword", trimmedQuery);
+      }
+      const findProjectsUrl = findProjectsParams.toString()
+        ? `/dashboard/projects/find?${findProjectsParams.toString()}`
+        : "/dashboard/projects/find";
+      router.push(findProjectsUrl);
       return;
     }
 

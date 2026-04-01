@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
@@ -601,6 +602,7 @@ function CountrySelect({
 
 export default function FindProjects() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [proposalStatuses, setProposalStatuses] = useState<
@@ -637,6 +639,12 @@ export default function FindProjects() {
   });
 
   const userId = user?.id;
+
+  useEffect(() => {
+    const keyword = searchParams.get("keyword")?.trim();
+    if (!keyword) return;
+    setSearchTerm(keyword);
+  }, [searchParams]);
 
   useEffect(() => {
     const onScroll = () => setShowScrollTop(window.scrollY > 300);
