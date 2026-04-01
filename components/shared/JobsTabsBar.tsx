@@ -9,12 +9,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export type JobsTab = "best" | "recent" | "saved";
+export type JobsTab = "all" | "best" | "recent" | "saved";
 
 interface JobsTabsBarProps {
   activeTab: JobsTab;
   onChangeTab: (tab: JobsTab) => void;
   savedCount: number;
+  showAllTab?: boolean;
   showSavedTab?: boolean;
   showDistanceSelect: boolean;
   maxDistance: number;
@@ -36,6 +37,7 @@ export default function JobsTabsBar({
   activeTab,
   onChangeTab,
   savedCount,
+  showAllTab = false,
   showSavedTab = true,
   showDistanceSelect,
   maxDistance,
@@ -54,6 +56,18 @@ export default function JobsTabsBar({
   return (
     <div className="flex items-center justify-between gap-6">
       <div className="flex items-center gap-5 text-sm">
+        {showAllTab && (
+          <button
+            type="button"
+            onClick={() => onChangeTab("all")}
+            className={cn(
+              "py-1 border-b-2 transition-colors font-medium",
+              activeTab === "all" ? activeClass : inactiveClass,
+            )}
+          >
+            All Jobs
+          </button>
+        )}
         <button
           type="button"
           onClick={() => onChangeTab("best")}

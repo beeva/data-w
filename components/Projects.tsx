@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "./Header";
@@ -56,6 +57,10 @@ import Footer from "./Footer";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import JobsTabsBar from "@/components/shared/JobsTabsBar";
+import {
+  LocationMapPreview,
+  type MapJobPin,
+} from "@/components/ui/location-map-preview";
 import { Photography1Svg } from "@/components/svg/photography/photography_1";
 import { Photography2Svg } from "@/components/svg/photography/photography_2";
 import { Photography3Svg } from "@/components/svg/photography/photography_3";
@@ -181,6 +186,12 @@ const CATEGORY_META: Record<
 
 const DEFAULT_CATEGORY_META = CATEGORY_META["Other"];
 
+function formatDistance(km: number): string {
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  if (km < 10) return `${km.toFixed(1)} km`;
+  return `${Math.round(km)} km`;
+}
+
 const CATEGORY_ICONS: Record<
   string,
   React.ComponentType<{ className?: string }>
@@ -222,6 +233,7 @@ interface ProjectCardProps {
   formatDate: (date: string | null) => string;
   getDaysLeft: (deadline: string | null) => number | null;
   onApplyClick: (project: Project) => void;
+  distance?: string | null;
   isSaved?: boolean;
   onToggleSave?: (projectId: string) => void;
 }
@@ -231,6 +243,7 @@ function ProjectCard({
   formatDate,
   getDaysLeft,
   onApplyClick,
+  distance,
   isSaved = false,
   onToggleSave,
 }: ProjectCardProps) {
@@ -401,6 +414,7 @@ function ProjectCard({
                 <span className="inline-flex items-center gap-1 text-xs text-white/50">
                   <MapPin className="w-3.5 h-3.5 shrink-0" />
                   {label}
+                  {distance && <span className="font-medium">({distance})</span>}
                 </span>
               );
             })()
@@ -597,11 +611,15 @@ export default function Projects() {
     useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [activeTab, setActiveTab] = useState<"best" | "recent" | "saved">(
-    "best",
+  const [activeTab, setActiveTab] = useState<"all" | "best" | "recent" | "saved">(
+    "all",
   );
   const [savedProjectIds, setSavedProjectIds] = useState<string[]>([]);
   const [maxDistance, setMaxDistance] = useState<number>(5);
+  const [guestCoords, setGuestCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
   const searchParams = useSearchParams();
   const categoryFromUrl = searchParams.get("category");
@@ -625,8 +643,8 @@ export default function Projects() {
   const [sortBy, setSortBy] = useState<
     "newest" | "budget_high" | "budget_low" | "deadline"
   >("newest");
-  const collectorLat = profile?.location?.lat;
-  const collectorLng = profile?.location?.lng;
+  const collectorLat = profile?.location?.lat ?? guestCoords?.lat;
+  const collectorLng = profile?.location?.lng ?? guestCoords?.lng;
   const hasLocation =
     typeof collectorLat === "number" && typeof collectorLng === "number";
 
@@ -703,6 +721,43 @@ export default function Projects() {
   }, [savedProjectIds, user?.id]);
 
   useEffect(() => {
+    if (user?.id) return;
+    if (
+      typeof profile?.location?.lat === "number" &&
+      typeof profile?.location?.lng === "number"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const resolveGuestLocation = async () => {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          latitude?: number;
+          longitude?: number;
+        };
+        if (
+          !cancelled &&
+          typeof data.latitude === "number" &&
+          typeof data.longitude === "number"
+        ) {
+          setGuestCoords({ lat: data.latitude, lng: data.longitude });
+        }
+      } catch {
+        // Ignore errors and keep non-location fallback behavior.
+      }
+    };
+
+    resolveGuestLocation();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, profile?.location?.lat, profile?.location?.lng]);
+
+  useEffect(() => {
     if (!user?.id && activeTab === "saved") {
       setActiveTab("best");
     }
@@ -732,6 +787,9 @@ export default function Projects() {
 
   const tabProjects = useMemo(() => {
     const savedSet = new Set(savedProjectIds);
+    if (activeTab === "all") {
+      return projects;
+    }
     if (activeTab === "saved") {
       return projects
         .filter((p) => savedSet.has(p.id))
@@ -764,6 +822,7 @@ export default function Projects() {
         return aDist - bDist;
       });
   }, [projects, activeTab, savedProjectIds, hasLocation, maxDistance]);
+  const showBestMatchesExtras = activeTab === "best";
 
   const availableCountries = useMemo(
     () =>
@@ -904,6 +963,11 @@ export default function Projects() {
       );
     })
     .sort((a, b) => {
+      if (activeTab === "best" && hasLocation) {
+        const aDist = getRawDistanceKm(a) ?? Number.POSITIVE_INFINITY;
+        const bDist = getRawDistanceKm(b) ?? Number.POSITIVE_INFINITY;
+        return aDist - bDist;
+      }
       switch (sortBy) {
         case "budget_high":
           return b.budget - a.budget;
@@ -921,6 +985,28 @@ export default function Projects() {
           );
       }
     });
+
+  const jobPins = useMemo<MapJobPin[]>(() => {
+    if (!showBestMatchesExtras || !hasLocation) return [];
+    return filteredProjects
+      .filter(
+        (p) =>
+          typeof p.location?.lat === "number" && typeof p.location?.lng === "number",
+      )
+      .map((p) => ({
+        id: p.id,
+        lat: p.location!.lat!,
+        lng: p.location!.lng!,
+        title: p.title,
+        budget: p.budget,
+        category: p.category,
+        iconSvg: renderToStaticMarkup(
+          <div className="w-5 h-5 flex items-center justify-center">
+            {getCategoryIconNode(p.id, p.category, "w-4 h-4")}
+          </div>,
+        ),
+      }));
+  }, [filteredProjects, showBestMatchesExtras, hasLocation]);
 
   const toggleSaveProject = (projectId: string) => {
     setSavedProjectIds((prev) =>
@@ -1251,6 +1337,7 @@ export default function Projects() {
                   activeTab={activeTab}
                   onChangeTab={setActiveTab}
                   savedCount={savedProjectIds.length}
+                  showAllTab
                   showSavedTab={!!user}
                   showDistanceSelect={activeTab === "best" && hasLocation}
                   maxDistance={maxDistance}
@@ -1259,48 +1346,50 @@ export default function Projects() {
                 />
               </div>
 
-              {/* Sort and Results Count */}
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-white/60 text-sm">
-                  {hasActiveFilters
-                    ? `${filteredProjects.length} result${filteredProjects.length !== 1 ? "s" : ""} found`
-                    : `${filteredProjects.length} project${filteredProjects.length !== 1 ? "s" : ""}`}
-                </p>
-                <Select
-                  value={sortBy}
-                  onValueChange={(v) => setSortBy(v as typeof sortBy)}
-                >
-                  <SelectTrigger className="!h-10 w-44 text-sm bg-[#0f172a] border border-white/10 rounded-lg text-white hover:bg-[#0f172a] focus:border-cyan-500 focus:ring-cyan-500/20">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#0f172a] text-white border-white/10 dark:border-white/10">
-                    <SelectItem
-                      value="newest"
-                      className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
-                    >
-                      Newest First
-                    </SelectItem>
-                    <SelectItem
-                      value="budget_high"
-                      className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
-                    >
-                      Budget: High → Low
-                    </SelectItem>
-                    <SelectItem
-                      value="budget_low"
-                      className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
-                    >
-                      Budget: Low → High
-                    </SelectItem>
-                    <SelectItem
-                      value="deadline"
-                      className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
-                    >
-                      Deadline: Soonest
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Sort and Results Count (All Jobs only) */}
+              {activeTab === "all" && (
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-white/60 text-sm">
+                    {hasActiveFilters
+                      ? `${filteredProjects.length} result${filteredProjects.length !== 1 ? "s" : ""} found`
+                      : `${filteredProjects.length} project${filteredProjects.length !== 1 ? "s" : ""}`}
+                  </p>
+                  <Select
+                    value={sortBy}
+                    onValueChange={(v) => setSortBy(v as typeof sortBy)}
+                  >
+                    <SelectTrigger className="!h-10 w-44 text-sm bg-[#0f172a] border border-white/10 rounded-lg text-white hover:bg-[#0f172a] focus:border-cyan-500 focus:ring-cyan-500/20">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#0f172a] text-white border-white/10 dark:border-white/10">
+                      <SelectItem
+                        value="newest"
+                        className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                      >
+                        Newest First
+                      </SelectItem>
+                      <SelectItem
+                        value="budget_high"
+                        className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                      >
+                        Budget: High → Low
+                      </SelectItem>
+                      <SelectItem
+                        value="budget_low"
+                        className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                      >
+                        Budget: Low → High
+                      </SelectItem>
+                      <SelectItem
+                        value="deadline"
+                        className="cursor-pointer hover:bg-white/10 focus:bg-white/10"
+                      >
+                        Deadline: Soonest
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Active filter chips */}
               {hasActiveFilters && (
@@ -1425,7 +1514,65 @@ export default function Projects() {
               {/* Projects */}
               {!loading && !error && (
                 <>
-                  {filteredProjects.length === 0 ? (
+                  {showBestMatchesExtras && hasLocation ? (
+                    <>
+                      <div className="h-1/2 h-[300px] sticky top-24 z-[11] rounded-xl overflow-hidden border border-white/10">
+                        <LocationMapPreview
+                          lat={collectorLat!}
+                          lng={collectorLng!}
+                          radiusKm={maxDistance > 0 ? maxDistance : 0}
+                          jobPins={jobPins}
+                          onSelectPin={(id) => {
+                            const project = filteredProjects.find((p) => p.id === id);
+                            if (project) {
+                              handleApplyClick(project);
+                            }
+                          }}
+                          className="aspect-auto h-full"
+                          forceDarkMode
+                        />
+                      </div>
+                      <div className="h-1/2 mt-3">
+                        {filteredProjects.length === 0 ? (
+                          <div className="text-center py-20 bg-white/5 rounded-xl border border-white/10">
+                            <FolderKanban className="w-16 h-16 text-white/20 mx-auto mb-4" />
+                            <p className="text-white/60 text-lg mb-2">
+                              No projects match your criteria
+                            </p>
+                            <p className="text-white/40 text-sm mb-4">
+                              Try adjusting your filters or search query
+                            </p>
+                            <Button
+                              onClick={clearAllFilters}
+                              className="bg-slate-700 border border-slate-600 text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]"
+                            >
+                              Clear Filters
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {visibleProjects.map((project) => {
+                              const rawKm = getRawDistanceKm(project);
+                              const distance =
+                                rawKm !== null ? formatDistance(rawKm) : null;
+                              return (
+                                <ProjectCard
+                                  key={project.id}
+                                  project={project}
+                                  formatDate={formatDate}
+                                  getDaysLeft={getDaysLeft}
+                                  onApplyClick={handleApplyClick}
+                                  distance={distance}
+                                  isSaved={savedProjectIds.includes(project.id)}
+                                  onToggleSave={user ? toggleSaveProject : undefined}
+                                />
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : filteredProjects.length === 0 ? (
                     <div className="text-center py-20 bg-white/5 rounded-xl border border-white/10">
                       <FolderKanban className="w-16 h-16 text-white/20 mx-auto mb-4" />
                       <p className="text-white/60 text-lg mb-2">
@@ -1443,20 +1590,28 @@ export default function Projects() {
                     </div>
                   ) : (
                     <>
-                      <div className="space-y-4">
-                        {visibleProjects.map((project) => (
-                          <ProjectCard
-                            key={project.id}
-                            project={project}
-                            formatDate={formatDate}
-                            getDaysLeft={getDaysLeft}
-                            onApplyClick={handleApplyClick}
-                            isSaved={savedProjectIds.includes(project.id)}
-                            onToggleSave={user ? toggleSaveProject : undefined}
-                          />
-                        ))}
-                      </div>
-                      {hasMoreJobs && (
+                        <div className="space-y-4">
+                          {visibleProjects.map((project) => {
+                            const rawKm = getRawDistanceKm(project);
+                            const distance =
+                              rawKm !== null ? formatDistance(rawKm) : null;
+                            return (
+                              <ProjectCard
+                                key={project.id}
+                                project={project}
+                                formatDate={formatDate}
+                                getDaysLeft={getDaysLeft}
+                                onApplyClick={handleApplyClick}
+                                distance={distance}
+                                isSaved={savedProjectIds.includes(project.id)}
+                                onToggleSave={user ? toggleSaveProject : undefined}
+                              />
+                            );
+                          })}
+                        </div>
+                    </>
+                  )}
+                  {hasMoreJobs && (
                         <div className="mt-6 flex justify-center">
                           <Button
                             variant="outline"
@@ -1485,8 +1640,6 @@ export default function Projects() {
                             )}
                           </Button>
                         </div>
-                      )}
-                    </>
                   )}
                 </>
               )}

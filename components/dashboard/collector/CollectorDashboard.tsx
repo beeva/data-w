@@ -1194,7 +1194,9 @@ export default function CollectorDashboard() {
             <div className="px-6 py-3">
               <JobsTabsBar
                 activeTab={activeTab}
-                onChangeTab={setActiveTab}
+                onChangeTab={(tab) => {
+                  if (tab !== "all") setActiveTab(tab);
+                }}
                 savedCount={savedProjects.length}
                 showDistanceSelect={showBestMatchesExtras && hasLocation}
                 maxDistance={maxDistance}
