@@ -1,3 +1,8 @@
+/**
+ * Single source for marketplace / project taxonomy:
+ * job categories (with icons), data types, and file formats.
+ * Use these everywhere instead of duplicating string arrays.
+ */
 import type { ComponentType } from "react";
 import { Photography1Svg } from "@/components/svg/photography/photography_1";
 import { Video1Svg } from "@/components/svg/video/video_1";
@@ -35,3 +40,30 @@ export const JOB_CATEGORY_DISPLAY: Record<
   "Sensor Data": { icon: Sensor3Svg, label: "Sensor Data" },
   Other: { icon: Other1Svg, label: "Other" },
 };
+
+/** Data kinds requested in projects (create/edit, proposals, DataPool filters). */
+export const PROJECT_DATA_TYPES = [
+  "Images",
+  "Videos",
+  "Audio Files",
+  "Text Documents",
+  "Spreadsheets",
+  "GPS Coordinates",
+  "Sensor Readings",
+  "Other",
+] as const;
+
+/** File formats accepted on projects (create/edit, DataPool filters). */
+export const PROJECT_FORMATS = [
+  "JPEG",
+  "PNG",
+  "MP4",
+  "PDF",
+  "CSV",
+  "JSON",
+  "XML",
+  "Other",
+] as const;
+
+export type ProjectDataType = (typeof PROJECT_DATA_TYPES)[number];
+export type ProjectFormat = (typeof PROJECT_FORMATS)[number];

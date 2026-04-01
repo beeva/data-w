@@ -8,6 +8,8 @@ type DataPoolRow = {
   price: number | null;
   owner: string | null;
   description: string | null;
+  data_types: string[] | null;
+  formats: string[] | null;
 };
 
 export async function getDataPoolItems(): Promise<{
@@ -29,6 +31,8 @@ export async function getDataPoolItems(): Promise<{
       price: row.price ?? undefined,
       owner: row.owner || undefined,
       description: row.description || undefined,
+      data_types: row.data_types ?? undefined,
+      formats: row.formats ?? undefined,
     }));
 
     return { data: items, error: null };

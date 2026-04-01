@@ -52,7 +52,11 @@ import {
   type HuggingFaceDataset,
 } from "@/lib/services/dataSuggestionsService";
 import { cn } from "@/lib/utils";
-import { JOB_CATEGORIES } from "@/lib/categories";
+import {
+  JOB_CATEGORIES,
+  PROJECT_DATA_TYPES,
+  PROJECT_FORMATS,
+} from "@/lib/categories";
 
 const CONFETTI_COLORS = ["#d13447", "#ffbf00", "#263672"];
 
@@ -171,16 +175,8 @@ const TOTAL_STEPS = STEP_ORDER.length;
 
 const CATEGORIES = JOB_CATEGORIES;
 
-const DATA_TYPES = [
-  "Images",
-  "Videos",
-  "Audio Files",
-  "Text Documents",
-  "Spreadsheets",
-  "GPS Coordinates",
-  "Sensor Readings",
-  "Other",
-];
+const DATA_TYPES = [...PROJECT_DATA_TYPES];
+const FORMATS = [...PROJECT_FORMATS];
 
 const DATA_TYPE_ICONS: Record<string, LucideIcon> = {
   Images: Image,
@@ -192,8 +188,6 @@ const DATA_TYPE_ICONS: Record<string, LucideIcon> = {
   "Sensor Readings": Activity,
   Other: MoreHorizontal,
 };
-
-const FORMATS = ["JPEG", "PNG", "MP4", "PDF", "CSV", "JSON", "XML", "Other"];
 
 function toYMD(d: Date): string {
   const y = d.getFullYear();

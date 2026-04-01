@@ -28,6 +28,11 @@ import { MapPin, DollarSign, Calendar, Users, FileText } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import DataSuggestionsPanel from "./DataSuggestionsPanel";
+import {
+  JOB_CATEGORIES,
+  PROJECT_DATA_TYPES,
+  PROJECT_FORMATS,
+} from "@/lib/categories";
 
 export default function NewProjectForm() {
   const router = useRouter();
@@ -58,39 +63,6 @@ export default function NewProjectForm() {
   const radiusKm = Number.isFinite(parseFloat(formData.radius_km))
     ? parseFloat(formData.radius_km)
     : 5;
-
-  const categories = [
-    "Photography",
-    "Video",
-    "Audio",
-    "Text",
-    "Survey",
-    "Location Data",
-    "Sensor Data",
-    "Other",
-  ];
-
-  const dataTypes = [
-    "Images",
-    "Videos",
-    "Audio Files",
-    "Text Documents",
-    "Spreadsheets",
-    "GPS Coordinates",
-    "Sensor Readings",
-    "Other",
-  ];
-
-  const formats = [
-    "JPEG",
-    "PNG",
-    "MP4",
-    "PDF",
-    "CSV",
-    "JSON",
-    "XML",
-    "Other",
-  ];
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -266,7 +238,7 @@ export default function NewProjectForm() {
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
+                {JOB_CATEGORIES.map((cat) => (
                   <SelectItem key={cat} value={cat} className="text-[11px]">{cat}</SelectItem>
                 ))}
               </SelectContent>
@@ -333,7 +305,7 @@ export default function NewProjectForm() {
           <div className="space-y-0.5">
             <Label className="text-[10px]">Data Types *</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1">
-              {dataTypes.map((type) => (
+              {PROJECT_DATA_TYPES.map((type) => (
                 <label
                   key={type}
                   className="flex items-center gap-1 cursor-pointer p-1 rounded border hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -354,7 +326,7 @@ export default function NewProjectForm() {
           <div className="space-y-0.5">
             <Label className="text-[10px]">Formats *</Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1">
-              {formats.map((format) => (
+              {PROJECT_FORMATS.map((format) => (
                 <label
                   key={format}
                   className="flex items-center gap-1 cursor-pointer p-1 rounded border hover:bg-gray-50 dark:hover:bg-gray-700"

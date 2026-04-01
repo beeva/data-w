@@ -1,6 +1,7 @@
 "use client";
 
 import type { DataItem } from "./DataItemCard";
+import { DataItemRequirementsTags } from "./DataItemRequirementsTags";
 
 interface DataItemListItemProps {
   item: DataItem;
@@ -42,6 +43,7 @@ export default function DataItemListItem({
       <p className="mb-1.5 line-clamp-1 flex-1 text-xs leading-snug text-white/55">
         {item.description?.trim() || "No description provided."}
       </p>
+      <DataItemRequirementsTags item={item} className="mb-2" size="list" />
       <div className="mt-auto flex flex-wrap items-center justify-between gap-1.5 border-t border-white/10 pt-2">
         <span className="text-[11px] text-white/45">
           {item.owner ? (

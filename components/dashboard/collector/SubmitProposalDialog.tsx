@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { cn } from "@/lib/utils";
+import { PROJECT_DATA_TYPES } from "@/lib/categories";
 
 const CONFETTI_COLORS = ["#d13447", "#ffbf00", "#263672"];
 
@@ -150,16 +151,7 @@ type StepId = (typeof STEP_ORDER)[number];
 
 const TOTAL_STEPS = STEP_ORDER.length;
 
-const DATA_TYPES = [
-  "Images",
-  "Videos",
-  "Audio Files",
-  "Text Documents",
-  "Spreadsheets",
-  "GPS Coordinates",
-  "Sensor Readings",
-  "Other",
-];
+const DATA_TYPES = [...PROJECT_DATA_TYPES];
 
 const DATA_TYPE_ICONS: Record<string, LucideIcon> = {
   Images: Image,

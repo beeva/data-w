@@ -1,5 +1,7 @@
 'use client'
 
+import { DataItemRequirementsTags } from "./DataItemRequirementsTags";
+
 export interface DataItem {
   id: string
   title: string
@@ -8,6 +10,9 @@ export interface DataItem {
   price?: number
   owner?: string
   description?: string
+  /** From completed project requirements */
+  data_types?: string[]
+  formats?: string[]
 }
 
 interface DataItemCardProps {
@@ -26,7 +31,9 @@ export default function DataItemCard({ item, onRequestAccess }: DataItemCardProp
         </div>
 
         <h3 className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-white">{item.title}</h3>
-        <p className="mb-3 line-clamp-1 text-sm leading-snug text-white/60">{item.description}</p>
+        <p className="mb-2 line-clamp-1 text-sm leading-snug text-white/60">{item.description}</p>
+
+        <DataItemRequirementsTags item={item} className="mb-3" size="card" />
 
         <div className="space-y-2.5">
           <div className="flex items-center justify-between gap-2">
