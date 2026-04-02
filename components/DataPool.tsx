@@ -10,41 +10,19 @@ import CreateDataSetDialog from "./CreateDataSetDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
-  Activity,
   Check,
-  FileText,
-  Image,
   LayoutGrid,
   List,
   Loader2,
-  MapPin,
-  MoreHorizontal,
-  Music,
-  Table,
-  Video,
-  type LucideIcon,
 } from "lucide-react";
 import { getDataPoolItems } from "@/lib/services/dataPoolService";
 import {
-  CATEGORY_ICON_COLOR,
   JOB_CATEGORIES,
   JOB_CATEGORY_DISPLAY,
   PROJECT_DATA_TYPES,
   PROJECT_FORMATS,
-  type JobCategory,
 } from "@/lib/categories";
 import { cn } from "@/lib/utils";
-
-const DATA_TYPE_ICONS: Record<string, LucideIcon> = {
-  Images: Image,
-  Videos: Video,
-  "Audio Files": Music,
-  "Text Documents": FileText,
-  Spreadsheets: Table,
-  "GPS Coordinates": MapPin,
-  "Sensor Readings": Activity,
-  Other: MoreHorizontal,
-};
 
 function matchesFacetSelection(
   selected: string[],
@@ -58,18 +36,21 @@ function matchesFacetSelection(
 function GelFilterChip({
   selected,
   onClick,
+  title,
   children,
 }: {
   selected: boolean;
   onClick: () => void;
+  title?: string;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      title={title}
       className={cn(
-        "btn-gelatine inline-flex max-w-full items-center gap-2 rounded-full pl-3 pr-4 py-2.5 text-sm font-medium transition-all border text-left",
+        "btn-gelatine flex w-full min-w-0 items-center gap-2 rounded-full pl-3 pr-4 py-2.5 text-sm font-medium transition-all border text-left",
         selected
           ? "bg-[#0a0a0a] dark:bg-white text-white dark:text-black border-[#0a0a0a] dark:border-white"
           : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
@@ -84,7 +65,7 @@ function TrailingCheckCircle({ selected }: { selected: boolean }) {
   return (
     <span
       className={cn(
-        "flex shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-all ml-1.5",
+        "ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all",
         selected
           ? "bg-white dark:bg-[#0a0a0a] border-white dark:border-[#0a0a0a] text-[#0a0a0a] dark:text-white"
           : "dark:border-white/50 border-[#0a0a0a] bg-transparent",
@@ -268,34 +249,20 @@ export default function DataPool() {
                     </button>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {JOB_CATEGORIES.map((category) => {
                     const selected = selectedCategories.includes(category);
-                    const { icon: IconComponent, label } =
-                      JOB_CATEGORY_DISPLAY[category as JobCategory];
+                    const { label } = JOB_CATEGORY_DISPLAY[category];
                     return (
                       <GelFilterChip
                         key={category}
                         selected={selected}
                         onClick={() => toggleCategory(category)}
+                        title={label}
                       >
-                        <span className="flex shrink-0 w-7 h-7 items-center justify-center rounded overflow-hidden">
-                          <span className="dark:hidden block w-5 h-5 [&_svg]:size-full">
-                            <IconComponent
-                              color={
-                                selected ? "#ffffff" : CATEGORY_ICON_COLOR
-                              }
-                            />
-                          </span>
-                          <span className="hidden dark:block w-5 h-5 [&_svg]:size-full">
-                            <IconComponent
-                              color={
-                                selected ? "#0a0a0a" : CATEGORY_ICON_COLOR
-                              }
-                            />
-                          </span>
+                        <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
+                          {label}
                         </span>
-                        <span className="text-left">{label}</span>
                         <TrailingCheckCircle selected={selected} />
                       </GelFilterChip>
                     );
@@ -326,29 +293,19 @@ export default function DataPool() {
                     </button>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {PROJECT_DATA_TYPES.map((type) => {
                     const selected = selectedDataTypes.includes(type);
-                    const IconComponent = DATA_TYPE_ICONS[type] ?? MoreHorizontal;
                     return (
                       <GelFilterChip
                         key={type}
                         selected={selected}
                         onClick={() => toggleDataType(type)}
+                        title={type}
                       >
-                        <span className="flex shrink-0 w-7 h-7 items-center justify-center rounded overflow-hidden">
-                          <IconComponent
-                            className={cn(
-                              "w-5 h-5 object-contain",
-                              selected
-                                ? "dark:text-[#0a0a0a] text-white"
-                                : "text-[#0a0a0a] dark:text-white",
-                            )}
-                            strokeWidth={1.5}
-                            aria-hidden
-                          />
+                        <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
+                          {type}
                         </span>
-                        <span className="text-left">{type}</span>
                         <TrailingCheckCircle selected={selected} />
                       </GelFilterChip>
                     );
@@ -379,7 +336,7 @@ export default function DataPool() {
                     </button>
                   </div>
                 )}
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {PROJECT_FORMATS.map((format) => {
                     const selected = selectedFormats.includes(format);
                     return (
@@ -387,8 +344,11 @@ export default function DataPool() {
                         key={format}
                         selected={selected}
                         onClick={() => toggleFormat(format)}
+                        title={format}
                       >
-                        <span className="text-left">{format}</span>
+                        <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
+                          {format}
+                        </span>
                         <TrailingCheckCircle selected={selected} />
                       </GelFilterChip>
                     );

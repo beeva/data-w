@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   createDataPoolDataset,
+  createDataPoolDatasetFileRecord,
+  deleteDataPoolDatasetFile,
+  listDataPoolDatasetFiles,
   updateDataPoolDataset,
+  uploadDataPoolDatasetFile,
+  type DataPoolDatasetFileRow,
 } from "@/lib/services/dataPoolService";
 import type { DataItem } from "@/components/DataItemCard";
 import {
@@ -58,6 +63,7 @@ const STEP_ORDER = [
   "price",
   "dataTypes",
   "formats",
+  "files",
 ] as const;
 
 type StepId = (typeof STEP_ORDER)[number];
@@ -93,6 +99,16 @@ const initialForm: DataSetFormState = {
   formats: [],
 };
 
+const FORMAT_ACCEPT: Record<string, string> = {
+  JPEG: "image/jpeg",
+  PNG: "image/png",
+  MP4: "video/mp4",
+  PDF: "application/pdf",
+  CSV: "text/csv",
+  JSON: "application/json",
+  XML: "application/xml,text/xml",
+};
+
 function formFromDataset(d: DataItem): DataSetFormState {
   return {
     title: d.title ?? "",
@@ -119,6 +135,12 @@ export default function CreateDataSetDialog({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [formData, setFormData] = useState<DataSetFormState>(initialForm);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [existingFiles, setExistingFiles] = useState<DataPoolDatasetFileRow[]>(
+    [],
+  );
+  const [filesLoading, setFilesLoading] = useState(false);
 
   const isEditMode = mode === "edit";
   const currentStepId: StepId = STEP_ORDER[stepIndex];
@@ -126,10 +148,21 @@ export default function CreateDataSetDialog({
   const isLastStep = stepIndex === TOTAL_STEPS - 1;
   const progressPercent = ((stepIndex + 1) / TOTAL_STEPS) * 100;
 
+  const acceptTypes = useMemo(() => {
+    const selected = formData.formats;
+    if (!selected.length) return undefined;
+    if (selected.includes("Other")) return undefined;
+    const mimes = selected.map((f) => FORMAT_ACCEPT[f]).filter(Boolean);
+    return mimes.length ? mimes.join(",") : undefined;
+  }, [formData.formats]);
+
   function resetForm() {
     setStepIndex(0);
     setError("");
     setSaving(false);
+    setPendingFiles([]);
+    setExistingFiles([]);
+    setFilesLoading(false);
     setFormData(
       isEditMode && dataset ? formFromDataset(dataset) : initialForm,
     );
@@ -147,10 +180,35 @@ export default function CreateDataSetDialog({
     } else {
       setFormData(initialForm);
     }
+    setPendingFiles([]);
+    setExistingFiles([]);
+    setFilesLoading(false);
     setStepIndex(0);
     setError("");
     setSaving(false);
   }, [open, isEditMode, dataset]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!isEditMode) return;
+    if (!dataset?.id) return;
+    if (dataset.item_kind !== "dataset") return;
+    let cancelled = false;
+    setFilesLoading(true);
+    void listDataPoolDatasetFiles(dataset.id).then(({ data, error: e }) => {
+      if (cancelled) return;
+      if (e) {
+        setError(e.message);
+        setExistingFiles([]);
+      } else {
+        setExistingFiles(data ?? []);
+      }
+      setFilesLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isEditMode, dataset?.id, dataset?.item_kind]);
 
   function toggleArrayField(
     field: "data_types" | "formats",
@@ -180,6 +238,8 @@ export default function CreateDataSetDialog({
         return formData.data_types.length > 0;
       case "formats":
         return formData.formats.length > 0;
+      case "files":
+        return pendingFiles.length + existingFiles.length > 0;
       default:
         return true;
     }
@@ -242,18 +302,50 @@ export default function CreateDataSetDialog({
         formats: formData.formats,
       };
 
+      const filesToUpload = [...pendingFiles];
+
+      if (filesToUpload.length + existingFiles.length === 0) {
+        throw new Error("Please upload at least one file for your dataset.");
+      }
+
+      let datasetId: string;
       if (isEditMode) {
         if (!dataset?.id || dataset.item_kind !== "dataset") {
           throw new Error("Invalid dataset to edit");
         }
+        datasetId = dataset.id;
         const { error: upErr } = await updateDataPoolDataset(
           dataset.id,
           input,
         );
         if (upErr) throw upErr;
       } else {
-        const { error: crErr } = await createDataPoolDataset(user.id, input);
+        const { id, error: crErr } = await createDataPoolDataset(user.id, input);
         if (crErr) throw crErr;
+        if (!id) throw new Error("Failed to create listing");
+        datasetId = id;
+      }
+
+      for (const file of filesToUpload) {
+        const { bucketId, storagePath, publicUrl, error: upErr } =
+          await uploadDataPoolDatasetFile({
+            ownerId: user.id,
+            datasetId,
+            file,
+          });
+        if (upErr || !publicUrl) {
+          throw new Error(upErr?.message || `Failed to upload ${file.name}`);
+        }
+
+        const { error: recErr } = await createDataPoolDatasetFileRecord({
+          datasetId,
+          ownerId: user.id,
+          bucketId,
+          storagePath,
+          publicUrl,
+          file,
+        });
+        if (recErr) throw recErr;
       }
 
       onSuccess?.();
@@ -269,6 +361,22 @@ export default function CreateDataSetDialog({
     } finally {
       setSaving(false);
     }
+  }
+
+  function addPendingFiles(list: FileList | null) {
+    if (!list?.length) return;
+    const next = Array.from(list);
+    setPendingFiles((prev) => {
+      const seen = new Set(prev.map((f) => `${f.name}:${f.size}:${f.lastModified}`));
+      const out = [...prev];
+      for (const f of next) {
+        const key = `${f.name}:${f.size}:${f.lastModified}`;
+        if (seen.has(key)) continue;
+        out.push(f);
+        seen.add(key);
+      }
+      return out;
+    });
   }
 
   return (
@@ -596,6 +704,155 @@ export default function CreateDataSetDialog({
                         </button>
                       );
                     })}
+                  </div>
+                </div>
+              )}
+
+              {currentStepId === "files" && (
+                <div className="space-y-8 pl-4 mb-24">
+                  <div className="space-y-2">
+                    <p className="text-2xl font-semibold text-black dark:text-white">
+                      Upload files
+                    </p>
+                    <p className="text-sm text-black dark:text-white/60">
+                      Add one or more files for this dataset listing.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 max-w-2xl">
+                    <div
+                      className={cn(
+                        "rounded-2xl border border-dashed p-6 transition-colors cursor-pointer",
+                        "border-[#0a0a0a] dark:border-[#333] bg-white dark:bg-[#0a0a0a]",
+                        saving && "pointer-events-none opacity-60",
+                      )}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => fileInputRef.current?.click()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                      aria-label="Upload dataset files"
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        className="hidden"
+                        accept={acceptTypes}
+                        onChange={(e) => {
+                          addPendingFiles(e.target.files);
+                          // allow selecting same file again
+                          e.target.value = "";
+                        }}
+                      />
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold text-black dark:text-white">
+                          Click to select files
+                        </p>
+                        <p className="text-xs text-black/70 dark:text-white/60">
+                          {acceptTypes
+                            ? `Allowed: ${formData.formats.join(", ")}`
+                            : "Any file type is allowed (because you selected “Other”)."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Existing files (edit mode) */}
+                    {filesLoading && (
+                      <p className="text-sm text-black/70 dark:text-white/60">
+                        Loading files…
+                      </p>
+                    )}
+                    {!filesLoading && existingFiles.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold text-black dark:text-white">
+                          Uploaded files
+                        </p>
+                        <ul className="space-y-2">
+                          {existingFiles.map((f) => (
+                            <li
+                              key={f.id}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e5e5e5] dark:border-[#333] px-4 py-3"
+                            >
+                              <a
+                                href={f.public_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-sm text-[#263672] dark:text-[#5b7cce] hover:underline break-all"
+                              >
+                                {f.file_name}
+                              </a>
+                              <button
+                                type="button"
+                                disabled={saving}
+                                onClick={async () => {
+                                  const { error: delErr } =
+                                    await deleteDataPoolDatasetFile({
+                                      fileId: f.id,
+                                      bucketId: f.bucket_id,
+                                      storagePath: f.storage_path,
+                                    });
+                                  if (delErr) {
+                                    setError(delErr.message);
+                                    return;
+                                  }
+                                  setExistingFiles((prev) =>
+                                    prev.filter((x) => x.id !== f.id),
+                                  );
+                                }}
+                                className="btn-gelatine rounded-full px-4 py-1.5 text-xs font-semibold border border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-500/10"
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Pending files */}
+                    {pendingFiles.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-semibold text-black dark:text-white">
+                          Files to upload
+                        </p>
+                        <ul className="space-y-2">
+                          {pendingFiles.map((f) => (
+                            <li
+                              key={`${f.name}:${f.size}:${f.lastModified}`}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e5e5e5] dark:border-[#333] px-4 py-3"
+                            >
+                              <span className="text-sm text-black dark:text-white break-all">
+                                {f.name}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={saving}
+                                onClick={() =>
+                                  setPendingFiles((prev) =>
+                                    prev.filter(
+                                      (x) =>
+                                        !(
+                                          x.name === f.name &&
+                                          x.size === f.size &&
+                                          x.lastModified === f.lastModified
+                                        ),
+                                    ),
+                                  )
+                                }
+                                className="btn-gelatine rounded-full px-4 py-1.5 text-xs font-semibold border border-[#0a0a0a]/30 dark:border-white/20 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/10"
+                              >
+                                Remove
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
