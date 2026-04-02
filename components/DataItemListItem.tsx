@@ -6,12 +6,22 @@ import { DataItemRequirementsTags } from "./DataItemRequirementsTags";
 interface DataItemListItemProps {
   item: DataItem;
   onRequestAccess: (item: DataItem) => void;
+  currentUserId?: string;
+  onEditDataset?: (item: DataItem) => void;
 }
 
 export default function DataItemListItem({
   item,
   onRequestAccess,
+  currentUserId,
+  onEditDataset,
 }: DataItemListItemProps) {
+  const showEdit =
+    !!onEditDataset &&
+    item.item_kind === "dataset" &&
+    !!item.owner_user_id &&
+    !!currentUserId &&
+    item.owner_user_id === currentUserId;
   return (
     <article className="group flex flex-col rounded-lg border border-white/10 bg-white/[0.04] p-2.5 transition-colors hover:border-cyan-500/40 hover:bg-white/[0.06]">
       <div className="mb-1.5 flex items-start gap-2">
@@ -55,11 +65,20 @@ export default function DataItemListItem({
             <span className="text-white/35">Owner not listed</span>
           )}
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {typeof item.price === "number" && (
             <span className="text-xs font-semibold text-emerald-400">
               ${item.price.toLocaleString()}
             </span>
+          )}
+          {showEdit && (
+            <button
+              type="button"
+              onClick={() => onEditDataset!(item)}
+              className="shrink-0 rounded-md border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-semibold text-white transition-all hover:border-cyan-400/80"
+            >
+              Edit
+            </button>
           )}
           <button
             type="button"

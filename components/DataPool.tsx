@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import Header from "./Header";
 import PageHero from "./PageHero";
 import DataItemCard, { DataItem } from "./DataItemCard";
 import DataItemListItem from "./DataItemListItem";
+import CreateDataSetDialog from "./CreateDataSetDialog";
+import { useAuth } from "@/contexts/AuthContext";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Activity,
@@ -96,6 +98,7 @@ function TrailingCheckCircle({ selected }: { selected: boolean }) {
 
 export default function DataPool() {
   const searchParams = useSearchParams();
+  const { profile } = useAuth();
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
@@ -108,7 +111,28 @@ export default function DataPool() {
   const [accessDialogItem, setAccessDialogItem] = useState<DataItem | null>(
     null,
   );
+  const [datasetDialogOpen, setDatasetDialogOpen] = useState(false);
+  const [datasetDialogMode, setDatasetDialogMode] = useState<"create" | "edit">(
+    "create",
+  );
+  const [datasetBeingEdited, setDatasetBeingEdited] =
+    useState<DataItem | null>(null);
   const itemsPerPage = 8;
+
+  const canListDatasets =
+    profile?.role === "personal" || profile?.role === "company";
+
+  const openCreateDatasetDialog = () => {
+    setDatasetDialogMode("create");
+    setDatasetBeingEdited(null);
+    setDatasetDialogOpen(true);
+  };
+
+  const openEditDatasetDialog = (item: DataItem) => {
+    setDatasetDialogMode("edit");
+    setDatasetBeingEdited(item);
+    setDatasetDialogOpen(true);
+  };
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -134,25 +158,25 @@ export default function DataPool() {
     );
   };
 
-  useEffect(() => {
-    const fetchDataPoolItems = async () => {
-      setLoading(true);
-      setError("");
+  const fetchDataPoolItems = useCallback(async () => {
+    setLoading(true);
+    setError("");
 
-      const { data, error: fetchError } = await getDataPoolItems();
+    const { data, error: fetchError } = await getDataPoolItems();
 
-      if (fetchError) {
-        setError(fetchError.message || "Failed to load DataPool items.");
-        setDataItems([]);
-      } else {
-        setDataItems(data || []);
-      }
+    if (fetchError) {
+      setError(fetchError.message || "Failed to load DataPool items.");
+      setDataItems([]);
+    } else {
+      setDataItems(data || []);
+    }
 
-      setLoading(false);
-    };
-
-    fetchDataPoolItems();
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    void fetchDataPoolItems();
+  }, [fetchDataPoolItems]);
 
   useEffect(() => {
     const keyword = searchParams.get("keyword")?.trim();
@@ -378,6 +402,15 @@ export default function DataPool() {
               {/* Search and view toggle */}
               <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
+                  {canListDatasets && (
+                    <button
+                      type="button"
+                      onClick={openCreateDatasetDialog}
+                      className="shrink-0 rounded-lg border border-cyan-500/50 bg-cyan-500/15 px-4 py-2.5 text-sm font-semibold text-cyan-200 transition-all hover:border-cyan-400 hover:bg-cyan-500/25"
+                    >
+                      List a dataset
+                    </button>
+                  )}
                   <div className="relative flex-shrink-0">
                     <input
                       type="text"
@@ -458,6 +491,10 @@ export default function DataPool() {
                       key={item.id}
                       item={item}
                       onRequestAccess={handleRequestAccess}
+                      currentUserId={profile?.id}
+                      onEditDataset={
+                        canListDatasets ? openEditDatasetDialog : undefined
+                      }
                     />
                   ))}
                 </div>
@@ -468,6 +505,10 @@ export default function DataPool() {
                       key={item.id}
                       item={item}
                       onRequestAccess={handleRequestAccess}
+                      currentUserId={profile?.id}
+                      onEditDataset={
+                        canListDatasets ? openEditDatasetDialog : undefined
+                      }
                     />
                   ))}
                 </div>
@@ -500,6 +541,18 @@ export default function DataPool() {
           </div>
         </div>
       </main>
+      <CreateDataSetDialog
+        open={datasetDialogOpen}
+        onOpenChange={(open) => {
+          setDatasetDialogOpen(open);
+          if (!open) setDatasetBeingEdited(null);
+        }}
+        mode={datasetDialogMode}
+        dataset={datasetBeingEdited}
+        onSuccess={() => {
+          void fetchDataPoolItems();
+        }}
+      />
       <ConfirmationDialog
         open={!!accessDialogItem}
         onOpenChange={(open) => {
