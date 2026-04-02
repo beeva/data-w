@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import DataPool from "@/components/DataPool";
+import DataPool from "@/components/datapool/DataPool";
 
 export default function DataPoolPage() {
   return (

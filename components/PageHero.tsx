@@ -7,6 +7,8 @@ interface PageHeroProps {
   subtitle?: string;
   description?: string;
   children?: React.ReactNode;
+  /** Compact mode for content-heavy pages (e.g. DataPool/detail pages). */
+  compact?: boolean;
   /** When set, layout becomes left (title + children) | right (Lottie). e.g. "/lottie/job-search.lottie" */
   rightLottie?: string;
   /** When set, used as the right column instead of rightLottie (e.g. macOS-style jobs list window). Takes precedence over rightLottie. */
@@ -18,6 +20,7 @@ export default function PageHero({
   subtitle,
   description,
   children,
+  compact = false,
   rightLottie,
   rightContent,
 }: PageHeroProps) {
@@ -50,19 +53,27 @@ export default function PageHero({
   const hasTwoColumns = useRightContent || useRightLottie;
 
   return (
-    <section className="pt-20 pb-20 px-4 sm:px-6 text-white relative overflow-hidden bg-gradient-to-b from-[#0a0f1e] via-[#0f172a] to-[#0f1419]">
+    <section
+      className={`px-4 sm:px-6 text-white relative overflow-hidden bg-gradient-to-b from-[#0a0f1e] via-[#0f172a] to-[#0f1419] ${
+        compact ? "pt-16 pb-10" : "pt-20 pb-20"
+      }`}
+    >
       <div className="absolute top-1/4 left-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl" />
       <div className="absolute bottom-1/3 left-1/4 w-24 h-24 bg-blue-500/8 rounded-full blur-2xl" />
       <div className="container mx-auto relative z-10">
         <div
-          className={`min-h-[52vh] flex items-center ${hasTwoColumns ? "flex-col lg:flex-row lg:justify-between lg:gap-12" : "justify-center"}`}
+          className={`flex ${compact ? "items-end min-h-[24vh]" : "items-center min-h-[52vh]"} ${hasTwoColumns ? "flex-col lg:flex-row lg:justify-between lg:gap-12" : "justify-center"}`}
         >
           {/* Left: title + description + children (e.g. search) */}
           <div
             className={`w-full ${hasTwoColumns ? "lg:flex-1 lg:max-w-2xl lg:text-left" : "max-w-3xl text-center"}`}
           >
             <div className="space-y-2">
-              <h1 className="text-2xl sm:text-3xl md:text-7xl font-bold leading-tight tracking-tight">
+              <h1
+                className={`font-bold leading-tight tracking-tight ${
+                  compact ? "text-2xl sm:text-3xl md:text-5xl" : "text-2xl sm:text-3xl md:text-7xl"
+                }`}
+              >
                 {subtitle ? (
                   <>
                     <span className="text-white">{title} </span>

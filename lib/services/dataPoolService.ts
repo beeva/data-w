@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
-import type { DataItem } from "@/components/DataItemCard";
+import type { DataItem } from "@/components/datapool/DataItemCard";
 
 type DataPoolRow = {
   id: string;
@@ -34,6 +34,30 @@ export type DataPoolDatasetFileRow = {
   file_size: number | null;
   mime_type: string | null;
   created_at: string;
+};
+
+export type DataPoolDatasetDetail = {
+  id: string;
+  owner_id: string;
+  owner_name: string | null;
+  title: string;
+  description: string;
+  category: string;
+  price: number;
+  data_types: string[];
+  formats: string[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type DataPoolDatasetMessageRow = {
+  id: string;
+  dataset_id: string;
+  author_id: string;
+  parent_id: string | null;
+  body: string;
+  created_at: string;
+  author_name: string | null;
 };
 
 export async function getDataPoolItems(): Promise<{
@@ -131,6 +155,69 @@ export async function updateDataPoolDataset(
     return {
       error:
         err instanceof Error ? err : new Error("Failed to update dataset listing"),
+    };
+  }
+}
+
+export async function getDataPoolDatasetById(datasetId: string): Promise<{
+  data: DataPoolDatasetDetail | null;
+  error: Error | null;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from("datapool_datasets")
+      .select(
+        `
+          id,
+          owner_id,
+          title,
+          description,
+          category,
+          price,
+          data_types,
+          formats,
+          created_at,
+          updated_at,
+          profiles:owner_id (
+            full_name,
+            email
+          )
+        `,
+      )
+      .eq("id", datasetId)
+      .single();
+
+    if (error) return { data: null, error: new Error(error.message) };
+    if (!data) return { data: null, error: null };
+
+    const ownerName =
+      (data as any)?.profiles?.full_name?.trim?.() ||
+      (data as any)?.profiles?.email?.trim?.() ||
+      null;
+
+    return {
+      data: {
+        id: (data as any).id,
+        owner_id: (data as any).owner_id,
+        owner_name: ownerName,
+        title: (data as any).title,
+        description: (data as any).description ?? "",
+        category: (data as any).category,
+        price: Number((data as any).price ?? 0),
+        data_types: ((data as any).data_types as string[]) ?? [],
+        formats: ((data as any).formats as string[]) ?? [],
+        created_at: (data as any).created_at,
+        updated_at: (data as any).updated_at,
+      },
+      error: null,
+    };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error
+          ? err
+          : new Error("Failed to load dataset details"),
     };
   }
 }
@@ -272,6 +359,92 @@ export async function deleteDataPoolDatasetFile(input: {
         err instanceof Error
           ? err
           : new Error("Failed to delete dataset file"),
+    };
+  }
+}
+
+export async function listDataPoolDatasetMessages(datasetId: string): Promise<{
+  data: DataPoolDatasetMessageRow[] | null;
+  error: Error | null;
+}> {
+  try {
+    const { data, error } = await supabase
+      .from("datapool_dataset_messages")
+      .select(
+        `
+          id,
+          dataset_id,
+          author_id,
+          parent_id,
+          body,
+          created_at,
+          profiles:author_id (
+            full_name,
+            email
+          )
+        `,
+      )
+      .eq("dataset_id", datasetId)
+      .order("created_at", { ascending: false });
+
+    if (error) return { data: null, error: new Error(error.message) };
+
+    const rows = ((data as any[]) ?? []).map((row) => {
+      const authorName =
+        row?.profiles?.full_name?.trim?.() ||
+        row?.profiles?.email?.trim?.() ||
+        null;
+      return {
+        id: row.id,
+        dataset_id: row.dataset_id,
+        author_id: row.author_id,
+        parent_id: row.parent_id ?? null,
+        body: row.body ?? "",
+        created_at: row.created_at,
+        author_name: authorName,
+      } satisfies DataPoolDatasetMessageRow;
+    });
+
+    return { data: rows, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err : new Error("Failed to load messages"),
+    };
+  }
+}
+
+export async function createDataPoolDatasetMessage(input: {
+  datasetId: string;
+  body: string;
+  parentId?: string | null;
+}): Promise<{ error: Error | null }> {
+  try {
+    const body = input.body.trim();
+    if (!body) return { error: new Error("Message cannot be empty") };
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) return { error: new Error(authError.message) };
+    if (!user) return { error: new Error("You must be signed in to post") };
+
+    const { error } = await supabase.from("datapool_dataset_messages").insert({
+      dataset_id: input.datasetId,
+      author_id: user.id,
+      parent_id: input.parentId ?? null,
+      body,
+    });
+
+    if (error) return { error: new Error(error.message) };
+    return { error: null };
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error ? err : new Error("Failed to send message"),
     };
   }
 }

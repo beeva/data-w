@@ -2,19 +2,14 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
-import Header from "./Header";
-import PageHero from "./PageHero";
-import DataItemCard, { DataItem } from "./DataItemCard";
+import Header from "@/components/Header";
+import PageHero from "@/components/PageHero";
+import DataItemCard, { type DataItem } from "./DataItemCard";
 import DataItemListItem from "./DataItemListItem";
 import CreateDataSetDialog from "./CreateDataSetDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import {
-  Check,
-  LayoutGrid,
-  List,
-  Loader2,
-} from "lucide-react";
+import { Check, LayoutGrid, List, Loader2 } from "lucide-react";
 import { getDataPoolItems } from "@/lib/services/dataPoolService";
 import {
   JOB_CATEGORIES,
@@ -125,17 +120,13 @@ export default function DataPool() {
 
   const toggleDataType = (value: string) => {
     setSelectedDataTypes((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value],
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value],
     );
   };
 
   const toggleFormat = (value: string) => {
     setSelectedFormats((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value],
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value],
     );
   };
 
@@ -168,12 +159,8 @@ export default function DataPool() {
   const filteredItems = dataItems.filter((item) => {
     const q = searchQuery.toLowerCase();
     const matchesCategory =
-      selectedCategories.length === 0 ||
-      selectedCategories.includes(item.category);
-    const matchesDataTypes = matchesFacetSelection(
-      selectedDataTypes,
-      item.data_types,
-    );
+      selectedCategories.length === 0 || selectedCategories.includes(item.category);
+    const matchesDataTypes = matchesFacetSelection(selectedDataTypes, item.data_types);
     const matchesFormats = matchesFacetSelection(selectedFormats, item.formats);
     const matchesSearch =
       searchQuery === "" ||
@@ -182,34 +169,21 @@ export default function DataPool() {
       item.category.toLowerCase().includes(q) ||
       item.data_types?.some((t) => t.toLowerCase().includes(q)) ||
       item.formats?.some((f) => f.toLowerCase().includes(q));
-    return (
-      matchesCategory &&
-      matchesDataTypes &&
-      matchesFormats &&
-      matchesSearch
-    );
+    return matchesCategory && matchesDataTypes && matchesFormats && matchesSearch;
   });
 
   const visibleItems = filteredItems.slice(0, visibleCount);
   const hasMore = filteredItems.length > visibleCount;
 
-  // Reset visible count when filters change
   useEffect(() => {
     setVisibleCount(itemsPerPage);
-  }, [
-    selectedCategories,
-    selectedDataTypes,
-    selectedFormats,
-    searchQuery,
-    viewMode,
-  ]);
+  }, [selectedCategories, selectedDataTypes, selectedFormats, searchQuery, viewMode]);
 
   const handleLoadMore = () => {
     setVisibleCount((prev) => prev + itemsPerPage);
   };
 
   const handleRequestAccess = (item: DataItem) => {
-    // Handle request access
     console.log("Requesting access to:", item);
     setAccessDialogItem(item);
   };
@@ -221,14 +195,13 @@ export default function DataPool() {
         title="Data"
         subtitle="Marketplace"
         description="Browse and access curated datasets gathered from our global network"
+        compact
       />
       <main className="pb-20 pt-8">
         <div className="container mx-auto px-6">
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Left filters — categories, data types, formats (same options as create/edit project) */}
             <aside className="w-full lg:w-80 lg:shrink-0">
               <div className="bg-white/5 border border-white/10 rounded-xl p-4 sticky top-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
-                {/* Categories */}
                 <div className="space-y-2 mb-3">
                   <h2 className="text-white font-semibold">Categories</h2>
                   <p className="text-sm text-white/60">
@@ -271,12 +244,10 @@ export default function DataPool() {
 
                 <div className="border-t border-white/10 my-5" />
 
-                {/* Data types */}
                 <div className="space-y-2 mb-3">
                   <h2 className="text-white font-semibold">Data types</h2>
                   <p className="text-sm text-white/60">
-                    Select one or more data types you need (matches project
-                    requirements).
+                    Select one or more data types you need (matches project requirements).
                   </p>
                 </div>
                 {selectedDataTypes.length > 0 && (
@@ -314,12 +285,10 @@ export default function DataPool() {
 
                 <div className="border-t border-white/10 my-5" />
 
-                {/* Formats */}
                 <div className="space-y-2 mb-3">
                   <h2 className="text-white font-semibold">Formats</h2>
                   <p className="text-sm text-white/60">
-                    Select one or more file formats (matches project
-                    requirements).
+                    Select one or more file formats (matches project requirements).
                   </p>
                 </div>
                 {selectedFormats.length > 0 && (
@@ -357,9 +326,7 @@ export default function DataPool() {
               </div>
             </aside>
 
-            {/* Main Content */}
             <section className="flex-1 min-w-0">
-              {/* Search and view toggle */}
               <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
                   {canListDatasets && (
@@ -439,7 +406,6 @@ export default function DataPool() {
                 </div>
               </div>
 
-              {/* Data Content */}
               {loading ? (
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="w-6 h-6 animate-spin text-white/70" />
@@ -452,9 +418,7 @@ export default function DataPool() {
                       item={item}
                       onRequestAccess={handleRequestAccess}
                       currentUserId={profile?.id}
-                      onEditDataset={
-                        canListDatasets ? openEditDatasetDialog : undefined
-                      }
+                      onEditDataset={canListDatasets ? openEditDatasetDialog : undefined}
                     />
                   ))}
                 </div>
@@ -466,15 +430,12 @@ export default function DataPool() {
                       item={item}
                       onRequestAccess={handleRequestAccess}
                       currentUserId={profile?.id}
-                      onEditDataset={
-                        canListDatasets ? openEditDatasetDialog : undefined
-                      }
+                      onEditDataset={canListDatasets ? openEditDatasetDialog : undefined}
                     />
                   ))}
                 </div>
               )}
 
-              {/* Load More Button */}
               {hasMore && (
                 <button
                   onClick={handleLoadMore}
@@ -484,7 +445,6 @@ export default function DataPool() {
                 </button>
               )}
 
-              {/* No Results Message */}
               {!loading && error && (
                 <div className="text-center py-6">
                   <p className="text-red-300 text-base">{error}</p>
@@ -501,6 +461,7 @@ export default function DataPool() {
           </div>
         </div>
       </main>
+
       <CreateDataSetDialog
         open={datasetDialogOpen}
         onOpenChange={(open) => {
@@ -513,6 +474,7 @@ export default function DataPool() {
           void fetchDataPoolItems();
         }}
       />
+
       <ConfirmationDialog
         open={!!accessDialogItem}
         onOpenChange={(open) => {
@@ -533,3 +495,4 @@ export default function DataPool() {
     </div>
   );
 }
+

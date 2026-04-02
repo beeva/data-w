@@ -11,7 +11,7 @@ import {
   uploadDataPoolDatasetFile,
   type DataPoolDatasetFileRow,
 } from "@/lib/services/dataPoolService";
-import type { DataItem } from "@/components/DataItemCard";
+import type { DataItem } from "./DataItemCard";
 import {
   Dialog,
   DialogContent,
@@ -42,11 +42,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import {
-  JOB_CATEGORIES,
-  PROJECT_DATA_TYPES,
-  PROJECT_FORMATS,
-} from "@/lib/categories";
+import { JOB_CATEGORIES, PROJECT_DATA_TYPES, PROJECT_FORMATS } from "@/lib/categories";
 
 export interface CreateDataSetDialogProps {
   open: boolean;
@@ -115,9 +111,7 @@ function formFromDataset(d: DataItem): DataSetFormState {
     description: d.description ?? "",
     category: d.category ?? "",
     price:
-      typeof d.price === "number" && Number.isFinite(d.price)
-        ? String(d.price)
-        : "",
+      typeof d.price === "number" && Number.isFinite(d.price) ? String(d.price) : "",
     data_types: [...(d.data_types ?? [])],
     formats: [...(d.formats ?? [])],
   };
@@ -137,9 +131,7 @@ export default function CreateDataSetDialog({
   const [formData, setFormData] = useState<DataSetFormState>(initialForm);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [existingFiles, setExistingFiles] = useState<DataPoolDatasetFileRow[]>(
-    [],
-  );
+  const [existingFiles, setExistingFiles] = useState<DataPoolDatasetFileRow[]>([]);
   const [filesLoading, setFilesLoading] = useState(false);
 
   const isEditMode = mode === "edit";
@@ -163,9 +155,7 @@ export default function CreateDataSetDialog({
     setPendingFiles([]);
     setExistingFiles([]);
     setFilesLoading(false);
-    setFormData(
-      isEditMode && dataset ? formFromDataset(dataset) : initialForm,
-    );
+    setFormData(isEditMode && dataset ? formFromDataset(dataset) : initialForm);
   }
 
   function handleOpenChange(next: boolean) {
@@ -210,10 +200,7 @@ export default function CreateDataSetDialog({
     };
   }, [open, isEditMode, dataset?.id, dataset?.item_kind]);
 
-  function toggleArrayField(
-    field: "data_types" | "formats",
-    value: string,
-  ) {
+  function toggleArrayField(field: "data_types" | "formats", value: string) {
     setFormData((prev) => ({
       ...prev,
       [field]: prev[field].includes(value)
@@ -278,11 +265,7 @@ export default function CreateDataSetDialog({
   async function handleSubmit() {
     setError("");
     if (!user || !profile) {
-      setError(
-        isEditMode
-          ? "You must be logged in to edit this listing"
-          : "You must be logged in to list a dataset",
-      );
+      setError(isEditMode ? "You must be logged in to edit this listing" : "You must be logged in to list a dataset");
       return;
     }
     if (profile.role !== "personal" && profile.role !== "company") {
@@ -314,10 +297,7 @@ export default function CreateDataSetDialog({
           throw new Error("Invalid dataset to edit");
         }
         datasetId = dataset.id;
-        const { error: upErr } = await updateDataPoolDataset(
-          dataset.id,
-          input,
-        );
+        const { error: upErr } = await updateDataPoolDataset(dataset.id, input);
         if (upErr) throw upErr;
       } else {
         const { id, error: crErr } = await createDataPoolDataset(user.id, input);
@@ -352,11 +332,7 @@ export default function CreateDataSetDialog({
       handleOpenChange(false);
     } catch (err: unknown) {
       setError(
-        err instanceof Error
-          ? err.message
-          : isEditMode
-            ? "Failed to update listing"
-            : "Failed to create listing",
+        err instanceof Error ? err.message : isEditMode ? "Failed to update listing" : "Failed to create listing",
       );
     } finally {
       setSaving(false);
@@ -394,9 +370,7 @@ export default function CreateDataSetDialog({
               <Info className="h-3.5 w-3.5 text-foreground dark:text-white" />
             </div>
             <span className="flex-1 text-center text-xs truncate">
-              {isEditMode
-                ? `Editing dataset: ${dataset?.title ?? ""}`
-                : "List a dataset on the Data Pool marketplace"}
+              {isEditMode ? `Editing dataset: ${dataset?.title ?? ""}` : "List a dataset on the Data Pool marketplace"}
             </span>
             <button
               type="button"
@@ -415,9 +389,7 @@ export default function CreateDataSetDialog({
               {isEditMode ? "Edit Dataset" : "List a Dataset"}
             </DialogTitle>
             <DialogDescription className="sr-only">
-              {isEditMode
-                ? "Update your marketplace listing."
-                : "Create a marketplace listing with category, types, formats, and price."}
+              {isEditMode ? "Update your marketplace listing." : "Create a marketplace listing with category, types, formats, and price."}
             </DialogDescription>
           </div>
           <span className="text-xs text-black dark:text-white/50">
@@ -430,10 +402,7 @@ export default function CreateDataSetDialog({
             <div className="flex flex-col justify-center min-h-full">
               {error && (
                 <div className="mb-6 p-3 bg-red-500/10 dark:bg-red-900/20 border border-red-500 dark:border-red-800 rounded-xl text-red-500 dark:text-red-400 text-sm">
-                  <TriangleAlert
-                    className="h-4 w-4 inline-block mr-2"
-                    strokeWidth={3}
-                  />
+                  <TriangleAlert className="h-4 w-4 inline-block mr-2" strokeWidth={3} />
                   {error}
                 </div>
               )}
@@ -441,22 +410,16 @@ export default function CreateDataSetDialog({
               {currentStepId === "title" && (
                 <div className="space-y-8 pl-4 mb-32">
                   <div className="space-y-2">
-                    <p className="text-2xl font-semibold text-black dark:text-white">
-                      Name your dataset
-                    </p>
+                    <p className="text-2xl font-semibold text-black dark:text-white">Name your dataset</p>
                     <p className="text-sm text-black dark:text-white/60">
                       Choose a clear title buyers will see on the Data Pool.
                     </p>
                   </div>
                   <div className="space-y-2 max-w-lg">
-                    <Label className="text-black dark:text-white/80 text-sm">
-                      Title *
-                    </Label>
+                    <Label className="text-black dark:text-white/80 text-sm">Title *</Label>
                     <Input
                       value={formData.title}
-                      onChange={(e) =>
-                        setFormData((p) => ({ ...p, title: e.target.value }))
-                      }
+                      onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
                       placeholder="e.g., Urban traffic camera samples"
                       className="rounded-full h-12 px-6 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
                     />
@@ -467,25 +430,16 @@ export default function CreateDataSetDialog({
               {currentStepId === "description" && (
                 <div className="space-y-8 pl-4 mb-24">
                   <div className="space-y-2">
-                    <p className="text-2xl font-semibold text-black dark:text-white">
-                      Describe the dataset
-                    </p>
+                    <p className="text-2xl font-semibold text-black dark:text-white">Describe the dataset</p>
                     <p className="text-sm text-black dark:text-white/60">
                       Explain what the data contains and how it can be used.
                     </p>
                   </div>
                   <div className="space-y-2 max-w-lg">
-                    <Label className="text-black dark:text-white/80 text-sm">
-                      Description *
-                    </Label>
+                    <Label className="text-black dark:text-white/80 text-sm">Description *</Label>
                     <Textarea
                       value={formData.description}
-                      onChange={(e) =>
-                        setFormData((p) => ({
-                          ...p,
-                          description: e.target.value,
-                        }))
-                      }
+                      onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
                       placeholder="Describe your dataset..."
                       rows={6}
                       className="rounded-xl bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 resize-none ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
@@ -497,9 +451,7 @@ export default function CreateDataSetDialog({
               {currentStepId === "category" && (
                 <div className="space-y-8 pl-4">
                   <div className="space-y-2">
-                    <p className="text-2xl font-semibold text-black dark:text-white">
-                      Category
-                    </p>
+                    <p className="text-2xl font-semibold text-black dark:text-white">Category</p>
                     <p className="text-sm text-black dark:text-white/60">
                       Pick the category that best matches your listing.
                     </p>
@@ -516,9 +468,7 @@ export default function CreateDataSetDialog({
                               setFormData((p) => ({ ...p, category: "" }));
                             } else {
                               setFormData((p) => ({ ...p, category: cat }));
-                              setStepIndex((i) =>
-                                Math.min(i + 1, TOTAL_STEPS - 1),
-                              );
+                              setStepIndex((i) => Math.min(i + 1, TOTAL_STEPS - 1));
                             }
                           }}
                           className={cn(
@@ -528,12 +478,7 @@ export default function CreateDataSetDialog({
                               : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
                           )}
                         >
-                          {selected && (
-                            <Check
-                              className="h-3.5 w-3.5 shrink-0"
-                              strokeWidth={3}
-                            />
-                          )}
+                          {selected && <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={3} />}
                           {cat}
                         </button>
                       );
@@ -545,18 +490,13 @@ export default function CreateDataSetDialog({
               {currentStepId === "price" && (
                 <div className="space-y-8 pl-4 mb-24">
                   <div className="space-y-2">
-                    <p className="text-2xl font-semibold text-black dark:text-white">
-                      Price
-                    </p>
+                    <p className="text-2xl font-semibold text-black dark:text-white">Price</p>
                     <p className="text-sm text-black dark:text-white/60">
-                      Set your listing price in USD (same currency as the rest
-                      of the marketplace).
+                      Set your listing price in USD (same currency as the rest of the marketplace).
                     </p>
                   </div>
                   <div className="space-y-2 max-w-md">
-                    <Label className="text-black dark:text-white/80 text-sm">
-                      Price (USD) *
-                    </Label>
+                    <Label className="text-black dark:text-white/80 text-sm">Price (USD) *</Label>
                     <div className="relative">
                       <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-black dark:text-white/50 pointer-events-none" />
                       <Input
@@ -565,9 +505,7 @@ export default function CreateDataSetDialog({
                         min="0"
                         placeholder="0.00"
                         value={formData.price}
-                        onChange={(e) =>
-                          setFormData((p) => ({ ...p, price: e.target.value }))
-                        }
+                        onChange={(e) => setFormData((p) => ({ ...p, price: e.target.value }))}
                         className="rounded-full h-12 w-full pl-10 pr-4 bg-white border-[#0a0a0a] dark:border-[#333] text-black dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-[#0a0a0a]"
                       />
                     </div>
@@ -578,12 +516,9 @@ export default function CreateDataSetDialog({
               {currentStepId === "dataTypes" && (
                 <div className="space-y-8 pl-4">
                   <div className="space-y-2">
-                    <p className="text-2xl font-semibold text-black dark:text-white">
-                      Data types
-                    </p>
+                    <p className="text-2xl font-semibold text-black dark:text-white">Data types</p>
                     <p className="text-sm text-black dark:text-white/60">
-                      Select all types that apply (same options as project
-                      requirements).
+                      Select all types that apply (same options as project requirements).
                     </p>
                   </div>
                   {formData.data_types.length > 0 && (
@@ -593,9 +528,7 @@ export default function CreateDataSetDialog({
                       </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setFormData((p) => ({ ...p, data_types: [] }))
-                        }
+                        onClick={() => setFormData((p) => ({ ...p, data_types: [] }))}
                         className="text-xs font-medium text-black dark:text-white/70 hover:text-white underline underline-offset-2"
                       >
                         Clear all
@@ -605,8 +538,7 @@ export default function CreateDataSetDialog({
                   <div className="flex flex-wrap gap-3">
                     {PROJECT_DATA_TYPES.map((type) => {
                       const selected = formData.data_types.includes(type);
-                      const IconComponent =
-                        DATA_TYPE_ICONS[type] ?? MoreHorizontal;
+                      const IconComponent = DATA_TYPE_ICONS[type] ?? MoreHorizontal;
                       return (
                         <button
                           key={type}
@@ -623,17 +555,13 @@ export default function CreateDataSetDialog({
                             <IconComponent
                               className={cn(
                                 "w-6 h-6 object-contain",
-                                selected
-                                  ? "dark:text-[#0a0a0a] text-white"
-                                  : "text-[#0a0a0a] dark:text-white",
+                                selected ? "dark:text-[#0a0a0a] text-white" : "text-[#0a0a0a] dark:text-white",
                               )}
                               strokeWidth={1.5}
                               aria-hidden
                             />
                           </span>
-                          <span className="flex-1 min-w-0 truncate">
-                            {type}
-                          </span>
+                          <span className="flex-1 min-w-0 truncate">{type}</span>
                           <span
                             className={cn(
                               "flex shrink-0 w-5 h-5 rounded-full border flex items-center justify-center transition-all ml-4",
@@ -642,9 +570,7 @@ export default function CreateDataSetDialog({
                                 : "dark:border-white/50 border-[#0a0a0a] bg-transparent",
                             )}
                           >
-                            {selected && (
-                              <Check className="h-3 w-3" strokeWidth={3} />
-                            )}
+                            {selected && <Check className="h-3 w-3" strokeWidth={3} />}
                           </span>
                         </button>
                       );
@@ -656,9 +582,7 @@ export default function CreateDataSetDialog({
               {currentStepId === "formats" && (
                 <div className="space-y-8 pl-4">
                   <div className="space-y-2">
-                    <p className="text-2xl font-semibold text-black dark:text-white">
-                      Formats
-                    </p>
+                    <p className="text-2xl font-semibold text-black dark:text-white">Formats</p>
                     <p className="text-sm text-black dark:text-white/60">
                       Select the file formats included in this dataset.
                     </p>
@@ -670,9 +594,7 @@ export default function CreateDataSetDialog({
                       </span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setFormData((p) => ({ ...p, formats: [] }))
-                        }
+                        onClick={() => setFormData((p) => ({ ...p, formats: [] }))}
                         className="text-xs font-medium text-black dark:text-white/70 hover:text-white underline underline-offset-2"
                       >
                         Clear all
@@ -694,12 +616,7 @@ export default function CreateDataSetDialog({
                               : "bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-gray-200 dark:border-[#2a2a2a] hover:bg-white dark:hover:bg-[#2a2a2a] hover:border-[#2a2a2a] dark:hover:border-[#2a2a2a]",
                           )}
                         >
-                          {selected && (
-                            <Check
-                              className="h-3.5 w-3.5 shrink-0"
-                              strokeWidth={3}
-                            />
-                          )}
+                          {selected && <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={3} />}
                           {format}
                         </button>
                       );
@@ -711,9 +628,7 @@ export default function CreateDataSetDialog({
               {currentStepId === "files" && (
                 <div className="space-y-8 pl-4 mb-24">
                   <div className="space-y-2">
-                    <p className="text-2xl font-semibold text-black dark:text-white">
-                      Upload files
-                    </p>
+                    <p className="text-2xl font-semibold text-black dark:text-white">Upload files</p>
                     <p className="text-sm text-black dark:text-white/60">
                       Add one or more files for this dataset listing.
                     </p>
@@ -745,33 +660,23 @@ export default function CreateDataSetDialog({
                         accept={acceptTypes}
                         onChange={(e) => {
                           addPendingFiles(e.target.files);
-                          // allow selecting same file again
                           e.target.value = "";
                         }}
                       />
                       <div className="space-y-2">
-                        <p className="text-sm font-semibold text-black dark:text-white">
-                          Click to select files
-                        </p>
+                        <p className="text-sm font-semibold text-black dark:text-white">Click to select files</p>
                         <p className="text-xs text-black/70 dark:text-white/60">
-                          {acceptTypes
-                            ? `Allowed: ${formData.formats.join(", ")}`
-                            : "Any file type is allowed (because you selected “Other”)."}
+                          {acceptTypes ? `Allowed: ${formData.formats.join(", ")}` : "Any file type is allowed (because you selected “Other”)."}
                         </p>
                       </div>
                     </div>
 
-                    {/* Existing files (edit mode) */}
                     {filesLoading && (
-                      <p className="text-sm text-black/70 dark:text-white/60">
-                        Loading files…
-                      </p>
+                      <p className="text-sm text-black/70 dark:text-white/60">Loading files…</p>
                     )}
                     {!filesLoading && existingFiles.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-semibold text-black dark:text-white">
-                          Uploaded files
-                        </p>
+                        <p className="text-sm font-semibold text-black dark:text-white">Uploaded files</p>
                         <ul className="space-y-2">
                           {existingFiles.map((f) => (
                             <li
@@ -790,19 +695,16 @@ export default function CreateDataSetDialog({
                                 type="button"
                                 disabled={saving}
                                 onClick={async () => {
-                                  const { error: delErr } =
-                                    await deleteDataPoolDatasetFile({
-                                      fileId: f.id,
-                                      bucketId: f.bucket_id,
-                                      storagePath: f.storage_path,
-                                    });
+                                  const { error: delErr } = await deleteDataPoolDatasetFile({
+                                    fileId: f.id,
+                                    bucketId: f.bucket_id,
+                                    storagePath: f.storage_path,
+                                  });
                                   if (delErr) {
                                     setError(delErr.message);
                                     return;
                                   }
-                                  setExistingFiles((prev) =>
-                                    prev.filter((x) => x.id !== f.id),
-                                  );
+                                  setExistingFiles((prev) => prev.filter((x) => x.id !== f.id));
                                 }}
                                 className="btn-gelatine rounded-full px-4 py-1.5 text-xs font-semibold border border-red-500/40 text-red-600 dark:text-red-400 hover:bg-red-500/10"
                               >
@@ -814,21 +716,16 @@ export default function CreateDataSetDialog({
                       </div>
                     )}
 
-                    {/* Pending files */}
                     {pendingFiles.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-semibold text-black dark:text-white">
-                          Files to upload
-                        </p>
+                        <p className="text-sm font-semibold text-black dark:text-white">Files to upload</p>
                         <ul className="space-y-2">
                           {pendingFiles.map((f) => (
                             <li
                               key={`${f.name}:${f.size}:${f.lastModified}`}
                               className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#e5e5e5] dark:border-[#333] px-4 py-3"
                             >
-                              <span className="text-sm text-black dark:text-white break-all">
-                                {f.name}
-                              </span>
+                              <span className="text-sm text-black dark:text-white break-all">{f.name}</span>
                               <button
                                 type="button"
                                 disabled={saving}
@@ -868,12 +765,7 @@ export default function CreateDataSetDialog({
             />
           </div>
 
-          <div
-            className={cn(
-              "flex items-center w-full gap-2",
-              isFirstStep ? "justify-end" : "justify-between",
-            )}
-          >
+          <div className={cn("flex items-center w-full gap-2", isFirstStep ? "justify-end" : "justify-between")}>
             {!isFirstStep && (
               <Button
                 type="button"
@@ -915,3 +807,4 @@ export default function CreateDataSetDialog({
     </Dialog>
   );
 }
+

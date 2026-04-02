@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { DataItem } from "./DataItemCard";
 import { DataItemRequirementsTags } from "./DataItemRequirementsTags";
 
@@ -41,11 +42,16 @@ export default function DataItemListItem({
             />
           </svg>
         </div>
-        <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-white transition-colors group-hover:text-cyan-100 line-clamp-1">
-            {item.title}
-          </h3>
-          <span className="mt-0.5 inline-block rounded bg-white/10 px-1.5 py-px text-[11px] font-medium text-cyan-300/90">
+        <div className="min-w-0 flex-1 flex flex-col items-start">
+          <Link
+            href={`/datapool/datasets?id=${encodeURIComponent(item.id)}`}
+            className="inline-block max-w-full"
+          >
+            <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-white transition-colors group-hover:text-cyan-100 line-clamp-1">
+              {item.title}
+            </h3>
+          </Link>
+          <span className="mt-1 block rounded bg-white/10 px-1.5 py-px text-[11px] font-medium text-cyan-300/90">
             {item.category}
           </span>
         </div>
@@ -92,3 +98,4 @@ export default function DataItemListItem({
     </article>
   );
 }
+
