@@ -21,12 +21,16 @@ import {
 import {
   createDataPoolDatasetMessage,
   getDataPoolDatasetById,
+  getDataPoolDatasetFileSignedUrl,
+  hasUserPurchasedDataPoolDataset,
   listDataPoolDatasetFiles,
   listDataPoolDatasetMessages,
+  purchaseDataPoolDataset,
   type DataPoolDatasetDetail,
   type DataPoolDatasetFileRow,
   type DataPoolDatasetMessageRow,
 } from "@/lib/services/dataPoolService";
+import { getWalletBalance } from "@/lib/services/walletService";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
@@ -38,6 +42,8 @@ import {
   FolderOpen,
   ChevronRight,
   MessageSquarePlus,
+  Lock,
+  Wallet,
 } from "lucide-react";
 
 function formatMoney(value: number | null | undefined): string {
@@ -187,8 +193,54 @@ function buildDatasetsHref(datasetId: string, discussionId: string | null) {
   return `/datapool/datasets?${q.toString()}`;
 }
 
+function FileAccessRow({
+  file,
+  canDownload,
+  downloading,
+  onDownload,
+}: {
+  file: DataPoolDatasetFileRow;
+  canDownload: boolean;
+  downloading: boolean;
+  onDownload: (f: DataPoolDatasetFileRow) => void;
+}) {
+  if (!canDownload) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-3">
+        <Lock className="h-5 w-5 shrink-0 text-white/35" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-white/55 truncate">{file.file_name}</p>
+          <p className="mt-0.5 text-xs text-white/40">Purchase this dataset to download files.</p>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <button
+      type="button"
+      disabled={downloading}
+      onClick={() => onDownload(file)}
+      className="flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition-colors hover:border-cyan-500/40 disabled:opacity-60"
+    >
+      <FileText className="h-5 w-5 shrink-0 text-cyan-300/80" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-white/85 truncate">{file.file_name}</p>
+        <p className="mt-0.5 text-xs text-white/50">
+          {formatBytes(file.file_size)}
+          {file.mime_type ? ` • ${file.mime_type}` : ""}
+        </p>
+      </div>
+      {downloading ? (
+        <Loader2 className="h-4 w-4 shrink-0 animate-spin text-white/50" aria-hidden />
+      ) : (
+        <ChevronRight className="h-4 w-4 shrink-0 text-white/40" aria-hidden />
+      )}
+    </button>
+  );
+}
+
 export default function DatasetDetail({ datasetId }: { datasetId: string }) {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const discussionIdFromUrl = searchParams.get("discussion")?.trim() || null;
@@ -211,6 +263,11 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
   const [createSending, setCreateSending] = useState(false);
   const [createFormError, setCreateFormError] = useState("");
 
+  const [purchased, setPurchased] = useState(false);
+  const [purchaseSubmitting, setPurchaseSubmitting] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
   const setDiscussionInUrl = useCallback(
     (discussionId: string | null) => {
       router.replace(buildDatasetsHref(datasetId, discussionId));
@@ -222,36 +279,45 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
     if (discussionIdFromUrl) setMainTab("community");
   }, [discussionIdFromUrl]);
 
-  const loadAll = useCallback(async (mode: "initial" | "refresh" = "initial") => {
-    const isRefresh = mode === "refresh";
-    if (isRefresh) setRefreshing(true);
-    else {
-      setLoading(true);
-      setError("");
-    }
+  const loadAll = useCallback(
+    async (mode: "initial" | "refresh" = "initial") => {
+      const isRefresh = mode === "refresh";
+      if (isRefresh) setRefreshing(true);
+      else {
+        setLoading(true);
+        setError("");
+      }
 
-    const [dRes, fRes, mRes] = await Promise.all([
-      getDataPoolDatasetById(datasetId),
-      listDataPoolDatasetFiles(datasetId),
-      listDataPoolDatasetMessages(datasetId),
-    ]);
+      const uid = user?.id;
+      const [dRes, fRes, mRes, buyRes] = await Promise.all([
+        getDataPoolDatasetById(datasetId),
+        listDataPoolDatasetFiles(datasetId),
+        listDataPoolDatasetMessages(datasetId),
+        uid
+          ? hasUserPurchasedDataPoolDataset(datasetId, uid)
+          : Promise.resolve({ purchased: false, error: null }),
+      ]);
 
-    if (dRes.error) {
-      setError(dRes.error.message || "Failed to load dataset.");
-      setDataset(null);
-      setFiles([]);
-      setMessages([]);
+      if (dRes.error) {
+        setError(dRes.error.message || "Failed to load dataset.");
+        setDataset(null);
+        setFiles([]);
+        setMessages([]);
+        setPurchased(false);
+        if (isRefresh) setRefreshing(false);
+        else setLoading(false);
+        return;
+      }
+
+      setDataset(dRes.data);
+      setFiles(fRes.data ?? []);
+      setMessages(mRes.data ?? []);
+      setPurchased(buyRes.purchased);
       if (isRefresh) setRefreshing(false);
       else setLoading(false);
-      return;
-    }
-
-    setDataset(dRes.data);
-    setFiles(fRes.data ?? []);
-    setMessages(mRes.data ?? []);
-    if (isRefresh) setRefreshing(false);
-    else setLoading(false);
-  }, [datasetId]);
+    },
+    [datasetId, user?.id],
+  );
   const openDiscussion = useCallback(
     (discussionId: string) => {
       if (discussionIdFromUrl !== discussionId) {
@@ -377,6 +443,57 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
     setCreateDiscussionOpen(false);
     await loadAll("refresh");
     setCreateSending(false);
+  };
+
+  const isOwner = Boolean(user?.id && dataset && user.id === dataset.owner_id);
+  const hasFileAccess = isOwner || purchased;
+
+  useEffect(() => {
+    if (!user?.id || !dataset) {
+      setWalletBalance(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const { balance } = await getWalletBalance(user.id);
+      if (!cancelled) setWalletBalance(balance);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, dataset?.id]);
+
+  const onDownloadFile = useCallback(async (f: DataPoolDatasetFileRow) => {
+    setDownloadingId(f.id);
+    setError("");
+    const { url, error: uErr } = await getDataPoolDatasetFileSignedUrl({
+      bucketId: f.bucket_id,
+      storagePath: f.storage_path,
+    });
+    setDownloadingId(null);
+    if (uErr || !url) {
+      setError(uErr?.message || "Could not create download link.");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }, []);
+
+  const onPurchaseDataset = async () => {
+    if (!dataset || !user?.id || isOwner || purchased || purchaseSubmitting) return;
+    setPurchaseSubmitting(true);
+    setError("");
+    const { error: pErr } = await purchaseDataPoolDataset(dataset.id);
+    if (pErr) {
+      setError(pErr.message || "Purchase failed.");
+      setPurchaseSubmitting(false);
+      return;
+    }
+    setPurchased(true);
+    await refreshProfile();
+    const { balance } = await getWalletBalance(user.id);
+    setWalletBalance(balance);
+    await loadAll("refresh");
+    setPurchaseSubmitting(false);
   };
 
   return (
@@ -530,6 +647,98 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                       </div>
 
                       <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-white/50">
+                          {isOwner ? "Your listing" : "Get this dataset"}
+                        </p>
+                        {isOwner ? (
+                          <p className="mt-2 text-sm text-white/70 leading-relaxed">
+                            You can always download files you uploaded for this dataset.
+                          </p>
+                        ) : purchased ? (
+                          <p className="mt-2 text-sm font-semibold text-emerald-200/90">
+                            Purchased — open the Files tab to download.
+                          </p>
+                        ) : !user ? (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-sm text-white/60">Sign in to purchase with your wallet balance.</p>
+                            <Button
+                              type="button"
+                              asChild
+                              variant="outline"
+                              size="sm"
+                              className="h-8 border-white/20 bg-white/5 text-white hover:bg-white/10"
+                            >
+                              <Link href="/login">Sign in</Link>
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="mt-3 space-y-3">
+                            <p className="text-sm text-white/70">
+                              Price{" "}
+                              <span className="font-semibold text-emerald-300">
+                                {formatMoney(dataset.price)}
+                              </span>
+                            </p>
+                            <div className="flex items-center gap-2 text-sm text-white/60">
+                              <Wallet className="h-4 w-4 shrink-0 text-white/45" aria-hidden />
+                              <span>
+                                Your balance:{" "}
+                                <span className="font-semibold text-white/85">
+                                  {walletBalance === null ? "—" : formatMoney(walletBalance)}
+                                </span>
+                              </span>
+                            </div>
+                            {dataset.price > 0 &&
+                            walletBalance !== null &&
+                            walletBalance < dataset.price ? (
+                              <p className="text-xs text-amber-200/90">
+                                Insufficient balance. Add funds to purchase.
+                              </p>
+                            ) : null}
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                type="button"
+                                className="h-9 w-full bg-emerald-600 text-white hover:bg-emerald-700"
+                                disabled={
+                                  purchaseSubmitting ||
+                                  (dataset.price > 0 &&
+                                    walletBalance !== null &&
+                                    walletBalance < dataset.price)
+                                }
+                                onClick={() => void onPurchaseDataset()}
+                              >
+                                {purchaseSubmitting ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Processing…
+                                  </>
+                                ) : dataset.price <= 0 ? (
+                                  "Add to library"
+                                ) : (
+                                  "Purchase with balance"
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                asChild
+                                variant="outline"
+                                size="sm"
+                                className="h-8 border-white/20 bg-white/5 text-white hover:bg-white/10"
+                              >
+                                <Link href="/dashboard/wallet">Wallet</Link>
+                              </Button>
+                            </div>
+                            <Link
+                              href="/datapool?tab=purchases"
+                              className="inline-block text-xs font-medium text-cyan-300/90 hover:text-cyan-200"
+                            >
+                              View my purchases
+                            </Link>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Created</p>
                         <p className="mt-1 text-sm font-semibold text-white/85">{formatDateTime(dataset.created_at)}</p>
                       </div>
@@ -543,7 +752,9 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                       <div>
                         <h2 className="text-lg font-bold text-white">Files in this dataset</h2>
                         <p className="mt-1 text-sm text-white/55">
-                          Download links open in a new tab.
+                          {hasFileAccess
+                            ? "Secure download links open in a new tab."
+                            : "Purchase this dataset to unlock downloads."}
                         </p>
                       </div>
                       <div className="space-y-2">
@@ -556,23 +767,13 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                           </div>
                         ) : (
                           files.map((f) => (
-                            <a
+                            <FileAccessRow
                               key={f.id}
-                              href={f.public_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 hover:border-cyan-500/40 transition-colors"
-                            >
-                              <FileText className="h-5 w-5 shrink-0 text-cyan-300/80" />
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-semibold text-white/85 truncate">{f.file_name}</p>
-                                <p className="mt-0.5 text-xs text-white/50">
-                                  {formatBytes(f.file_size)}
-                                  {f.mime_type ? ` • ${f.mime_type}` : ""}
-                                </p>
-                              </div>
-                              <ChevronRight className="h-4 w-4 shrink-0 text-white/40" />
-                            </a>
+                              file={f}
+                              canDownload={hasFileAccess}
+                              downloading={downloadingId === f.id}
+                              onDownload={onDownloadFile}
+                            />
                           ))
                         )}
                       </div>
@@ -580,6 +781,11 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                     <aside className="rounded-xl border border-white/10 bg-white/[0.03] p-4 h-fit">
                       <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Summary</p>
                       <p className="mt-2 text-sm font-semibold text-white/85">{files.length} file(s)</p>
+                      {!hasFileAccess && files.length > 0 ? (
+                        <p className="mt-2 text-xs text-white/50 leading-relaxed">
+                          Buy with your wallet on the Dataset Card tab to access downloads.
+                        </p>
+                      ) : null}
                     </aside>
                   </div>
                 </TabsContent>

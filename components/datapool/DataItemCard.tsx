@@ -18,6 +18,8 @@ export interface DataItem {
   item_kind?: "project" | "dataset";
   /** Profile id of the listing owner (for edit) */
   owner_user_id?: string;
+  /** Current user has bought this dataset (server RPC) */
+  is_purchased?: boolean;
 }
 
 interface DataItemCardProps {
@@ -40,6 +42,12 @@ export default function DataItemCard({
     !!item.owner_user_id &&
     !!currentUserId &&
     item.owner_user_id === currentUserId;
+
+  const isOwner =
+    !!currentUserId &&
+    !!item.owner_user_id &&
+    item.owner_user_id === currentUserId;
+  const showPurchasedBadge = Boolean(item.is_purchased) && !isOwner;
 
   const detailHref = `/datapool/datasets?id=${encodeURIComponent(item.id)}`;
 
@@ -81,8 +89,13 @@ export default function DataItemCard({
             <span className="min-w-0 truncate text-xs text-white/50">
               {item.owner ? `By ${item.owner}` : ""}
             </span>
-            <span className="shrink-0 text-xs text-white/50">
-              {item.category}
+            <span className="flex shrink-0 items-center gap-2">
+              {showPurchasedBadge ? (
+                <span className="rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-200">
+                  Purchased
+                </span>
+              ) : null}
+              <span className="text-xs text-white/50">{item.category}</span>
             </span>
           </div>
         </Link>
@@ -108,7 +121,7 @@ export default function DataItemCard({
                   onClick={() => onRequestAccess(item)}
                   className="rounded-lg border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm font-semibold text-white transition-all hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]"
                 >
-                  Request Access
+                  View details
                 </button>
               </div>
             </div>
@@ -128,7 +141,7 @@ export default function DataItemCard({
                 onClick={() => onRequestAccess(item)}
                 className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm font-semibold text-white transition-all hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] sm:flex-1"
               >
-                Request Access
+                View details
               </button>
             </div>
           )}

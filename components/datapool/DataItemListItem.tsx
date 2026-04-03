@@ -24,6 +24,12 @@ export default function DataItemListItem({
     !!currentUserId &&
     item.owner_user_id === currentUserId;
 
+  const isOwner =
+    !!currentUserId &&
+    !!item.owner_user_id &&
+    item.owner_user_id === currentUserId;
+  const showPurchasedBadge = Boolean(item.is_purchased) && !isOwner;
+
   const detailHref = `/datapool/datasets?id=${encodeURIComponent(item.id)}`;
 
   return (
@@ -54,8 +60,15 @@ export default function DataItemListItem({
             <h3 className="line-clamp-1 max-w-full text-sm font-semibold leading-tight text-white transition-colors group-hover/detail:text-cyan-100">
               {item.title}
             </h3>
-            <span className="mt-1 block rounded bg-white/10 px-1.5 py-px text-[11px] font-medium text-cyan-300/90">
-              {item.category}
+            <span className="mt-1 flex flex-wrap items-center gap-1.5">
+              {showPurchasedBadge ? (
+                <span className="rounded bg-emerald-500/20 px-1.5 py-px text-[10px] font-bold uppercase tracking-wide text-emerald-200">
+                  Purchased
+                </span>
+              ) : null}
+              <span className="rounded bg-white/10 px-1.5 py-px text-[11px] font-medium text-cyan-300/90">
+                {item.category}
+              </span>
             </span>
           </div>
         </div>
@@ -95,7 +108,7 @@ export default function DataItemListItem({
             onClick={() => onRequestAccess(item)}
             className="shrink-0 rounded-md border border-slate-600 bg-slate-700 px-2.5 py-1 text-xs font-semibold text-white transition-all hover:border-cyan-400 hover:shadow-[0_0_12px_rgba(34,211,238,0.25)]"
           >
-            Request
+            Details
           </button>
         </div>
       </div>

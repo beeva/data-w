@@ -1,14 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { useSearchParams } from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import PageHero from "@/components/PageHero";
 import DataItemCard, { type DataItem } from "./DataItemCard";
 import DataItemListItem from "./DataItemListItem";
 import CreateDataSetDialog from "./CreateDataSetDialog";
+import DataPoolPurchasesPanel from "./DataPoolPurchasesPanel";
+import { Tabs, TabsUnderlineList, TabsUnderlineTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthContext";
-import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   BarChart3,
   Camera,
@@ -27,9 +34,14 @@ import {
   Table,
   Video,
   Activity,
+  ShoppingBag,
   type LucideIcon,
 } from "lucide-react";
-import { getDataPoolItems } from "@/lib/services/dataPoolService";
+import {
+  getDataPoolItems,
+  listMyDataPoolPurchases,
+  type DataPoolPurchaseListRow,
+} from "@/lib/services/dataPoolService";
 import {
   JOB_CATEGORIES,
   JOB_CATEGORY_DISPLAY,
@@ -119,8 +131,10 @@ function TrailingCheckCircle({ selected }: { selected: boolean }) {
 }
 
 export default function DataPool() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { profile } = useAuth();
+  const [poolTab, setPoolTabState] = useState<"browse" | "purchases">("browse");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
@@ -130,15 +144,17 @@ export default function DataPool() {
   const [error, setError] = useState("");
   const [visibleCount, setVisibleCount] = useState<number>(8);
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
-  const [accessDialogItem, setAccessDialogItem] = useState<DataItem | null>(
-    null,
-  );
   const [datasetDialogOpen, setDatasetDialogOpen] = useState(false);
   const [datasetDialogMode, setDatasetDialogMode] = useState<"create" | "edit">(
     "create",
   );
   const [datasetBeingEdited, setDatasetBeingEdited] =
     useState<DataItem | null>(null);
+  const [purchaseRows, setPurchaseRows] = useState<DataPoolPurchaseListRow[]>(
+    [],
+  );
+  const [purchasesLoading, setPurchasesLoading] = useState(false);
+  const [purchasesError, setPurchasesError] = useState("");
   const itemsPerPage = 8;
 
   const canListDatasets =
@@ -176,31 +192,93 @@ export default function DataPool() {
     );
   };
 
-  const fetchDataPoolItems = useCallback(async () => {
-    setLoading(true);
-    setError("");
+  const fetchDataPoolItems = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = Boolean(opts?.silent);
+    if (!silent) {
+      setLoading(true);
+      setError("");
+    }
 
     const { data, error: fetchError } = await getDataPoolItems();
 
     if (fetchError) {
-      setError(fetchError.message || "Failed to load DataPool items.");
-      setDataItems([]);
+      if (!silent) {
+        setError(fetchError.message || "Failed to load DataPool items.");
+        setDataItems([]);
+      }
     } else {
       setDataItems(data || []);
+      if (!silent) setError("");
     }
 
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, []);
+
+  const fetchPurchases = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = Boolean(opts?.silent);
+      if (!profile?.id) {
+        setPurchaseRows([]);
+        if (!silent) {
+          setPurchasesLoading(false);
+          setPurchasesError("");
+        }
+        return;
+      }
+      if (!silent) {
+        setPurchasesLoading(true);
+        setPurchasesError("");
+      }
+      const { data, error: pErr } = await listMyDataPoolPurchases();
+      if (pErr) {
+        if (!silent) {
+          setPurchasesError(pErr.message || "Failed to load purchases.");
+          setPurchaseRows([]);
+        }
+      } else {
+        setPurchaseRows(data ?? []);
+        if (!silent) setPurchasesError("");
+      }
+      if (!silent) setPurchasesLoading(false);
+    },
+    [profile?.id],
+  );
 
   useEffect(() => {
     void fetchDataPoolItems();
   }, [fetchDataPoolItems]);
 
   useEffect(() => {
+    if (poolTab !== "purchases") return;
+    void fetchPurchases();
+  }, [poolTab, fetchPurchases]);
+
+  useEffect(() => {
     const keyword = searchParams.get("keyword")?.trim();
     if (!keyword) return;
     setSearchQuery(keyword);
   }, [searchParams]);
+
+  useEffect(() => {
+    const t = searchParams.get("tab")?.toLowerCase();
+    if (t === "purchases") setPoolTabState("purchases");
+  }, [searchParams]);
+
+  const setPoolTab = useCallback(
+    (v: string) => {
+      const next = v === "purchases" ? "purchases" : "browse";
+      setPoolTabState(next);
+      if (next === "browse") {
+        void fetchDataPoolItems({ silent: true });
+      }
+      const params = new URLSearchParams(searchParams.toString());
+      if (next === "purchases") params.set("tab", "purchases");
+      else params.delete("tab");
+      const qs = params.toString();
+      router.replace(qs ? `/datapool?${qs}` : "/datapool", { scroll: false });
+    },
+    [router, searchParams, fetchDataPoolItems],
+  );
 
   const filteredItems = dataItems.filter((item) => {
     const q = searchQuery.toLowerCase();
@@ -218,20 +296,71 @@ export default function DataPool() {
     return matchesCategory && matchesDataTypes && matchesFormats && matchesSearch;
   });
 
+  const filteredPurchases = useMemo(() => {
+    const q = searchQuery.toLowerCase();
+    return purchaseRows.filter((row) => {
+      const ds = row.dataset;
+      if (!ds) {
+        const matchesSearch =
+          searchQuery === "" ||
+          "removed dataset".includes(q) ||
+          "removed".includes(q);
+        const noFacets =
+          selectedCategories.length === 0 &&
+          selectedDataTypes.length === 0 &&
+          selectedFormats.length === 0;
+        return noFacets && matchesSearch;
+      }
+      const matchesCategory =
+        selectedCategories.length === 0 ||
+        selectedCategories.includes(ds.category);
+      const matchesDataTypes = matchesFacetSelection(
+        selectedDataTypes,
+        ds.data_types,
+      );
+      const matchesFormats = matchesFacetSelection(selectedFormats, ds.formats);
+      const matchesSearch =
+        searchQuery === "" ||
+        ds.title.toLowerCase().includes(q) ||
+        (ds.description?.toLowerCase().includes(q) ?? false) ||
+        ds.category.toLowerCase().includes(q) ||
+        ds.data_types.some((t) => t.toLowerCase().includes(q)) ||
+        ds.formats.some((f) => f.toLowerCase().includes(q));
+      return (
+        matchesCategory && matchesDataTypes && matchesFormats && matchesSearch
+      );
+    });
+  }, [
+    purchaseRows,
+    searchQuery,
+    selectedCategories,
+    selectedDataTypes,
+    selectedFormats,
+  ]);
+
   const visibleItems = filteredItems.slice(0, visibleCount);
   const hasMore = filteredItems.length > visibleCount;
 
+  const visiblePurchaseRows = filteredPurchases.slice(0, visibleCount);
+  const hasMorePurchases = filteredPurchases.length > visibleCount;
+
   useEffect(() => {
     setVisibleCount(itemsPerPage);
-  }, [selectedCategories, selectedDataTypes, selectedFormats, searchQuery, viewMode]);
+  }, [
+    selectedCategories,
+    selectedDataTypes,
+    selectedFormats,
+    searchQuery,
+    viewMode,
+    poolTab,
+  ]);
 
   const handleLoadMore = () => {
     setVisibleCount((prev) => prev + itemsPerPage);
   };
 
-  const handleRequestAccess = (item: DataItem) => {
-    console.log("Requesting access to:", item);
-    setAccessDialogItem(item);
+  const handleOpenDatasetDetail = (item: DataItem) => {
+    router.push(`/datapool/datasets?id=${encodeURIComponent(item.id)}`);
   };
 
   return (
@@ -245,7 +374,29 @@ export default function DataPool() {
       />
       <main className="pb-20 pt-8">
         <div className="container mx-auto px-6">
-          <div className="flex flex-col lg:flex-row gap-6">
+          <Tabs
+            value={poolTab}
+            onValueChange={setPoolTab}
+            className="w-full gap-0"
+          >
+            <TabsUnderlineList className="mb-6 border-white/10 px-0">
+              <TabsUnderlineTrigger
+                value="browse"
+                className="text-white/60 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-200"
+              >
+                <LayoutGrid className="h-4 w-4" />
+                Browse
+              </TabsUnderlineTrigger>
+              <TabsUnderlineTrigger
+                value="purchases"
+                className="text-white/60 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-200"
+              >
+                <ShoppingBag className="h-4 w-4" />
+                My purchases
+              </TabsUnderlineTrigger>
+            </TabsUnderlineList>
+
+            <div className="flex flex-col lg:flex-row gap-6">
             <aside className="w-full lg:w-80 lg:shrink-0">
               <div className="bg-white/5 border border-white/10 rounded-xl p-4 sticky top-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
                 <div className="space-y-2 mb-3">
@@ -409,8 +560,16 @@ export default function DataPool() {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search datasets..."
-                      aria-label="Search datasets"
+                      placeholder={
+                        poolTab === "purchases"
+                          ? "Search your purchases..."
+                          : "Search datasets..."
+                      }
+                      aria-label={
+                        poolTab === "purchases"
+                          ? "Search purchases"
+                          : "Search datasets"
+                      }
                       className="w-full sm:w-72 px-4 py-2.5 pl-10 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
                     />
                     <svg
@@ -428,103 +587,137 @@ export default function DataPool() {
                       />
                     </svg>
                   </div>
-                  {!loading && !error && (
+                  {poolTab === "browse" && !loading && !error && (
                     <p className="text-sm text-white/50 truncate">
                       {filteredItems.length === 0
                         ? "No matches"
                         : `Showing ${visibleItems.length} of ${filteredItems.length} dataset${filteredItems.length === 1 ? "" : "s"}`}
                     </p>
                   )}
+                  {poolTab === "purchases" &&
+                    profile?.id &&
+                    !purchasesLoading &&
+                    !purchasesError && (
+                      <p className="text-sm text-white/50 truncate">
+                        {filteredPurchases.length === 0
+                          ? "No matches"
+                          : `Showing ${visiblePurchaseRows.length} of ${filteredPurchases.length} purchase${filteredPurchases.length === 1 ? "" : "s"}`}
+                      </p>
+                    )}
                 </div>
-                <div
-                  className="inline-flex w-fit rounded-lg border border-white/10 p-1 bg-white/5"
-                  role="group"
-                  aria-label="Layout"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("list")}
-                    title="List layout (two columns)"
-                    aria-pressed={viewMode === "list"}
-                    aria-label="List layout"
-                    className={`p-2 rounded-md transition-colors ${
-                      viewMode === "list"
-                        ? "bg-slate-700 text-white shadow-sm"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
-                    }`}
+                {poolTab === "browse" && (
+                  <div
+                    className="inline-flex w-fit rounded-lg border border-white/10 p-1 bg-white/5"
+                    role="group"
+                    aria-label="Layout"
                   >
-                    <List className="w-5 h-5" aria-hidden />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setViewMode("card")}
-                    title="Card layout"
-                    aria-pressed={viewMode === "card"}
-                    aria-label="Card layout"
-                    className={`p-2 rounded-md transition-colors ${
-                      viewMode === "card"
-                        ? "bg-slate-700 text-white shadow-sm"
-                        : "text-white/60 hover:text-white hover:bg-white/5"
-                    }`}
-                  >
-                    <LayoutGrid className="w-5 h-5" aria-hidden />
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("list")}
+                      title="List layout (two columns)"
+                      aria-pressed={viewMode === "list"}
+                      aria-label="List layout"
+                      className={`p-2 rounded-md transition-colors ${
+                        viewMode === "list"
+                          ? "bg-slate-700 text-white shadow-sm"
+                          : "text-white/60 hover:text-white hover:bg-white/5"
+                      }`}
+                    >
+                      <List className="w-5 h-5" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode("card")}
+                      title="Card layout"
+                      aria-pressed={viewMode === "card"}
+                      aria-label="Card layout"
+                      className={`p-2 rounded-md transition-colors ${
+                        viewMode === "card"
+                          ? "bg-slate-700 text-white shadow-sm"
+                          : "text-white/60 hover:text-white hover:bg-white/5"
+                      }`}
+                    >
+                      <LayoutGrid className="w-5 h-5" aria-hidden />
+                    </button>
+                  </div>
+                )}
               </div>
 
-              {loading ? (
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="w-6 h-6 animate-spin text-white/70" />
-                </div>
-              ) : viewMode === "card" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {visibleItems.map((item) => (
-                    <DataItemCard
-                      key={item.id}
-                      item={item}
-                      onRequestAccess={handleRequestAccess}
-                      currentUserId={profile?.id}
-                      onEditDataset={canListDatasets ? openEditDatasetDialog : undefined}
-                    />
-                  ))}
-                </div>
+              {poolTab === "browse" ? (
+                <>
+                  {loading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <Loader2 className="w-6 h-6 animate-spin text-white/70" />
+                    </div>
+                  ) : viewMode === "card" ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {visibleItems.map((item) => (
+                        <DataItemCard
+                          key={item.id}
+                          item={item}
+                          onRequestAccess={handleOpenDatasetDetail}
+                          currentUserId={profile?.id}
+                          onEditDataset={
+                            canListDatasets ? openEditDatasetDialog : undefined
+                          }
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                      {visibleItems.map((item) => (
+                        <DataItemListItem
+                          key={item.id}
+                          item={item}
+                          onRequestAccess={handleOpenDatasetDetail}
+                          currentUserId={profile?.id}
+                          onEditDataset={
+                            canListDatasets ? openEditDatasetDialog : undefined
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {hasMore && (
+                    <button
+                      type="button"
+                      onClick={handleLoadMore}
+                      className="mt-12 mx-auto block px-8 py-3 bg-slate-700 text-white font-semibold rounded-lg border border-slate-600 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all"
+                    >
+                      Load More
+                    </button>
+                  )}
+
+                  {!loading && error && (
+                    <div className="text-center py-6">
+                      <p className="text-red-300 text-base">{error}</p>
+                    </div>
+                  )}
+                  {!loading && !error && filteredItems.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-white/60 text-lg">
+                        No data found matching your search criteria.
+                      </p>
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {visibleItems.map((item) => (
-                    <DataItemListItem
-                      key={item.id}
-                      item={item}
-                      onRequestAccess={handleRequestAccess}
-                      currentUserId={profile?.id}
-                      onEditDataset={canListDatasets ? openEditDatasetDialog : undefined}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {hasMore && (
-                <button
-                  onClick={handleLoadMore}
-                  className="mt-12 mx-auto block px-8 py-3 bg-slate-700 text-white font-semibold rounded-lg border border-slate-600 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] transition-all"
-                >
-                  Load More
-                </button>
-              )}
-
-              {!loading && error && (
-                <div className="text-center py-6">
-                  <p className="text-red-300 text-base">{error}</p>
-                </div>
-              )}
-              {!loading && !error && filteredItems.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-white/60 text-lg">
-                    No data found matching your search criteria.
-                  </p>
-                </div>
+                <DataPoolPurchasesPanel
+                  userId={profile?.id}
+                  loading={purchasesLoading}
+                  error={purchasesError}
+                  visibleRows={visiblePurchaseRows}
+                  totalLoaded={purchaseRows.length}
+                  totalFiltered={filteredPurchases.length}
+                  hasMore={hasMorePurchases}
+                  onLoadMore={handleLoadMore}
+                  onBrowseClick={() => setPoolTab("browse")}
+                />
               )}
             </section>
           </div>
+          </Tabs>
         </div>
       </main>
 
@@ -541,23 +734,6 @@ export default function DataPool() {
         }}
       />
 
-      <ConfirmationDialog
-        open={!!accessDialogItem}
-        onOpenChange={(open) => {
-          if (!open) setAccessDialogItem(null);
-        }}
-        title="Access Request Sent"
-        description={
-          accessDialogItem
-            ? `Requesting access to ${accessDialogItem.title} from ${accessDialogItem.owner || "the data owner"}.`
-            : ""
-        }
-        confirmText="OK"
-        hideCancel
-        onConfirm={async () => {
-          setAccessDialogItem(null);
-        }}
-      />
     </div>
   );
 }

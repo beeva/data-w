@@ -12,6 +12,7 @@ type DataPoolRow = {
   formats: string[] | null;
   item_kind: string | null;
   owner_id: string | null;
+  is_purchased?: boolean | null;
 };
 
 export type DataPoolDatasetInput = {
@@ -121,6 +122,7 @@ export async function getDataPoolItems(): Promise<{
           ? ("dataset" as const)
           : ("project" as const),
       owner_user_id: row.owner_id ?? undefined,
+      is_purchased: Boolean(row.is_purchased),
     }));
 
     return { data: items, error: null };
@@ -576,6 +578,165 @@ export async function createDataPoolDatasetMessage(input: {
     return {
       error:
         err instanceof Error ? err : new Error("Failed to send message"),
+    };
+  }
+}
+
+export async function purchaseDataPoolDataset(
+  datasetId: string,
+): Promise<{ purchaseId: string | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase.rpc("purchase_datapool_dataset", {
+      p_dataset_id: datasetId,
+    });
+    if (error) {
+      let msg = error.message;
+      if (msg.includes("Insufficient balance")) {
+        msg = "Insufficient balance. Add funds in your wallet to complete this purchase.";
+      }
+      return { purchaseId: null, error: new Error(msg) };
+    }
+    return { purchaseId: (data as string) ?? null, error: null };
+  } catch (err) {
+    return {
+      purchaseId: null,
+      error:
+        err instanceof Error ? err : new Error("Failed to purchase dataset"),
+    };
+  }
+}
+
+export async function hasUserPurchasedDataPoolDataset(
+  datasetId: string,
+  buyerId: string | undefined,
+): Promise<{ purchased: boolean; error: Error | null }> {
+  if (!buyerId) return { purchased: false, error: null };
+  try {
+    const { data, error } = await supabase
+      .from("datapool_dataset_purchases")
+      .select("id")
+      .eq("dataset_id", datasetId)
+      .eq("buyer_id", buyerId)
+      .maybeSingle();
+    if (error) return { purchased: false, error: new Error(error.message) };
+    return { purchased: !!data, error: null };
+  } catch (err) {
+    return {
+      purchased: false,
+      error:
+        err instanceof Error ? err : new Error("Failed to check purchase status"),
+    };
+  }
+}
+
+export type DataPoolPurchaseListRow = {
+  id: string;
+  price_paid: number;
+  created_at: string;
+  dataset: {
+    id: string;
+    title: string;
+    description: string | null;
+    category: string;
+    price: number;
+    owner_display_name: string | null;
+    data_types: string[];
+    formats: string[];
+  } | null;
+};
+
+export async function listMyDataPoolPurchases(): Promise<{
+  data: DataPoolPurchaseListRow[] | null;
+  error: Error | null;
+}> {
+  try {
+    const { data: purchases, error: pErr } = await supabase
+      .from("datapool_dataset_purchases")
+      .select("id, price_paid, created_at, dataset_id")
+      .order("created_at", { ascending: false });
+
+    if (pErr) return { data: null, error: new Error(pErr.message) };
+
+    type PurchaseRow = {
+      id: string;
+      price_paid: number;
+      created_at: string;
+      dataset_id: string;
+    };
+    const plist = (purchases as PurchaseRow[] | null) ?? [];
+    if (plist.length === 0) return { data: [], error: null };
+
+    const ids = Array.from(new Set(plist.map((p) => p.dataset_id)));
+
+    let primary = await supabase
+      .from("datapool_datasets")
+      .select(
+        "id, title, description, category, price, owner_display_name, data_types, formats",
+      )
+      .in("id", ids);
+
+    if (primary.error && isMissingColumnError(primary.error)) {
+      primary = await supabase
+        .from("datapool_datasets")
+        .select("id, title, description, category, price, data_types, formats")
+        .in("id", ids);
+    }
+
+    if (primary.error) {
+      return { data: null, error: new Error(primary.error.message) };
+    }
+
+    const byId = new Map(
+      ((primary.data as any[]) ?? []).map((d) => [d.id as string, d]),
+    );
+
+    const rows: DataPoolPurchaseListRow[] = plist.map((p) => {
+      const ds = byId.get(p.dataset_id);
+      return {
+        id: p.id,
+        price_paid: Number(p.price_paid ?? 0),
+        created_at: p.created_at,
+        dataset: ds
+          ? {
+              id: ds.id,
+              title: ds.title,
+              description: ds.description ?? null,
+              category: ds.category,
+              price: Number(ds.price ?? 0),
+              owner_display_name: ds.owner_display_name?.trim?.() || null,
+              data_types: ((ds as any).data_types as string[]) ?? [],
+              formats: ((ds as any).formats as string[]) ?? [],
+            }
+          : null,
+      };
+    });
+
+    return { data: rows, error: null };
+  } catch (err) {
+    return {
+      data: null,
+      error:
+        err instanceof Error ? err : new Error("Failed to load purchases"),
+    };
+  }
+}
+
+export async function getDataPoolDatasetFileSignedUrl(input: {
+  bucketId: string;
+  storagePath: string;
+  expiresIn?: number;
+}): Promise<{ url: string | null; error: Error | null }> {
+  try {
+    const { data, error } = await supabase.storage
+      .from(input.bucketId)
+      .createSignedUrl(input.storagePath, input.expiresIn ?? 3600);
+    if (error) return { url: null, error: new Error(error.message) };
+    return { url: data?.signedUrl ?? null, error: null };
+  } catch (err) {
+    return {
+      url: null,
+      error:
+        err instanceof Error ? err : new Error("Failed to create download link"),
     };
   }
 }
