@@ -15,13 +15,19 @@ import {
   Check,
   Cpu,
   FileText,
+  Image,
   LayoutGrid,
   List,
   Loader2,
+  MapPin,
   MapPinned,
+  Music,
   Mic,
   MoreHorizontal,
+  Table,
   Video,
+  Activity,
+  type LucideIcon,
 } from "lucide-react";
 import { getDataPoolItems } from "@/lib/services/dataPoolService";
 import {
@@ -44,6 +50,18 @@ const CATEGORY_ICONS: Record<
   Survey: BarChart3,
   "Location Data": MapPinned,
   "Sensor Data": Cpu,
+  Other: MoreHorizontal,
+};
+
+/** Keep data type icon mapping consistent with create project flow. */
+const DATA_TYPE_ICONS: Record<string, LucideIcon> = {
+  Images: Image,
+  Videos: Video,
+  "Audio Files": Music,
+  "Text Documents": FileText,
+  Spreadsheets: Table,
+  "GPS Coordinates": MapPin,
+  "Sensor Readings": Activity,
   Other: MoreHorizontal,
 };
 
@@ -305,6 +323,7 @@ export default function DataPool() {
                 <div className="grid grid-cols-2 gap-2">
                   {PROJECT_DATA_TYPES.map((type) => {
                     const selected = selectedDataTypes.includes(type);
+                    const Icon = DATA_TYPE_ICONS[type] ?? MoreHorizontal;
                     return (
                       <GelFilterChip
                         key={type}
@@ -312,6 +331,15 @@ export default function DataPool() {
                         onClick={() => toggleDataType(type)}
                         title={type}
                       >
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            selected
+                              ? "text-white dark:text-black"
+                              : "text-cyan-400",
+                          )}
+                          aria-hidden
+                        />
                         <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
                           {type}
                         </span>
