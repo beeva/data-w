@@ -196,11 +196,14 @@ function buildDatasetsHref(datasetId: string, discussionId: string | null) {
 function FileAccessRow({
   file,
   canDownload,
+  lockedHint = "Purchase this dataset to download files.",
   downloading,
   onDownload,
 }: {
   file: DataPoolDatasetFileRow;
   canDownload: boolean;
+  /** Shown under the file name when the user can see the row but may not download */
+  lockedHint?: string;
   downloading: boolean;
   onDownload: (f: DataPoolDatasetFileRow) => void;
 }) {
@@ -210,7 +213,7 @@ function FileAccessRow({
         <Lock className="h-5 w-5 shrink-0 text-white/35" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-white/55 truncate">{file.file_name}</p>
-          <p className="mt-0.5 text-xs text-white/40">Purchase this dataset to download files.</p>
+          <p className="mt-0.5 text-xs text-white/40">{lockedHint}</p>
         </div>
       </div>
     );
@@ -240,7 +243,7 @@ function FileAccessRow({
 }
 
 export default function DatasetDetail({ datasetId }: { datasetId: string }) {
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const discussionIdFromUrl = searchParams.get("discussion")?.trim() || null;
@@ -447,6 +450,7 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
 
   const isOwner = Boolean(user?.id && dataset && user.id === dataset.owner_id);
   const hasFileAccess = isOwner || purchased;
+  const isCollector = profile?.role === "collector";
 
   useEffect(() => {
     if (!user?.id || !dataset) {
@@ -479,7 +483,15 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
   }, []);
 
   const onPurchaseDataset = async () => {
-    if (!dataset || !user?.id || isOwner || purchased || purchaseSubmitting) return;
+    if (
+      !dataset ||
+      !user?.id ||
+      isOwner ||
+      purchased ||
+      purchaseSubmitting ||
+      isCollector
+    )
+      return;
     setPurchaseSubmitting(true);
     setError("");
     const { error: pErr } = await purchaseDataPoolDataset(dataset.id);
@@ -671,6 +683,23 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                               <Link href="/login">Sign in</Link>
                             </Button>
                           </div>
+                        ) : isCollector ? (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-sm text-white/70 leading-relaxed">
+                              Collector accounts cannot buy Data Pool listings. You can sell your own datasets
+                              with <span className="text-white/85 font-medium">List a dataset</span> on the
+                              marketplace.
+                            </p>
+                            <Button
+                              type="button"
+                              asChild
+                              variant="outline"
+                              size="sm"
+                              className="h-8 border-white/20 bg-white/5 text-white hover:bg-white/10"
+                            >
+                              <Link href="/datapool">Back to Data Pool</Link>
+                            </Button>
+                          </div>
                         ) : (
                           <div className="mt-3 space-y-3">
                             <p className="text-sm text-white/70">
@@ -747,30 +776,44 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                 </TabsContent>
 
                 <TabsContent value="files" className="px-6 py-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <section className="lg:col-span-2 space-y-4">
+                  <div
+                    className={cn(
+                      "grid gap-6",
+                      hasFileAccess ? "grid-cols-1 lg:grid-cols-3" : "grid-cols-1",
+                    )}
+                  >
+                    <section className={cn("space-y-4", hasFileAccess && "lg:col-span-2")}>
                       <div>
                         <h2 className="text-lg font-bold text-white">Files in this dataset</h2>
                         <p className="mt-1 text-sm text-white/55">
                           {hasFileAccess
                             ? "Secure download links open in a new tab."
-                            : "Purchase this dataset to unlock downloads."}
+                            : isCollector
+                              ? "Collector accounts cannot purchase this dataset or download its files. You can list your own data for sale from the Data Pool."
+                              : "Purchase this dataset on the Dataset Card tab to unlock downloads."}
                         </p>
                       </div>
                       <div className="space-y-2">
                         {files.length === 0 ? (
-                          <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
-                            <p className="text-sm font-semibold text-white/80">No files uploaded yet</p>
-                            <p className="mt-1 text-sm text-white/55">
-                              The dataset owner can attach files when creating or editing the listing.
-                            </p>
-                          </div>
+                          hasFileAccess ? (
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-8 text-center">
+                              <p className="text-sm font-semibold text-white/80">No files uploaded yet</p>
+                              <p className="mt-1 text-sm text-white/55">
+                                The dataset owner can attach files when creating or editing the listing.
+                              </p>
+                            </div>
+                          ) : null
                         ) : (
                           files.map((f) => (
                             <FileAccessRow
                               key={f.id}
                               file={f}
                               canDownload={hasFileAccess}
+                              lockedHint={
+                                isCollector
+                                  ? "Purchasing isn’t available for collector accounts."
+                                  : "Purchase this dataset to download files."
+                              }
                               downloading={downloadingId === f.id}
                               onDownload={onDownloadFile}
                             />
@@ -778,15 +821,12 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                         )}
                       </div>
                     </section>
-                    <aside className="rounded-xl border border-white/10 bg-white/[0.03] p-4 h-fit">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Summary</p>
-                      <p className="mt-2 text-sm font-semibold text-white/85">{files.length} file(s)</p>
-                      {!hasFileAccess && files.length > 0 ? (
-                        <p className="mt-2 text-xs text-white/50 leading-relaxed">
-                          Buy with your wallet on the Dataset Card tab to access downloads.
-                        </p>
-                      ) : null}
-                    </aside>
+                    {hasFileAccess ? (
+                      <aside className="rounded-xl border border-white/10 bg-white/[0.03] p-4 h-fit">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Summary</p>
+                        <p className="mt-2 text-sm font-semibold text-white/85">{files.length} file(s)</p>
+                      </aside>
+                    ) : null}
                   </div>
                 </TabsContent>
 

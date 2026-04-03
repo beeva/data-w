@@ -593,6 +593,8 @@ export async function purchaseDataPoolDataset(
       let msg = error.message;
       if (msg.includes("Insufficient balance")) {
         msg = "Insufficient balance. Add funds in your wallet to complete this purchase.";
+      } else if (msg.includes("Collectors cannot purchase")) {
+        msg = "Collector accounts cannot purchase datasets. You can list your own data for sale on the Data Pool.";
       }
       return { purchaseId: null, error: new Error(msg) };
     }
