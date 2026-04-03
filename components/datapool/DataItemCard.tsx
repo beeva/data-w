@@ -40,44 +40,43 @@ export default function DataItemCard({
     !!item.owner_user_id &&
     !!currentUserId &&
     item.owner_user_id === currentUserId;
+
+  const detailHref = `/datapool/datasets?id=${encodeURIComponent(item.id)}`;
+
   return (
     <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 overflow-hidden hover:border-cyan-500/50 hover:bg-white/[0.07] transition-all duration-300">
       <div className="p-3.5">
         <Link
-          href={`/datapool/datasets?id=${encodeURIComponent(item.id)}`}
-          className="mb-3 flex h-32 w-full items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 hover:opacity-95 transition-opacity"
+          href={detailHref}
+          className="group/detail mb-3 block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1419]"
           aria-label={`Open dataset: ${item.title}`}
         >
-          <svg
-            className="h-10 w-10 text-cyan-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-        </Link>
+          <div className="mb-3 flex h-32 w-full items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 group-hover/detail:opacity-95 transition-opacity">
+            <svg
+              className="h-10 w-10 text-cyan-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
 
-        <Link
-          href={`/datapool/datasets?id=${encodeURIComponent(item.id)}`}
-          className="inline-block"
-        >
-          <h3 className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-white hover:text-cyan-100 transition-colors">
+          <h3 className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-white group-hover/detail:text-cyan-100 transition-colors">
             {item.title}
           </h3>
-        </Link>
-        <p className="mb-2 line-clamp-1 text-sm leading-snug text-white/60">
-          {item.description}
-        </p>
+          <p className="mb-2 line-clamp-1 text-sm leading-snug text-white/60">
+            {item.description}
+          </p>
 
-        <DataItemRequirementsTags item={item} className="mb-3" size="card" />
+          <DataItemRequirementsTags item={item} className="mb-3" size="card" />
 
-        <div className="space-y-2.5">
           <div className="flex items-center justify-between gap-2">
             <span className="min-w-0 truncate text-xs text-white/50">
               {item.owner ? `By ${item.owner}` : ""}
@@ -86,7 +85,9 @@ export default function DataItemCard({
               {item.category}
             </span>
           </div>
+        </Link>
 
+        <div className="space-y-2.5">
           {typeof item.price === "number" ? (
             <div className="flex items-center justify-between gap-2">
               <span className="text-base font-bold text-emerald-400">

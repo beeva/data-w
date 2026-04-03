@@ -9,7 +9,20 @@ import DataItemListItem from "./DataItemListItem";
 import CreateDataSetDialog from "./CreateDataSetDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { Check, LayoutGrid, List, Loader2 } from "lucide-react";
+import {
+  BarChart3,
+  Camera,
+  Check,
+  Cpu,
+  FileText,
+  LayoutGrid,
+  List,
+  Loader2,
+  MapPinned,
+  Mic,
+  MoreHorizontal,
+  Video,
+} from "lucide-react";
 import { getDataPoolItems } from "@/lib/services/dataPoolService";
 import {
   JOB_CATEGORIES,
@@ -18,6 +31,21 @@ import {
   PROJECT_FORMATS,
 } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+
+/** Same category icons as `components/Projects.tsx` filter sidebar */
+const CATEGORY_ICONS: Record<
+  string,
+  React.ComponentType<{ className?: string }>
+> = {
+  Photography: Camera,
+  Video: Video,
+  Audio: Mic,
+  Text: FileText,
+  Survey: BarChart3,
+  "Location Data": MapPinned,
+  "Sensor Data": Cpu,
+  Other: MoreHorizontal,
+};
 
 function matchesFacetSelection(
   selected: string[],
@@ -226,6 +254,7 @@ export default function DataPool() {
                   {JOB_CATEGORIES.map((category) => {
                     const selected = selectedCategories.includes(category);
                     const { label } = JOB_CATEGORY_DISPLAY[category];
+                    const Icon = CATEGORY_ICONS[category] ?? MoreHorizontal;
                     return (
                       <GelFilterChip
                         key={category}
@@ -233,6 +262,15 @@ export default function DataPool() {
                         onClick={() => toggleCategory(category)}
                         title={label}
                       >
+                        <Icon
+                          className={cn(
+                            "h-4 w-4 shrink-0",
+                            selected
+                              ? "text-white dark:text-black"
+                              : "text-cyan-400",
+                          )}
+                          aria-hidden
+                        />
                         <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
                           {label}
                         </span>
