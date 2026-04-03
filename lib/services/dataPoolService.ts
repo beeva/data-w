@@ -56,9 +56,44 @@ export type DataPoolDatasetMessageRow = {
   author_id: string;
   parent_id: string | null;
   body: string;
+  /** Set on root posts when created via the discussion dialog */
+  title: string | null;
+  description: string | null;
   created_at: string;
   author_name: string | null;
 };
+
+async function getOwnDisplayName(userId: string): Promise<string | null> {
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) return null;
+  const u = authData.user;
+  if (!u || u.id !== userId) return null;
+
+  const { data: own } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const metaName = u.user_metadata?.full_name ?? u.user_metadata?.name;
+  return (
+    own?.full_name?.trim() ||
+    (typeof metaName === "string" ? metaName.trim() : "") ||
+    own?.email?.trim()?.split("@")[0] ||
+    u.email?.split("@")[0] ||
+    null
+  );
+}
+
+function isMissingColumnError(error: unknown): boolean {
+  const msg =
+    typeof error === "string"
+      ? error
+      : error instanceof Error
+        ? error.message
+        : "";
+  return /column .* does not exist/i.test(msg);
+}
 
 export async function getDataPoolItems(): Promise<{
   data: DataItem[] | null;
@@ -103,10 +138,12 @@ export async function createDataPoolDataset(
   input: DataPoolDatasetInput,
 ): Promise<{ id: string | null; error: Error | null }> {
   try {
+    const ownerDisplayName = (await getOwnDisplayName(ownerId)) ?? "Member";
     const { data, error } = await supabase
       .from("datapool_datasets")
       .insert({
         owner_id: ownerId,
+        owner_display_name: ownerDisplayName,
         title: input.title.trim(),
         description: input.description.trim() || "",
         category: input.category,
@@ -164,7 +201,7 @@ export async function getDataPoolDatasetById(datasetId: string): Promise<{
   error: Error | null;
 }> {
   try {
-    const { data, error } = await supabase
+    const primary = await supabase
       .from("datapool_datasets")
       .select(
         `
@@ -176,24 +213,48 @@ export async function getDataPoolDatasetById(datasetId: string): Promise<{
           price,
           data_types,
           formats,
+          owner_display_name,
           created_at,
-          updated_at,
-          profiles:owner_id (
-            full_name,
-            email
-          )
+          updated_at
         `,
       )
       .eq("id", datasetId)
       .single();
+    let data = primary.data as any;
+    let error = primary.error;
+
+    // Backward-compatible path when owner_display_name column is not migrated yet.
+    if (error && isMissingColumnError(error)) {
+      const fallback = await supabase
+        .from("datapool_datasets")
+        .select(
+          `
+            id,
+            owner_id,
+            title,
+            description,
+            category,
+            price,
+            data_types,
+            formats,
+            created_at,
+            updated_at
+          `,
+        )
+        .eq("id", datasetId)
+        .single();
+      data = fallback.data as any;
+      error = fallback.error;
+    }
 
     if (error) return { data: null, error: new Error(error.message) };
     if (!data) return { data: null, error: null };
 
-    const ownerName =
-      (data as any)?.profiles?.full_name?.trim?.() ||
-      (data as any)?.profiles?.email?.trim?.() ||
-      null;
+    let ownerName = data?.owner_display_name?.trim?.() || null;
+    // If owner_display_name is unexpectedly empty, recover from signed-in owner profile.
+    if (!ownerName) {
+      ownerName = await getOwnDisplayName((data as any).owner_id);
+    }
 
     return {
       data: {
@@ -368,7 +429,7 @@ export async function listDataPoolDatasetMessages(datasetId: string): Promise<{
   error: Error | null;
 }> {
   try {
-    const { data, error } = await supabase
+    const primary = await supabase
       .from("datapool_dataset_messages")
       .select(
         `
@@ -377,29 +438,50 @@ export async function listDataPoolDatasetMessages(datasetId: string): Promise<{
           author_id,
           parent_id,
           body,
-          created_at,
-          profiles:author_id (
-            full_name,
-            email
-          )
+          title,
+          description,
+          author_display_name,
+          created_at
         `,
       )
       .eq("dataset_id", datasetId)
       .order("created_at", { ascending: false });
+    let data = primary.data as any[] | null;
+    let error = primary.error;
+
+    // Backward-compatible path when title/description/author_display_name columns
+    // are not migrated yet.
+    if (error && isMissingColumnError(error)) {
+      const fallback = await supabase
+        .from("datapool_dataset_messages")
+        .select(
+          `
+            id,
+            dataset_id,
+            author_id,
+            parent_id,
+            body,
+            created_at
+          `,
+        )
+        .eq("dataset_id", datasetId)
+        .order("created_at", { ascending: false });
+      data = fallback.data as any[] | null;
+      error = fallback.error;
+    }
 
     if (error) return { data: null, error: new Error(error.message) };
 
     const rows = ((data as any[]) ?? []).map((row) => {
-      const authorName =
-        row?.profiles?.full_name?.trim?.() ||
-        row?.profiles?.email?.trim?.() ||
-        null;
+      const authorName = row?.author_display_name?.trim?.() || null;
       return {
         id: row.id,
         dataset_id: row.dataset_id,
         author_id: row.author_id,
         parent_id: row.parent_id ?? null,
         body: row.body ?? "",
+        title: row.title ?? null,
+        description: row.description ?? null,
         created_at: row.created_at,
         author_name: authorName,
       } satisfies DataPoolDatasetMessageRow;
@@ -417,13 +499,14 @@ export async function listDataPoolDatasetMessages(datasetId: string): Promise<{
 
 export async function createDataPoolDatasetMessage(input: {
   datasetId: string;
-  body: string;
+  /** Reply text when `parentId` is set; ignored for new root discussions. */
+  body?: string;
   parentId?: string | null;
+  /** New root discussion only */
+  title?: string | null;
+  description?: string | null;
 }): Promise<{ error: Error | null }> {
   try {
-    const body = input.body.trim();
-    if (!body) return { error: new Error("Message cannot be empty") };
-
     const {
       data: { user },
       error: authError,
@@ -431,13 +514,61 @@ export async function createDataPoolDatasetMessage(input: {
 
     if (authError) return { error: new Error(authError.message) };
     if (!user) return { error: new Error("You must be signed in to post") };
+    const authorDisplayName = (await getOwnDisplayName(user.id)) ?? "Member";
 
-    const { error } = await supabase.from("datapool_dataset_messages").insert({
+    const parentId = input.parentId ?? null;
+
+    if (!parentId) {
+      const title = (input.title ?? "").trim();
+      const description = (input.description ?? "").trim();
+      if (!title) return { error: new Error("Title is required") };
+      if (!description) return { error: new Error("Description is required") };
+
+      let { error } = await supabase.from("datapool_dataset_messages").insert({
+        dataset_id: input.datasetId,
+        author_id: user.id,
+        author_display_name: authorDisplayName,
+        parent_id: null,
+        title,
+        description,
+        body: description,
+      });
+
+      if (error && isMissingColumnError(error)) {
+        // Fallback for DBs that don't have the new columns yet.
+        const fallback = await supabase.from("datapool_dataset_messages").insert({
+          dataset_id: input.datasetId,
+          author_id: user.id,
+          parent_id: null,
+          body: description,
+        });
+        error = fallback.error;
+      }
+
+      if (error) return { error: new Error(error.message) };
+      return { error: null };
+    }
+
+    const body = (input.body ?? "").trim();
+    if (!body) return { error: new Error("Message cannot be empty") };
+
+    let { error } = await supabase.from("datapool_dataset_messages").insert({
       dataset_id: input.datasetId,
       author_id: user.id,
-      parent_id: input.parentId ?? null,
+      author_display_name: authorDisplayName,
+      parent_id: parentId,
       body,
     });
+
+    if (error && isMissingColumnError(error)) {
+      const fallback = await supabase.from("datapool_dataset_messages").insert({
+        dataset_id: input.datasetId,
+        author_id: user.id,
+        parent_id: parentId,
+        body,
+      });
+      error = fallback.error;
+    }
 
     if (error) return { error: new Error(error.message) };
     return { error: null };
