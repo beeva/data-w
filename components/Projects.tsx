@@ -755,7 +755,7 @@ export default function Projects() {
     return () => {
       cancelled = true;
     };
-  }, [profile?.location?.lat, profile?.location?.lng]);
+  }, [user?.id, profile?.location?.lat, profile?.location?.lng]);
 
   useEffect(() => {
     if (!user?.id && activeTab === "saved") {
