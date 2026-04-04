@@ -25,13 +25,18 @@ export default function DatasetDetailFromQuery() {
           compact
         />
         <main className="pb-20 pt-6">
-          <div className="container mx-auto px-6">
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-white/70">
-              No dataset selected. Open a dataset from{" "}
-              <Link href="/datapool" className="text-cyan-200 hover:underline">
-                DataPool
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="mx-auto max-w-lg rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 py-12 text-center">
+              <p className="text-lg font-semibold text-white/90">No dataset selected</p>
+              <p className="mt-2 text-sm text-white/50 leading-relaxed">
+                Use a link from the marketplace, or pick a dataset from the browse tab.
+              </p>
+              <Link
+                href="/datapool"
+                className="mt-6 inline-flex items-center justify-center rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-5 py-2.5 text-sm font-semibold text-cyan-100 transition-colors hover:border-cyan-400/50 hover:bg-cyan-500/18"
+              >
+                Go to DataPool
               </Link>
-              .
             </div>
           </div>
         </main>

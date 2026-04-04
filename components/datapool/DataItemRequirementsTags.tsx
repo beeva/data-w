@@ -7,10 +7,13 @@ export function DataItemRequirementsTags({
   item,
   className,
   size = "card",
+  layout = "stack",
 }: {
   item: Pick<DataItem, "data_types" | "formats">;
   className?: string;
   size?: "card" | "list";
+  /** `row`: one wrapped line of pills (for wide list rows). */
+  layout?: "stack" | "row";
 }) {
   const types = item.data_types?.filter(Boolean) ?? [];
   const formats = item.formats?.filter(Boolean) ?? [];
@@ -20,6 +23,47 @@ export function DataItemRequirementsTags({
     size === "list"
       ? "rounded px-1.5 py-px text-[10px] font-medium"
       : "rounded-md px-1.5 py-0.5 text-[10px] font-medium";
+
+  if (layout === "row") {
+    return (
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-1.5",
+          types.length > 0 && formats.length > 0 && "sm:gap-x-2",
+          className,
+        )}
+      >
+        {types.map((t) => (
+          <span
+            key={t}
+            className={cn(
+              pill,
+              "border border-cyan-500/25 bg-cyan-500/10 text-cyan-200/90",
+            )}
+          >
+            {t}
+          </span>
+        ))}
+        {types.length > 0 && formats.length > 0 ? (
+          <span
+            className="hidden h-3 w-px shrink-0 bg-white/15 sm:block"
+            aria-hidden
+          />
+        ) : null}
+        {formats.map((f) => (
+          <span
+            key={f}
+            className={cn(
+              pill,
+              "border border-white/15 bg-white/[0.08] text-white/70",
+            )}
+          >
+            {f}
+          </span>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className={cn("space-y-1.5", className)}>

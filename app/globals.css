@@ -158,6 +158,40 @@
   scrollbar-color: #475569 #1e293b;
 }
 
+/* DataPool marketplace filter sidebar — thin, minimal track, cyan hover */
+.datapool-filter-scrollbar {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(34, 211, 238, 0.35) transparent;
+}
+.datapool-filter-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.datapool-filter-scrollbar::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+.datapool-filter-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+  border-radius: 100px;
+}
+.datapool-filter-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.22);
+  border-radius: 100px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.datapool-filter-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 211, 238, 0.4);
+  background-clip: padding-box;
+}
+.datapool-filter-scrollbar::-webkit-scrollbar-thumb:active {
+  background: rgba(34, 211, 238, 0.55);
+  background-clip: padding-box;
+}
+
 /* Hide scrollbar but keep scroll behavior (e.g. SignUp, Login) */
 .scrollbar-hide {
   -ms-overflow-style: none;

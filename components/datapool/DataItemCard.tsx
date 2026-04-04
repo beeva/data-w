@@ -52,14 +52,14 @@ export default function DataItemCard({
   const detailHref = `/datapool/datasets?id=${encodeURIComponent(item.id)}`;
 
   return (
-    <div className="bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 overflow-hidden hover:border-cyan-500/50 hover:bg-white/[0.07] transition-all duration-300">
-      <div className="p-3.5">
+    <div className="group/card overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_16px_40px_-28px_rgba(0,0,0,0.65)] backdrop-blur-sm transition-all duration-300 hover:border-cyan-400/35 hover:bg-white/[0.06] hover:shadow-[0_24px_48px_-24px_rgba(34,211,238,0.12)]">
+      <div className="p-4">
         <Link
           href={detailHref}
-          className="group/detail mb-3 block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1419]"
+          className="group/detail mb-3 block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1419]"
           aria-label={`Open dataset: ${item.title}`}
         >
-          <div className="mb-3 flex h-32 w-full items-center justify-center rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 group-hover/detail:opacity-95 transition-opacity">
+          <div className="mb-3 flex h-36 w-full items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500/15 via-slate-800/40 to-indigo-600/15 ring-1 ring-inset ring-white/5 transition-all duration-300 group-hover/card:from-cyan-500/25 group-hover/card:ring-cyan-500/20">
             <svg
               className="h-10 w-10 text-cyan-400"
               fill="none"
@@ -76,11 +76,11 @@ export default function DataItemCard({
             </svg>
           </div>
 
-          <h3 className="mb-1.5 line-clamp-2 text-sm font-semibold leading-snug text-white group-hover/detail:text-cyan-100 transition-colors">
+          <h3 className="mb-1.5 line-clamp-2 text-base font-semibold leading-snug tracking-tight text-white group-hover/detail:text-cyan-100 transition-colors">
             {item.title}
           </h3>
-          <p className="mb-2 line-clamp-1 text-sm leading-snug text-white/60">
-            {item.description}
+          <p className="mb-2 line-clamp-2 text-sm leading-relaxed text-white/55">
+            {item.description?.trim() || "No description yet—open the listing for full details."}
           </p>
 
           <DataItemRequirementsTags item={item} className="mb-3" size="card" />
@@ -119,7 +119,7 @@ export default function DataItemCard({
                 <button
                   type="button"
                   onClick={() => onRequestAccess(item)}
-                  className="rounded-lg border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm font-semibold text-white transition-all hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]"
+                  className="rounded-lg border border-cyan-500/40 bg-gradient-to-r from-cyan-600/80 to-teal-600/70 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all hover:border-cyan-300/60 hover:from-cyan-500 hover:to-teal-500 hover:shadow-[0_0_20px_-6px_rgba(34,211,238,0.45)]"
                 >
                   View details
                 </button>
@@ -139,7 +139,7 @@ export default function DataItemCard({
               <button
                 type="button"
                 onClick={() => onRequestAccess(item)}
-                className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm font-semibold text-white transition-all hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] sm:flex-1"
+                className="w-full rounded-lg border border-cyan-500/40 bg-gradient-to-r from-cyan-600/80 to-teal-600/70 px-3 py-1.5 text-sm font-semibold text-white shadow-sm transition-all hover:border-cyan-300/60 hover:from-cyan-500 hover:to-teal-500 hover:shadow-[0_0_20px_-6px_rgba(34,211,238,0.45)] sm:flex-1"
               >
                 View details
               </button>

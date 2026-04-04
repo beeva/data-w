@@ -508,42 +508,77 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
     setPurchaseSubmitting(false);
   };
 
+  const heroDescription = loading
+    ? "Loading dataset details…"
+    : error
+      ? "Something went wrong. Use the message below or return to the marketplace."
+      : dataset
+        ? "Review the listing, download files after purchase, and chat with the community."
+        : "This dataset is missing or no longer available.";
+
   return (
-    <div className="min-h-screen bg-[#0f1419]">
+    <div className="relative min-h-screen overflow-x-hidden bg-[#0f1419]">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-[min(36rem,50vh)] bg-gradient-to-b from-cyan-950/20 via-transparent to-transparent"
+        aria-hidden
+      />
       <Header />
       <PageHero
         title="Dataset"
-        subtitle={dataset?.title ? `: ${dataset.title}` : "Detail"}
-        description="View full dataset details and join the community discussion."
+        subtitle={dataset?.title?.trim() || "Detail"}
+        description={heroDescription}
         compact
       />
 
-      <main className="pb-20 pt-6">
-        <div className="container mx-auto px-6">
-          <div className="mb-4">
+      <main className="relative pb-20 pt-4">
+        <div className="container mx-auto px-4 sm:px-6">
+          <div className="mb-5">
             <Link
               href="/datapool"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-white/70 hover:text-white"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-2 text-sm font-medium text-white/75 transition-all hover:border-cyan-400/35 hover:bg-white/[0.1] hover:text-white"
             >
-              <ArrowLeft className="h-4 w-4" />
-              Back to DataPool
+              <ArrowLeft className="h-4 w-4 opacity-80" />
+              Back to marketplace
             </Link>
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-white/70" />
+            <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-[0_24px_60px_-32px_rgba(0,0,0,0.55)]">
+              <div className="flex flex-wrap gap-3">
+                <div className="h-9 w-28 animate-pulse rounded-lg bg-white/[0.08]" />
+                <div className="h-9 w-24 animate-pulse rounded-lg bg-white/[0.08]" />
+                <div className="h-9 w-28 animate-pulse rounded-lg bg-white/[0.08]" />
+              </div>
+              <div className="h-8 w-2/3 max-w-md animate-pulse rounded-lg bg-white/10" />
+              <div className="space-y-2 pt-2">
+                <div className="h-3 w-full animate-pulse rounded bg-white/[0.06]" />
+                <div className="h-3 w-full animate-pulse rounded bg-white/[0.06]" />
+                <div className="h-3 w-[80%] animate-pulse rounded bg-white/[0.06]" />
+              </div>
+              <div className="flex items-center justify-center gap-2 pt-6 text-sm text-white/40">
+                <Loader2 className="h-4 w-4 animate-spin text-cyan-400/60" aria-hidden />
+                Loading…
+              </div>
             </div>
           ) : error ? (
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-200">
+            <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.08] p-5 text-red-100">
               {error}
             </div>
           ) : !dataset ? (
-            <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 text-white/70">
-              Dataset not found.
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] p-8 text-center text-white/65">
+              <p className="font-semibold text-white/85">We could not find this dataset</p>
+              <p className="mt-2 text-sm text-white/50">
+                It may have been removed. Return to the marketplace to pick another listing.
+              </p>
+              <Link
+                href="/datapool"
+                className="mt-5 inline-flex rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-100 hover:border-cyan-400/50"
+              >
+                Browse datasets
+              </Link>
             </div>
           ) : (
-            <div className="rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden">
+            <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_24px_60px_-32px_rgba(0,0,0,0.55)]">
               <Tabs
                 value={mainTab}
                 onValueChange={(v) => {
@@ -554,17 +589,26 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                 }}
                 className="w-full"
               >
-                <TabsUnderlineList className="border-white/10 px-6">
-                  <TabsUnderlineTrigger value="card" className="text-white/70 data-[state=active]:text-white">
-                    <FileText className="h-4 w-4" />
-                    Dataset Card
+                <TabsUnderlineList className="border-white/10 px-4 sm:px-6 gap-4 sm:gap-8">
+                  <TabsUnderlineTrigger
+                    value="card"
+                    className="gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100"
+                  >
+                    <FileText className="h-4 w-4 opacity-80" />
+                    Overview
                   </TabsUnderlineTrigger>
-                  <TabsUnderlineTrigger value="files" className="text-white/70 data-[state=active]:text-white">
-                    <FolderOpen className="h-4 w-4" />
+                  <TabsUnderlineTrigger
+                    value="files"
+                    className="gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100"
+                  >
+                    <FolderOpen className="h-4 w-4 opacity-80" />
                     Files
                   </TabsUnderlineTrigger>
-                  <TabsUnderlineTrigger value="community" className="text-white/70 data-[state=active]:text-white">
-                    <MessageSquareText className="h-4 w-4" />
+                  <TabsUnderlineTrigger
+                    value="community"
+                    className="gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100"
+                  >
+                    <MessageSquareText className="h-4 w-4 opacity-80" />
                     Community
                   </TabsUnderlineTrigger>
                 </TabsUnderlineList>
