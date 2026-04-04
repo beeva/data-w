@@ -214,7 +214,9 @@ export default function DataPool() {
   const itemsPerPage = 8;
 
   const canListDatasets =
-    profile?.role === "personal" || profile?.role === "company";
+    profile?.role === "personal" ||
+    profile?.role === "company" ||
+    profile?.role === "collector";
 
   const openCreateDatasetDialog = () => {
     setDatasetDialogMode("create");

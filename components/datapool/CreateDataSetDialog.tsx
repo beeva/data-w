@@ -268,8 +268,12 @@ export default function CreateDataSetDialog({
       setError(isEditMode ? "You must be logged in to edit this listing" : "You must be logged in to list a dataset");
       return;
     }
-    if (profile.role !== "personal" && profile.role !== "company") {
-      setError("Only personal and company accounts can list datasets.");
+    if (
+      profile.role !== "personal" &&
+      profile.role !== "company" &&
+      profile.role !== "collector"
+    ) {
+      setError("Only collector, personal, and company accounts can list datasets.");
       return;
     }
     if (!canProceed()) return;
