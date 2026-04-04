@@ -720,8 +720,8 @@ export default function Projects() {
     localStorage.setItem(savedKey, JSON.stringify(savedProjectIds));
   }, [savedProjectIds, user?.id]);
 
+  // Approximate location from IP when profile has no coordinates (guest or logged-in).
   useEffect(() => {
-    if (user?.id) return;
     if (
       typeof profile?.location?.lat === "number" &&
       typeof profile?.location?.lng === "number"
@@ -755,7 +755,7 @@ export default function Projects() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, profile?.location?.lat, profile?.location?.lng]);
+  }, [profile?.location?.lat, profile?.location?.lng]);
 
   useEffect(() => {
     if (!user?.id && activeTab === "saved") {
