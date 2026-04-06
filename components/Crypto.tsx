@@ -208,9 +208,9 @@ function renderPieNameLabel(props: {
 
 const TokenDistributionChart = memo(function TokenDistributionChart() {
   return (
-    <div className="flex w-full flex-col-reverse items-center justify-center gap-6 sm:gap-8 md:flex-row md:items-center">
+    <div className="flex w-full flex-col-reverse items-center justify-center gap-5 sm:flex-row sm:gap-0">
       {/* Legend with full names */}
-      <div className="grid w-full max-w-sm grid-cols-1 gap-3 sm:grid-cols-2 md:flex md:max-w-none md:flex-col md:gap-6">
+      <div className="grid w-full max-w-sm grid-cols-1 gap-3 sm:flex sm:max-w-none sm:flex-col sm:gap-6">
         {TOKEN_DISTRIBUTION_DATA.map((entry) => (
           <div
             key={entry.name}
@@ -225,7 +225,7 @@ const TokenDistributionChart = memo(function TokenDistributionChart() {
           </div>
         ))}
       </div>
-      <div className="h-64 w-full max-w-[320px] sm:h-72 sm:max-w-[360px] md:h-[400px] md:max-w-[400px]">
+      <div className="h-56 w-full max-w-[280px] sm:h-72 sm:w-72 sm:max-w-none md:h-[400px] md:w-[400px]">
         <ResponsiveContainer
           width="100%"
           height="100%"
@@ -834,30 +834,30 @@ export default function Crypto() {
           </motion.section>
 
           {/* How It Works - styled like About with watermark numbers */}
-          <motion.section {...fadeInUp} className="py-24">
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-12">
+          <motion.section {...fadeInUp} className="py-16 sm:py-20 lg:py-24">
+            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 sm:gap-6 mb-8 sm:mb-12">
               <div>
                 <Badge className="mb-4 bg-cyan-500/15 text-cyan-400 border-cyan-500/25 text-xs font-medium tracking-wide uppercase">
                   How It Works
                 </Badge>
-                <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
+                <h2 className="text-2xl sm:text-4xl font-bold text-white mb-3 sm:mb-4 tracking-tight leading-tight">
                   Start Earning in{" "}
                   <span className="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
                     3 Simple Steps
                   </span>
                 </h2>
-                <p className="text-white/55 max-w-lg text-base">
+                <p className="text-white/55 max-w-lg text-sm sm:text-base">
                   Complete tasks, earn DTW tokens, and get paid—no bank account
                   required.
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-white/40 text-sm font-medium tracking-wide uppercase shrink-0">
+              <div className="hidden sm:flex items-center gap-2 text-white/40 text-sm font-medium tracking-wide uppercase shrink-0">
                 <span className="w-8 h-px bg-gradient-to-r from-transparent to-white/20" />
                 3 simple steps
               </div>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8 lg:gap-6 relative">
+            <div className="grid md:grid-cols-3 gap-6 sm:gap-8 lg:gap-6 relative">
               {howItWorks.map((item, idx) => {
                 const step = String(item.step).padStart(2, "0");
                 return (
@@ -866,13 +866,13 @@ export default function Crypto() {
                     {...staggerItem}
                     transition={{ delay: idx * 0.1, ...staggerItem.transition }}
                     whileHover={{ y: -4, scale: 1.01 }}
-                    className="group relative flex flex-col pr-24"
+                    className="group relative flex flex-col pr-0 sm:pr-16 md:pr-24"
                   >
-                    <div className="relative flex flex-col transition-all duration-300 h-full min-h-[240px] overflow-hidden">
+                    <div className="relative flex flex-col transition-all duration-300 h-full min-h-[180px] sm:min-h-[220px] md:min-h-[240px] overflow-hidden">
                       {/* Large watermark number - from About */}
                       <svg
                         viewBox="0 0 140 100"
-                        className="absolute top-0 -left-8 w-40 h-40 sm:w-52 sm:h-52 md:w-64 md:h-64 pointer-events-none"
+                        className="absolute top-0 -left-4 sm:-left-8 w-28 h-28 sm:w-52 sm:h-52 md:w-64 md:h-64 pointer-events-none"
                         aria-hidden="true"
                       >
                         <defs>
@@ -936,11 +936,11 @@ export default function Crypto() {
                         </text>
                       </svg>
 
-                      <div className="relative z-10 flex flex-col flex-1 pt-32">
-                        <h3 className="text-xl sm:text-2xl font-bold text-white mb-3 uppercase tracking-tight">
+                      <div className="relative z-10 flex flex-col flex-1 pt-16 sm:pt-28 md:pt-32">
+                        <h3 className="text-lg sm:text-2xl font-bold text-white mb-2 sm:mb-3 uppercase tracking-tight leading-snug">
                           {item.title}
                         </h3>
-                        <p className="text-white/70 text-base leading-relaxed flex-1">
+                        <p className="text-white/70 text-sm sm:text-base leading-relaxed flex-1">
                           {item.description}
                         </p>
                       </div>
