@@ -286,9 +286,15 @@ export default function Crypto() {
   const [priceChange, setPriceChange] = useState(3.45);
   const [selectedTimeframe, setSelectedTimeframe] = useState("30D");
   const [isLive, setIsLive] = useState(true);
+  const [isMobileChart, setIsMobileChart] = useState(false);
   const [faqOpenIndex, setFaqOpenIndex] = useState<number | null>(null);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const updateChartViewport = () => setIsMobileChart(mediaQuery.matches);
+    updateChartViewport();
+    mediaQuery.addEventListener("change", updateChartViewport);
+
     setPriceData(generateMockPriceData());
 
     // Simulate live price updates
@@ -298,7 +304,10 @@ export default function Crypto() {
       setPriceChange((prev) => prev + (Math.random() - 0.5) * 0.5);
     }, 3000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      mediaQuery.removeEventListener("change", updateChartViewport);
+    };
   }, []);
 
   const timeframes = ["24H", "7D", "30D", "90D", "1Y", "ALL"];
@@ -450,10 +459,11 @@ export default function Crypto() {
               </div>
 
               {/* Chart Area */}
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 {/* Timeframe Selector */}
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                  <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+                <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <div className="w-full overflow-x-auto pb-1 sm:w-auto sm:overflow-visible sm:pb-0">
+                    <div className="inline-flex min-w-max gap-1 rounded-lg bg-white/5 p-1">
                     {timeframes.map((tf) => (
                       <motion.button
                         key={tf}
@@ -465,7 +475,7 @@ export default function Crypto() {
                           stiffness: 400,
                           damping: 17,
                         }}
-                        className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                        className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-200 sm:px-3 sm:text-sm ${
                           selectedTimeframe === tf
                             ? "bg-cyan-500 text-white shadow-lg shadow-cyan-500/25"
                             : "text-white/50 hover:text-white hover:bg-white/10"
@@ -474,13 +484,14 @@ export default function Crypto() {
                         {tf}
                       </motion.button>
                     ))}
+                    </div>
                   </div>
                   <motion.button
                     onClick={() => setPriceData(generateMockPriceData())}
                     whileHover={{ scale: 1.02, x: 2 }}
                     whileTap={{ scale: 0.98 }}
                     transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                    className="flex items-center gap-2 text-white/50 hover:text-cyan-400 hover:bg-white/5 px-3 py-2 rounded-lg text-sm transition-all duration-200"
+                    className="flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-white/50 transition-all duration-200 hover:bg-white/5 hover:text-cyan-400 sm:w-auto sm:justify-start"
                   >
                     <RefreshCw className="w-4 h-4" />
                     Refresh
@@ -489,7 +500,7 @@ export default function Crypto() {
 
                 {/* Chart */}
                 <motion.div
-                  className="h-64 w-full min-h-[256px] min-w-0"
+                  className="h-52 w-full min-h-[208px] min-w-0 sm:h-64 sm:min-h-[256px]"
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
@@ -502,7 +513,11 @@ export default function Crypto() {
                   >
                     <AreaChart
                       data={priceData}
-                      margin={{ top: 4, right: 4, left: 4, bottom: 4 }}
+                      margin={
+                        isMobileChart
+                          ? { top: 4, right: 2, left: 0, bottom: 0 }
+                          : { top: 4, right: 4, left: 4, bottom: 4 }
+                      }
                     >
                       <defs>
                         <linearGradient
@@ -529,9 +544,11 @@ export default function Crypto() {
                         tickFormatter={xAxisTickFormatter}
                         axisLine={false}
                         tickLine={false}
-                        tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 12 }}
+                        minTickGap={isMobileChart ? 22 : 12}
+                        tick={{ fill: "rgba(255,255,255,0.4)", fontSize: isMobileChart ? 10 : 12 }}
                       />
                       <YAxis
+                        hide={isMobileChart}
                         domain={["auto", "auto"]}
                         axisLine={false}
                         tickLine={false}
