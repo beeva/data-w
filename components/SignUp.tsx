@@ -327,11 +327,12 @@ export default function SignUp() {
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
+                <form onSubmit={handleSubmit} className="space-y-3.5">
+                  {/* Full name field */}
                   <div>
                     <label
                       htmlFor="fullName"
-                      className="block text-sm font-medium text-slate-700 mb-2"
+                      className="block text-sm font-medium text-slate-700 mb-1"
                     >
                       Full name
                     </label>
@@ -348,10 +349,11 @@ export default function SignUp() {
                     />
                   </div>
 
+                  {/* Email field */}
                   <div>
                     <label
                       htmlFor="email"
-                      className="block text-sm font-medium text-slate-700 mb-2"
+                      className="block text-sm font-medium text-slate-700 mb-1"
                     >
                       Email
                     </label>
@@ -368,8 +370,9 @@ export default function SignUp() {
                     />
                   </div>
 
+                  {/* Role selection */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-3">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
                       How will you use DataW?
                     </label>
                     <input
@@ -377,9 +380,22 @@ export default function SignUp() {
                       name="role"
                       value={formData.role}
                     />
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 sm:gap-5 justify-items-center max-w-4xl mx-auto">
-                      {ROLE_OPTIONS.map((role) => {
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-6 sm:gap-x-5 sm:gap-y-2 max-w-[20rem] sm:max-w-lg mx-auto">
+                      {ROLE_OPTIONS.map((role, index) => {
                         const art = roleHeroAssetKey(role.value);
+                        const positionClass =
+                          index === 0
+                            ? "col-span-1 col-start-1 row-start-1 sm:col-span-2 sm:col-start-1 sm:row-start-1"
+                            : index === 1
+                              ? "col-span-1 col-start-2 row-start-1 sm:col-span-2 sm:col-start-3 sm:row-start-1"
+                              : index === 2
+                                ? "col-span-1 col-start-1 row-start-2 sm:col-span-2 sm:col-start-5 sm:row-start-1"
+                                : index === 3
+                                  ? "col-span-1 col-start-2 row-start-2 sm:col-span-2 sm:col-start-2 sm:row-start-2"
+                                  : "col-span-2 col-start-1 row-start-3 sm:col-span-2 sm:col-start-4 sm:row-start-2";
+                        const rowLayerClass =
+                          index < 3 ? "z-30 sm:z-30" : "z-20 sm:z-20";
+                        const secondRowOffsetClass = index >= 3 ? "sm:-mt-20" : "";
                         return (
                           <button
                             key={role.value}
@@ -390,7 +406,7 @@ export default function SignUp() {
                                 role: role.value,
                               }))
                             }
-                            className={`role-hero-card focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 rounded-xl ${formData.role === role.value ? "selected" : ""}`}
+                            className={`role-hero-card ${positionClass} ${rowLayerClass} ${secondRowOffsetClass} focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2 rounded-xl ${formData.role === role.value ? "selected" : ""}`}
                             aria-pressed={formData.role === role.value}
                             aria-label={`Select ${role.label}: ${role.desc}`}
                             title={role.desc}
@@ -427,10 +443,11 @@ export default function SignUp() {
                     </div>
                   </div>
 
+                  {/* Password fields */}
                   <div>
                     <label
                       htmlFor="password"
-                      className="block text-sm font-medium text-slate-700 mb-2"
+                      className="block text-sm font-medium text-slate-700 mb-1"
                     >
                       Password
                     </label>
@@ -493,10 +510,11 @@ export default function SignUp() {
                     </div>
                   </div>
 
+                  {/* Confirm password field */}
                   <div>
                     <label
                       htmlFor="confirmPassword"
-                      className="block text-sm font-medium text-slate-700 mb-2"
+                      className="block text-sm font-medium text-slate-700 mb-1"
                     >
                       Confirm password
                     </label>
@@ -563,10 +581,11 @@ export default function SignUp() {
                     </div>
                   </div>
 
+                  {/* Sign up button */}
                   <button
                     type="submit"
                     disabled={loading || googleLoading}
-                    className="w-full mt-3 py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm"
+                    className="w-full mt-1.5 py-3.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-medium text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:pointer-events-none shadow-sm"
                   >
                     {loading ? (
                       <span className="inline-flex items-center justify-center gap-2">
@@ -598,7 +617,7 @@ export default function SignUp() {
                   </button>
                 </form>
 
-                <p className="text-center text-slate-500 text-sm mt-8">
+                <p className="text-center text-slate-500 text-sm mt-5">
                   Already have an account?{" "}
                   <Link
                     href="/login"

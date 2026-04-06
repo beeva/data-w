@@ -324,6 +324,14 @@
   transition: transform 0.3s ease;
 }
 
+.role-hero-card.selected {
+  z-index: 55;
+}
+
+.role-hero-card:hover {
+  z-index: 60 !important;
+}
+
 .role-hero-wrapper {
   transition: all 0.5s;
   position: absolute;
@@ -437,22 +445,69 @@
 /* Selected card: obvious ring, scale, and glow */
 .role-hero-card.selected {
   transform: scale(1.08);
-  z-index: 1;
 }
 
 .role-hero-card.selected .role-hero-wrapper {
   box-shadow:
-    0 0 0 4px rgb(15, 23, 42),
-    0 0 0 8px rgba(15, 23, 42, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 0 0 4px rgba(15, 23, 42, 0.95),
+    0 0 0 7px rgba(15, 23, 42, 0.52),
     2px 35px 32px -8px rgba(0, 0, 0, 0.75);
   -webkit-box-shadow:
-    0 0 0 4px rgb(15, 23, 42),
-    0 0 0 8px rgba(15, 23, 42, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 0 0 4px rgba(15, 23, 42, 0.95),
+    0 0 0 7px rgba(15, 23, 42, 0.52),
     2px 35px 32px -8px rgba(0, 0, 0, 0.75);
 }
 
 .role-hero-card.selected:focus-visible {
   outline: none;
+}
+
+.role-hero-card.selected:focus-visible .role-hero-wrapper {
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 0 0 4px rgba(15, 23, 42, 1),
+    0 0 0 8px rgba(15, 23, 42, 0.62),
+    0 0 0 12px rgba(15, 23, 42, 0.2),
+    2px 35px 32px -8px rgba(0, 0, 0, 0.75);
+  -webkit-box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 0 0 4px rgba(15, 23, 42, 1),
+    0 0 0 8px rgba(15, 23, 42, 0.62),
+    0 0 0 12px rgba(15, 23, 42, 0.2),
+    2px 35px 32px -8px rgba(0, 0, 0, 0.75);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --role-card-height: 154px;
+  }
+
+  .role-hero-card {
+    padding: 0 10px 12px;
+  }
+
+  .role-hero-title {
+    font-size: 0.875rem;
+  }
+
+  .role-hero-character {
+    width: 142px;
+    height: 142px;
+    left: -10%;
+    transform: translateX(-10%);
+    bottom: -50px;
+  }
+
+  .role-hero-card:hover .role-hero-title,
+  .role-hero-card.selected .role-hero-title {
+    transform: translate3d(0%, -10px, 60px);
+  }
+
+  .role-hero-card.selected {
+    transform: scale(1.04);
+  }
 }
 
 /* JobsListWindow: new job card slides in from right (GPU-friendly, smooth easing) */
