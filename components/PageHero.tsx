@@ -77,7 +77,7 @@ export default function PageHero({
             <div className={`${compact ? "space-y-3" : "space-y-4"}`}>
               <h1
                 className={`font-bold leading-tight tracking-tight ${
-                  compact ? "text-2xl sm:text-3xl md:text-5xl" : "text-2xl sm:text-3xl md:text-7xl"
+                  compact ? "text-2xl sm:text-3xl md:text-7xl" : "text-2xl sm:text-3xl md:text-7xl"
                 }`}
               >
                 {subtitle ? (
