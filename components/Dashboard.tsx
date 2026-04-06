@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import RequesterDashboard from "./dashboard/requester/RequesterDashboard";
+import PersonalCompanyDashboard from "./dashboard/shared/PersonalCompanyDashboard";
 import CollectorDashboard from "./dashboard/collector/CollectorDashboard";
 import AgentDashboard from "./dashboard/agent/AgentDashboard";
 import AdminDashboard from "./dashboard/admin/AdminDashboard";
@@ -68,6 +69,9 @@ export default function Dashboard() {
         return <AgentDashboard />;
       case "admin":
         return <AdminDashboard />;
+      case "personal":
+      case "company":
+        return <PersonalCompanyDashboard />;
       default:
         return <RequesterDashboard />;
     }

@@ -4,14 +4,18 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { isPersonalOrCompanyRole } from "@/lib/dashboardFeatureAccess";
 import Image from "next/image";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user, loading, signOut } = useAuth();
+  const { user, profile, cachedRole, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const role = profile?.role ?? cachedRole;
+  const hideProjectsNav =
+    Boolean(user) && isPersonalOrCompanyRole(role ?? undefined);
 
   const isActive = (path: string) => pathname === path;
 
@@ -57,14 +61,16 @@ export default function Header() {
 
             {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8">
-              <Link
-                href="/projects"
-                className={`hover:text-cyan-500 hover:scale-105 transition-all duration-300 font-medium ${
-                  isActive("/projects") ? "text-cyan-400" : "text-white/90"
-                }`}
-              >
-                Projects
-              </Link>
+              {!hideProjectsNav && (
+                <Link
+                  href="/projects"
+                  className={`hover:text-cyan-500 hover:scale-105 transition-all duration-300 font-medium ${
+                    isActive("/projects") ? "text-cyan-400" : "text-white/90"
+                  }`}
+                >
+                  Projects
+                </Link>
+              )}
               <Link
                 href="/datapool"
                 className={`hover:text-cyan-500 hover:scale-105 transition-all duration-300 font-medium ${
@@ -173,15 +179,17 @@ export default function Header() {
         {isMobileMenuOpen && (
           <div className="lg:hidden mt-4 pb-4 border-t border-white/10 pt-4 animate-in slide-in-from-top duration-300">
             <nav className="flex flex-col gap-4">
-              <Link
-                href="/projects"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`hover:text-cyan-500 transition-colors font-medium py-2 ${
-                  isActive("/projects") ? "text-cyan-400" : "text-white/90"
-                }`}
-              >
-                Projects
-              </Link>
+              {!hideProjectsNav && (
+                <Link
+                  href="/projects"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={`hover:text-cyan-500 transition-colors font-medium py-2 ${
+                    isActive("/projects") ? "text-cyan-400" : "text-white/90"
+                  }`}
+                >
+                  Projects
+                </Link>
+              )}
               <Link
                 href="/datapool"
                 onClick={() => setIsMobileMenuOpen(false)}

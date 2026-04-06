@@ -6,6 +6,8 @@ import DashboardSidebar from "./DashboardSidebar";
 import DashboardHeader from "./DashboardHeader";
 import CollectorHeader from "@/components/dashboard/collector/CollectorHeader";
 import RequesterHeader from "@/components/dashboard/requester/RequesterHeader";
+import PersonalHeader from "@/components/dashboard/personal/PersonalHeader";
+import CompanyHeader from "@/components/dashboard/company/CompanyHeader";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 interface DashboardLayoutProps {
@@ -44,6 +46,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900">
         <div className="sticky top-0 z-20 px-2 pt-2 md:px-4 md:pt-4 bg-[#F4F5FA] dark:bg-gray-900 pb-2">
           <RequesterHeader />
+        </div>
+        <main className="px-2 pb-4 md:px-4 md:pb-6">{children}</main>
+      </div>
+    );
+  }
+
+  // Personal / company: same top nav pattern as requester
+  if (role === "personal") {
+    return (
+      <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900">
+        <div className="sticky top-0 z-20 px-2 pt-2 md:px-4 md:pt-4 bg-[#F4F5FA] dark:bg-gray-900 pb-2">
+          <PersonalHeader />
+        </div>
+        <main className="px-2 pb-4 md:px-4 md:pb-6">{children}</main>
+      </div>
+    );
+  }
+
+  if (role === "company") {
+    return (
+      <div className="min-h-screen bg-[#F4F5FA] dark:bg-gray-900">
+        <div className="sticky top-0 z-20 px-2 pt-2 md:px-4 md:pt-4 bg-[#F4F5FA] dark:bg-gray-900 pb-2">
+          <CompanyHeader />
         </div>
         <main className="px-2 pb-4 md:px-4 md:pb-6">{children}</main>
       </div>
