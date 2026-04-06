@@ -941,16 +941,16 @@ export default function CollectorDashboard() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 pt-2">
+    <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 pt-1 sm:pt-2">
       {/* ── Left panel ── */}
-      <aside className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-4">
+      <aside className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-3 sm:gap-4">
         {/* User info card */}
         <Card className="dark:bg-gray-800/50 border-none shadow-sm ">
-          <CardContent className="px-6">
+          <CardContent className="px-4 sm:px-6">
             <div className="flex flex-col items-start gap-3">
-              <div className="flex gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <div className="relative">
-                  <Avatar className="w-20 h-20">
+                  <Avatar className="w-14 h-14 sm:w-20 sm:h-20">
                     <AvatarImage src={profile?.avatar_url || "/default-avatar.svg"} />
                     <AvatarFallback className="p-0 overflow-hidden text-2xl font-bold bg-gradient-to-br from-cyan-400 to-blue-500 text-white">
                       <img
@@ -960,7 +960,7 @@ export default function CollectorDashboard() {
                       />
                     </AvatarFallback>
                   </Avatar>
-                  <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-emerald-400 border-[4px] border-white dark:border-gray-800" />
+                  <span className="absolute bottom-0 right-0 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-400 border-[3px] sm:border-[4px] border-white dark:border-gray-800" />
                 </div>
 
                 <div className="flex flex-col gap-1.5 justify-center">
@@ -974,7 +974,7 @@ export default function CollectorDashboard() {
                   {profile?.location?.address ? (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <MapPin className="w-4 h-4 shrink-0" />
-                      <span className="truncate text-sm w-24 md:w-32">
+                      <span className="truncate text-sm max-w-[9rem] sm:max-w-[12rem]">
                         {[profile.location.city, profile.location.country]
                           .filter(Boolean)
                           .join(", ") || profile.location.address}
@@ -983,7 +983,7 @@ export default function CollectorDashboard() {
                   ) : (
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <MapPin className="w-4 h-4 shrink-0" />
-                      <span className="truncate text-sm w-32">
+                      <span className="truncate text-sm max-w-[9rem] sm:max-w-[12rem]">
                         No location set
                       </span>
                     </div>
@@ -1061,7 +1061,7 @@ export default function CollectorDashboard() {
 
         {/* Balance card */}
         <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-          <CardContent className="px-6">
+          <CardContent className="px-4 sm:px-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                 Available Balance
@@ -1089,7 +1089,7 @@ export default function CollectorDashboard() {
 
         {/* Quick Actions card */}
         <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-          <CardContent className="px-6">
+          <CardContent className="px-4 sm:px-6">
             <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
               Quick Actions
             </p>
@@ -1149,7 +1149,7 @@ export default function CollectorDashboard() {
                 </g>
               </svg>
             </div>
-            <CardContent className="relative px-6 flex items-center gap-4">
+            <CardContent className="relative px-4 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
               <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-white/20 flex items-center justify-center">
                 <svg
                   viewBox="0 0 512 512"
@@ -1174,7 +1174,7 @@ export default function CollectorDashboard() {
               </div>
               <Button
                 size="sm"
-                className="btn-gelatine shrink-0 text-xs h-8 bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm"
+                className="btn-gelatine w-full sm:w-auto shrink-0 text-xs h-8 bg-white/20 hover:bg-white/30 text-white border border-white/30 backdrop-blur-sm"
                 onClick={() => router.push("/dashboard/settings")}
               >
                 Update Profile
@@ -1185,13 +1185,13 @@ export default function CollectorDashboard() {
 
         {/* Tabs + filter bar */}
         <Card className="dark:bg-gray-800/50 border-none shadow-sm pt-2">
-          <CardHeader className="px-6 pt-4 pb-0">
+          <CardHeader className="px-4 sm:px-6 pt-4 pb-0">
             <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
               Jobs for You
             </CardTitle>
           </CardHeader>
           <CardContent className="py-0 px-0">
-            <div className="px-6 py-3">
+            <div className="px-4 sm:px-6 py-3">
               <JobsTabsBar
                 activeTab={activeTab}
                 onChangeTab={(tab) => {
@@ -1206,9 +1206,9 @@ export default function CollectorDashboard() {
 
             {/* Best Matches: two-column layout (map left, jobs right) */}
             {showBestMatchesExtras && hasLocation ? (
-              <div className="flex h-[calc(100vh-280px)] overflow-hidden">
+              <div className="flex flex-col lg:flex-row lg:h-[calc(100vh-280px)] overflow-hidden">
                 {/* Left: Map panel */}
-                <div className="w-2/5 pl-6 pt-3">
+                <div className="w-full lg:w-2/5 px-4 sm:px-6 lg:pl-6 lg:pr-0 pt-2 sm:pt-3">
                   <div className="rounded-xl overflow-hidden">
                     <LocationMapPreview
                       lat={collectorLat!}
@@ -1222,8 +1222,8 @@ export default function CollectorDashboard() {
 
                 {/* Right: Jobs list panel */}
                 <div className="flex-1 overflow-hidden">
-                  <ScrollArea className="h-full">
-                    <div className="pl-4 py-3">
+                  <ScrollArea className="h-[58dvh] lg:h-full">
+                    <div className="px-4 sm:px-6 lg:pl-4 py-3">
                       <ProjectList
                         projects={tabProjects}
                         activeTab={activeTab}
@@ -1246,8 +1246,8 @@ export default function CollectorDashboard() {
               </div>
             ) : (
               /* Recent / Saved / Best without location: single column */
-              <ScrollArea className="h-[calc(100vh-280px)]">
-                <div className="pl-6 pt-3">
+              <ScrollArea className="h-[62dvh] sm:h-[calc(100vh-280px)]">
+                <div className="px-4 sm:px-6 pt-3">
                   <ProjectList
                     projects={tabProjects}
                     activeTab={activeTab}

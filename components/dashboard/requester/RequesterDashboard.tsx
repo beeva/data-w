@@ -768,25 +768,25 @@ export default function RequesterDashboard() {
       : null;
 
   return (
-    <div className="p-2">
+    <div className="p-1 sm:p-2">
       <CreateProjectDialog
         open={createProjectOpen}
         onOpenChange={setCreateProjectOpen}
         onSuccess={fetchData}
       />
       {guideOverlay}
-      <div className="flex flex-col lg:flex-row gap-6 pt-2">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 pt-1 sm:pt-2">
         {/* Left panel – User info (like collector) */}
         <aside
           data-guide="sidebar"
-          className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-4"
+          className="w-full lg:w-64 xl:w-72 shrink-0 flex flex-col gap-3 sm:gap-4"
         >
           <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-            <CardContent className="px-6">
+            <CardContent className="px-4 sm:px-6">
               <div className="flex flex-col items-start gap-3">
-                <div className="flex gap-4">
+                <div className="flex items-center gap-3 sm:gap-4">
                   <div className="relative">
-                    <Avatar className="w-20 h-20">
+                    <Avatar className="w-14 h-14 sm:w-20 sm:h-20">
                       <AvatarImage src={profile?.avatar_url || "/default-avatar.svg"} />
                       <AvatarFallback className="p-0 overflow-hidden text-2xl font-bold bg-gradient-to-br from-cyan-400 to-blue-500 text-white">
                         <img
@@ -796,7 +796,7 @@ export default function RequesterDashboard() {
                         />
                       </AvatarFallback>
                     </Avatar>
-                    <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-emerald-400 border-[4px] border-white dark:border-gray-800" />
+                    <span className="absolute bottom-0 right-0 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-400 border-[3px] sm:border-[4px] border-white dark:border-gray-800" />
                   </div>
 
                   <div className="flex flex-col gap-1.5 justify-center">
@@ -810,7 +810,7 @@ export default function RequesterDashboard() {
                     {profile?.location?.address ? (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <MapPin className="w-4 h-4 shrink-0" />
-                        <span className="truncate text-sm w-24 md:w-32">
+                        <span className="truncate text-sm max-w-[9rem] sm:max-w-[12rem]">
                           {[profile.location.city, profile.location.country]
                             .filter(Boolean)
                             .join(", ") || profile.location.address}
@@ -819,7 +819,7 @@ export default function RequesterDashboard() {
                     ) : (
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <MapPin className="w-4 h-4 shrink-0" />
-                        <span className="truncate text-sm w-32">
+                        <span className="truncate text-sm max-w-[9rem] sm:max-w-[12rem]">
                           No location set
                         </span>
                       </div>
@@ -898,7 +898,7 @@ export default function RequesterDashboard() {
             data-guide="balance"
             className="dark:bg-gray-800/50 border-none shadow-sm"
           >
-            <CardContent className="px-6">
+            <CardContent className="px-4 sm:px-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                   Available Balance
@@ -929,7 +929,7 @@ export default function RequesterDashboard() {
             data-guide="quick-actions"
             className="dark:bg-gray-800/50 border-none shadow-sm"
           >
-            <CardContent className="px-6">
+            <CardContent className="px-4 sm:px-6">
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                 Quick Actions
               </p>
@@ -991,7 +991,7 @@ export default function RequesterDashboard() {
         </aside>
 
         {/* Right – main content */}
-        <section className="flex-1 min-w-0 flex flex-col gap-6">
+          <section className="flex-1 min-w-0 flex flex-col gap-4 sm:gap-6">
           {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
@@ -1062,7 +1062,7 @@ export default function RequesterDashboard() {
               return (
                 <div
                   data-guide="stats"
-                  className="grid grid-cols-2 lg:grid-cols-5 gap-6"
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6"
                 >
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Card
@@ -1088,7 +1088,7 @@ export default function RequesterDashboard() {
             return (
               <div
                 data-guide="stats"
-                className="grid grid-cols-2 lg:grid-cols-5 gap-6"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6"
               >
                 {stats.map(
                   ({
@@ -1132,9 +1132,9 @@ export default function RequesterDashboard() {
           })()}
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 h-full items-stretch">
             {/* Left Column - Projects */}
-            <div className="lg:col-span-2 flex flex-col gap-6 min-h-0">
+            <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6 min-h-0">
               {/* Projects with Tabs */}
               {(() => {
                 const COL =
@@ -1146,7 +1146,7 @@ export default function RequesterDashboard() {
                     className="dark:bg-gray-800/50 border-none shadow-md overflow-hidden pt-2 flex flex-col"
                   >
                     {/* Header */}
-                    <CardHeader className="pt-4 pl-5 pr-0">
+                    <CardHeader className="pt-4 px-4 sm:pl-5 sm:pr-0">
                       <div className="flex items-center justify-between gap-3">
                         <CardTitle className="text-base font-medium flex items-center gap-1.5 flex-shrink-0">
                           Projects
@@ -1168,7 +1168,27 @@ export default function RequesterDashboard() {
 
                     {loading ? (
                       <>
-                        <div className="flex flex-col gap-0">
+                        <div className="lg:hidden flex flex-col gap-3 px-4 pb-4">
+                          {Array.from({ length: 4 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className="rounded-xl border border-gray-100 dark:border-gray-700/40 bg-gray-50/80 dark:bg-gray-800/60 p-3"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Skeleton className="w-10 h-10 rounded-lg shrink-0" />
+                                <div className="min-w-0 flex-1 space-y-1.5">
+                                  <Skeleton className="h-4 w-32" />
+                                  <Skeleton className="h-3 w-24" />
+                                </div>
+                              </div>
+                              <div className="mt-3 grid grid-cols-2 gap-2">
+                                <Skeleton className="h-6 w-full rounded-full" />
+                                <Skeleton className="h-6 w-full rounded-full" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="hidden lg:flex flex-col gap-0">
                           <div
                             className="grid items-center px-5 py-5 bg-gray-50/80 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700/40 flex-shrink-0"
                             style={{ gridTemplateColumns: COL }}
@@ -1243,7 +1263,176 @@ export default function RequesterDashboard() {
                     ) : (
                       <>
                         {/* Table header row — sticky outside the scroll area */}
-                        <div className="flex flex-col gap-0">
+                        <div className="lg:hidden flex flex-col gap-3 px-4 pb-4">
+                          {projects.map((project) => {
+                            const progress = getProjectProgress(project);
+                            const daysLeft = getDaysUntilDeadline(
+                              project.deadline,
+                            );
+                            const isActive = project.status === "open";
+                            const isPaused =
+                              (project.status as string) === "paused";
+                            const isDone = project.status === "completed";
+                            const isCancelled =
+                              project.status === "cancelled";
+                            const displayProgress = isDone ? 100 : progress;
+
+                            const barColor = isActive
+                              ? "bg-violet-500"
+                              : isPaused
+                                ? "bg-amber-400"
+                                : isDone
+                                  ? "bg-emerald-500"
+                                  : "bg-gray-300 dark:bg-gray-600";
+
+                            const pctColor = isActive
+                              ? "text-violet-600 dark:text-violet-400"
+                              : isPaused
+                                ? "text-amber-600 dark:text-amber-400"
+                                : isDone
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-gray-400";
+
+                            return (
+                              <div
+                                key={project.id}
+                                className="rounded-xl border border-gray-100 dark:border-gray-700/40 bg-gray-50/80 dark:bg-gray-800/60 p-3 cursor-pointer"
+                                onClick={() =>
+                                  router.push(
+                                    `/dashboard/projects/${project.id}/workshop`,
+                                  )
+                                }
+                              >
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div
+                                    className={cn(
+                                      "w-10 h-10 rounded-lg flex items-center justify-center shrink-0 text-white",
+                                      getCategoryBg(project.category),
+                                    )}
+                                  >
+                                    {getCategoryIcon(project.category)}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-semibold truncate">
+                                      {project.title}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground truncate">
+                                      {project.category}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold border",
+                                      isCancelled
+                                        ? "bg-gray-100 text-gray-400 border-gray-200 dark:bg-gray-700/50 dark:text-gray-500 dark:border-gray-700"
+                                        : daysLeft !== null && daysLeft <= 3
+                                          ? "bg-red-50 text-red-600 border-red-200/60 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700/40"
+                                          : daysLeft !== null && daysLeft <= 7
+                                            ? "bg-orange-50 text-orange-600 border-orange-200/60 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-700/40"
+                                            : project.deadline === null
+                                              ? "bg-gray-100 text-gray-500 border-gray-200 dark:bg-gray-700/50 dark:text-gray-400 dark:border-gray-700"
+                                              : "bg-cyan-50 text-cyan-700 border-cyan-200/60 dark:bg-cyan-900/20 dark:text-cyan-400 dark:border-cyan-700/40",
+                                    )}
+                                  >
+                                    <Clock className="w-3 h-3 flex-shrink-0" />
+                                    {formatDeadline(project.deadline)}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold",
+                                      isActive
+                                        ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400"
+                                        : isPaused
+                                          ? "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400"
+                                          : isDone
+                                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                                            : "bg-red-500/10 text-red-600 dark:text-red-400",
+                                    )}
+                                  >
+                                    <span
+                                      className={cn(
+                                        "w-1.5 h-1.5 rounded-full flex-shrink-0",
+                                        isActive
+                                          ? "bg-cyan-500"
+                                          : isPaused
+                                            ? "bg-yellow-500"
+                                            : isDone
+                                              ? "bg-emerald-500"
+                                              : "bg-red-500",
+                                      )}
+                                    />
+                                    {isActive
+                                      ? "Active"
+                                      : isPaused
+                                        ? "Paused"
+                                        : isDone
+                                          ? "Done"
+                                          : "Cancelled"}
+                                  </span>
+                                </div>
+                                <div className="mt-3 flex items-center gap-3 min-w-0">
+                                  <span
+                                    className={cn(
+                                      "text-sm font-medium w-9 flex-shrink-0 tabular-nums",
+                                      pctColor,
+                                    )}
+                                  >
+                                    {isCancelled
+                                      ? "—"
+                                      : `${displayProgress}%`}
+                                  </span>
+                                  <div className="flex-1 h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden min-w-0">
+                                    {!isCancelled && (
+                                      <div
+                                        className={cn(
+                                          "h-full rounded-full transition-all duration-500",
+                                          barColor,
+                                        )}
+                                        style={{
+                                          width: `${displayProgress}%`,
+                                        }}
+                                      />
+                                    )}
+                                  </div>
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground flex-shrink-0 tabular-nums">
+                                    <Users className="w-3 h-3" />
+                                    {isDone
+                                      ? `${project.max_collectors}/${project.max_collectors}`
+                                      : `0/${project.max_collectors}`}
+                                  </span>
+                                </div>
+                                <div className="mt-3 flex items-center justify-between gap-2">
+                                  <span
+                                    className={cn(
+                                      "text-xs font-medium tabular-nums",
+                                    )}
+                                  >
+                                    $
+                                    {project.budget >= 1000
+                                      ? `${(project.budget / 1000).toFixed(1)}k`
+                                      : project.budget}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs shrink-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      router.push(
+                                        `/dashboard/projects/${project.id}/workshop`,
+                                      );
+                                    }}
+                                  >
+                                    Open
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="hidden lg:flex flex-col gap-0">
                           <div
                             className="grid items-center px-5 py-5 bg-gray-50/80 dark:bg-gray-800/60 border-b border-gray-100 dark:border-gray-700/40 flex-shrink-0"
                             style={{ gridTemplateColumns: COL }}
@@ -1529,8 +1718,8 @@ export default function RequesterDashboard() {
                 </CardHeader>
                 <CardContent className="pt-0 pb-5 px-5 flex flex-col flex-1 min-h-0">
                   {loading ? (
-                    <div className="grid grid-cols-5 gap-6">
-                      <div className="col-span-3 space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
+                      <div className="lg:col-span-3 space-y-4">
                         {Array.from({ length: 4 }).map((_, i) => (
                           <Skeleton
                             key={i}
@@ -1539,7 +1728,7 @@ export default function RequesterDashboard() {
                           />
                         ))}
                       </div>
-                      <div className="col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
+                      <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                         {Array.from({ length: 4 }).map((_, i) => (
                           <div key={i} className="flex flex-col gap-2">
                             <div className="flex items-center gap-2">
@@ -1616,8 +1805,8 @@ export default function RequesterDashboard() {
                         barCount * BAR_INTERVAL_PX + BOTTOM_AXIS_HEIGHT;
 
                       return (
-                        <div className="grid grid-cols-5 gap-6">
-                          <div className="col-span-3">
+                        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 lg:gap-6">
+                          <div className="lg:col-span-3">
                             <ResponsiveContainer
                               width="100%"
                               height={chartHeight}
@@ -1682,7 +1871,7 @@ export default function RequesterDashboard() {
                           </div>
 
                           {/* Legend — color dot, project name, amount & % */}
-                          <div className="shrink-0 col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
+                          <div className="shrink-0 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-4">
                             {chartData.map((item) => (
                               <div
                                 key={item.id}
@@ -1717,7 +1906,7 @@ export default function RequesterDashboard() {
             </div>
 
             {/* Right Column - Notifications & Deadlines */}
-            <div className="flex flex-col gap-6 min-h-0">
+            <div className="flex flex-col gap-4 sm:gap-6 min-h-0">
               {/* Upcoming Deadlines */}
               <Card
                 data-guide="deadlines"
@@ -1858,7 +2047,7 @@ export default function RequesterDashboard() {
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                 {closest.title}
                               </p>
-                              <div className="grid grid-cols-2 gap-4 mt-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                                 <div className="flex items-start gap-3">
                                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                                     <Calendar className="w-5 h-5 text-primary" />
