@@ -39,6 +39,7 @@ import {
   ChevronUp,
   CheckCircle2,
   XCircle,
+  X,
   Bookmark,
   RefreshCw,
   SlidersHorizontal,
@@ -266,12 +267,12 @@ function ProjectCard({
 
   return (
     <div
-      className="group relative flex items-stretch gap-4 rounded-xl border border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all cursor-pointer p-4"
+      className="group relative flex flex-col gap-3 rounded-xl border border-transparent bg-gray-50 p-3.5 transition-all cursor-pointer hover:border-gray-200 hover:bg-white hover:shadow-sm dark:bg-gray-800/50 dark:hover:border-gray-700 dark:hover:bg-gray-800 sm:flex-row sm:items-stretch sm:gap-4 sm:p-4"
       onClick={() => onSelectProject(project)}
     >
       {/* Category icon */}
       <div
-        className={`shrink-0 w-12 h-12 rounded-xl ${catMeta.bg} flex items-center justify-center mt-0.5`}
+        className={`shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${catMeta.bg} flex items-center justify-center mt-0.5`}
         style={{ color: catMeta.accent }}
       >
         {categoryIcon}
@@ -281,7 +282,7 @@ function ProjectCard({
       <div className="flex-1 min-w-0">
         {/* Title row */}
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <h3 className="text-base font-semibold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">
+          <h3 className="text-sm sm:text-base font-semibold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors break-words">
             {project.title}
           </h3>
           {slotsFilled && !proposal && (
@@ -292,14 +293,14 @@ function ProjectCard({
         </div>
 
         {/* Price & Deadline */}
-        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 mb-1.5 flex-wrap">
           <span className="inline-flex items-center gap-1 text-xs">
             <span className="text-muted-foreground">Price:</span>
             <span className="font-semibold text-muted-foreground">
               ${project.budget.toFixed(2)}
             </span>
           </span>
-          <span className="text-muted-foreground/30 text-xs">·</span>
+          <span className="hidden sm:inline text-muted-foreground/30 text-xs">·</span>
           <span className="inline-flex items-center gap-1 text-xs">
             <span className="text-muted-foreground">Deadline:</span>
             <span className="font-medium text-muted-foreground">
@@ -393,7 +394,7 @@ function ProjectCard({
 
       {/* Right actions */}
       <div
-        className="shrink-0 flex flex-col items-end justify-between gap-2 pl-1"
+        className="shrink-0 flex w-full sm:w-auto flex-row sm:flex-col items-center sm:items-end justify-between gap-2 pl-0 sm:pl-1"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -404,11 +405,11 @@ function ProjectCard({
         >
           {isSaved ? (
             <Bookmark
-              className="w-6 h-6 text-cyan-600 dark:text-cyan-400"
+              className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 dark:text-cyan-400"
               fill="currentColor"
             />
           ) : (
-            <Bookmark className="w-6 h-6" />
+            <Bookmark className="w-5 h-5 sm:w-6 sm:h-6" />
           )}
         </button>
 
@@ -631,6 +632,7 @@ export default function FindProjects() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const [expandedSections, setExpandedSections] = useState({
     category: true,
@@ -651,6 +653,15 @@ export default function FindProjects() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!mobileFiltersOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [mobileFiltersOpen]);
 
   useEffect(() => {
     if (!userId) return;
@@ -1097,11 +1108,11 @@ export default function FindProjects() {
   ).length;
 
   return (
-    <div className="min-h-screen pt-2">
+    <div className="min-h-screen pt-1 sm:pt-2">
       {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Find Projects</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Find Projects</h1>
+        <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
           Browse available data collection projects from requesters and start
           earning
         </p>
@@ -1113,30 +1124,57 @@ export default function FindProjects() {
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
         {/* ── Left: Filter sidebar ── */}
-        <aside className="w-full lg:w-64 xl:w-72 shrink-0">
-          <Card className="dark:bg-gray-800/50 border-none shadow-sm pt-6">
-            <CardHeader className="px-6 pb-0">
+        {mobileFiltersOpen && (
+          <button
+            type="button"
+            aria-label="Close filters panel"
+            className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+            onClick={() => setMobileFiltersOpen(false)}
+          />
+        )}
+        <aside
+          className={cn(
+            "shrink-0 w-[86vw] max-w-sm fixed inset-y-0 left-0 z-50 overflow-y-auto bg-white dark:bg-gray-900 transition-transform duration-300 ease-out lg:static lg:z-auto lg:w-64 xl:w-72 lg:bg-transparent lg:dark:bg-transparent",
+            mobileFiltersOpen
+              ? "translate-x-0"
+              : "-translate-x-full lg:translate-x-0",
+          )}
+        >
+          <Card className="bg-white dark:bg-gray-900 lg:bg-transparent lg:dark:bg-gray-800/50 border-none shadow-sm pt-4 sm:pt-6 rounded-none lg:rounded-xl min-h-full">
+            <CardHeader className="px-4 sm:px-6 pb-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
                   <SlidersHorizontal className="w-4 h-4" />
                   Filters
                 </CardTitle>
-                {hasActiveFilters && (
+                <div className="flex items-center gap-2">
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearFilters}
+                      className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 h-auto py-0.5 px-0 hover:bg-transparent hover:underline"
+                    >
+                      Clear all
+                    </Button>
+                  )}
                   <Button
+                    type="button"
                     variant="ghost"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="text-xs text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 h-auto py-0.5 px-0 hover:bg-transparent hover:underline"
+                    size="icon"
+                    className="h-7 w-7 lg:hidden"
+                    onClick={() => setMobileFiltersOpen(false)}
+                    aria-label="Close filters"
                   >
-                    Clear all
+                    <X className="w-4 h-4" />
                   </Button>
-                )}
+                </div>
               </div>
             </CardHeader>
 
-            <CardContent className="px-6 space-y-5">
+            <CardContent className="px-4 sm:px-6 space-y-4 sm:space-y-5">
               {/* Category Filter */}
               <div>
                 <button
@@ -1342,9 +1380,9 @@ export default function FindProjects() {
         </aside>
 
         {/* ── Right: Main section ── */}
-        <section className="flex-1 min-w-0 flex flex-col gap-6">
+        <section className="flex-1 min-w-0 flex flex-col gap-4 sm:gap-6">
           {/* Stats row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
             <Card className="bg-white dark:bg-gray-800/50 border-none shadow-md">
               <CardContent className="px-4">
                 <div className="flex items-end justify-between">
@@ -1426,17 +1464,33 @@ export default function FindProjects() {
             </Card>
           </div>
 
+          <div className="lg:hidden">
+            <Button
+              type="button"
+              onClick={() => setMobileFiltersOpen(true)}
+              className="h-9 inline-flex items-center gap-2 rounded-lg bg-gray-100 text-foreground hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
+            >
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+              {hasActiveFilters && (
+                <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  Active
+                </span>
+              )}
+            </Button>
+          </div>
+
           {/* Project list card */}
           <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-            <CardHeader className="px-6">
-              <div className="flex items-center justify-between gap-6">
+            <CardHeader className="px-4 sm:px-6">
+              <div className="flex flex-col items-stretch gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
                 {/* Search bar */}
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   {hasActiveFilters
                     ? `${filteredProjects.length} result${filteredProjects.length !== 1 ? "s" : ""} found`
                     : `${filteredProjects.length} project${filteredProjects.length !== 1 ? "s" : ""}`}
                 </span>
-                <div className="relative flex-1">
+                <div className="relative w-full lg:flex-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search projects by title or description..."
@@ -1446,11 +1500,11 @@ export default function FindProjects() {
                   />
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:w-auto">
                   <button
                     onClick={() => setShowSavedOnly((prev) => !prev)}
                     className={cn(
-                      "inline-flex items-center gap-1.5 h-10 px-3 rounded-md text-sm font-medium transition-colors",
+                      "inline-flex items-center justify-center gap-1.5 h-10 px-3 rounded-md text-sm font-medium transition-colors w-full sm:w-auto",
                       showSavedOnly
                         ? "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300"
                         : "bg-gray-50 dark:bg-gray-800/50 text-muted-foreground hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800",
@@ -1477,7 +1531,7 @@ export default function FindProjects() {
                     value={sortBy}
                     onValueChange={(v) => setSortBy(v as typeof sortBy)}
                   >
-                    <SelectTrigger className="!h-10 w-44 text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground">
+                    <SelectTrigger className="!h-10 w-full sm:w-44 text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground">
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-50 dark:bg-[#111827] text-foreground border-none dark:border-gray-700">
@@ -1512,9 +1566,9 @@ export default function FindProjects() {
             </CardHeader>
 
             {hasActiveFilters && (
-              <div className="px-6 pb-3 flex flex-wrap items-center gap-4">
+              <div className="px-4 sm:px-6 pb-3 flex flex-wrap items-center gap-2 sm:gap-4">
                 {showSavedOnly && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-900/30 px-3 py-1 text-sm text-cyan-700 dark:text-cyan-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-900/30 px-2.5 py-1 text-xs sm:text-sm text-cyan-700 dark:text-cyan-300">
                     <Bookmark className="w-3 h-3 fill-current" />
                     Saved jobs
                     <button
@@ -1526,7 +1580,7 @@ export default function FindProjects() {
                   </span>
                 )}
                 {searchTerm && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-sm text-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs sm:text-sm text-foreground">
                     &ldquo;{searchTerm}&rdquo;
                     <button
                       onClick={() => setSearchTerm("")}
@@ -1539,7 +1593,7 @@ export default function FindProjects() {
                 {selectedCategories.map((cat) => (
                   <span
                     key={cat}
-                    className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-900/30 px-3 py-1 text-sm text-cyan-700 dark:text-cyan-300"
+                    className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-900/30 px-2.5 py-1 text-xs sm:text-sm text-cyan-700 dark:text-cyan-300"
                   >
                     {cat}
                     <button
@@ -1557,7 +1611,7 @@ export default function FindProjects() {
                 {selectedDataTypes.map((dt) => (
                   <span
                     key={dt}
-                    className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30 px-3 py-1 text-sm text-purple-700 dark:text-purple-300"
+                    className="inline-flex items-center gap-1 rounded-full bg-purple-100 dark:bg-purple-900/30 px-2.5 py-1 text-xs sm:text-sm text-purple-700 dark:text-purple-300"
                   >
                     {dt}
                     <button
@@ -1575,7 +1629,7 @@ export default function FindProjects() {
                 {selectedCountries.map((country) => (
                   <span
                     key={country}
-                    className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/30 px-3 py-1 text-sm text-blue-700 dark:text-blue-300"
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/30 px-2.5 py-1 text-xs sm:text-sm text-blue-700 dark:text-blue-300"
                   >
                     {country}
                     <button
@@ -1591,7 +1645,7 @@ export default function FindProjects() {
                   </span>
                 ))}
                 {(budgetRange.min > 0 || budgetRange.max < 100000) && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-3 py-1 text-sm text-emerald-700 dark:text-emerald-300">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/30 px-2.5 py-1 text-xs sm:text-sm text-emerald-700 dark:text-emerald-300">
                     {budgetRange.min > 0 && budgetRange.max < 100000
                       ? `$${budgetRange.min.toLocaleString()} – $${budgetRange.max.toLocaleString()}`
                       : budgetRange.min > 0
@@ -1607,14 +1661,14 @@ export default function FindProjects() {
                 )}
                 <button
                   onClick={clearFilters}
-                  className="text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
+                  className="text-xs sm:text-sm text-muted-foreground hover:text-foreground underline underline-offset-2"
                 >
                   Clear all
                 </button>
               </div>
             )}
 
-            <CardContent className="px-6 pt-0">
+            <CardContent className="px-4 sm:px-6 pt-0">
               {filteredProjects.length === 0 ? (
                 <div className="text-center py-16">
                   <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40" />
@@ -1660,10 +1714,10 @@ export default function FindProjects() {
                   })}
 
                   {filteredProjects.length > 0 && (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                       {/* Left: info + per-page select */}
-                      <div className="flex items-center gap-3">
-                        <p className="text-sm text-muted-foreground whitespace-nowrap">
+                      <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-3">
+                        <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                           {filteredProjects.length > itemsPerPage ? (
                             <>
                               {(currentPage - 1) * itemsPerPage + 1}–
@@ -1687,7 +1741,7 @@ export default function FindProjects() {
                             setCurrentPage(1);
                           }}
                         >
-                          <SelectTrigger className="h-8 w-[110px] text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground">
+                          <SelectTrigger className="h-8 w-[108px] text-xs sm:text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-gray-50 dark:bg-[#111827] text-foreground border-none dark:border-gray-700">
@@ -1706,7 +1760,7 @@ export default function FindProjects() {
 
                       {/* Right: page navigation */}
                       {totalPages > 1 && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2">
                           <Button
                             variant="outline"
                             size="icon"
@@ -1718,7 +1772,11 @@ export default function FindProjects() {
                           >
                             <ChevronLeft className="w-4 h-4" />
                           </Button>
-                          {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          <span className="sm:hidden text-xs text-muted-foreground">
+                            Page {currentPage} / {totalPages}
+                          </span>
+                          <div className="hidden sm:flex items-center gap-1">
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
                             .filter(
                               (page) =>
                                 page === 1 ||
@@ -1764,6 +1822,7 @@ export default function FindProjects() {
                                 </Button>
                               ),
                             )}
+                          </div>
                           <Button
                             variant="outline"
                             size="icon"
