@@ -208,9 +208,9 @@ function renderPieNameLabel(props: {
 
 const TokenDistributionChart = memo(function TokenDistributionChart() {
   return (
-    <div className="flex items-center justify-center">
+    <div className="flex w-full flex-col-reverse items-center justify-center gap-6 sm:gap-8 md:flex-row md:items-center">
       {/* Legend with full names */}
-      <div className="flex flex-col justify-center gap-6">
+      <div className="grid w-full max-w-sm grid-cols-1 gap-3 sm:grid-cols-2 md:flex md:max-w-none md:flex-col md:gap-6">
         {TOKEN_DISTRIBUTION_DATA.map((entry) => (
           <div
             key={entry.name}
@@ -225,7 +225,7 @@ const TokenDistributionChart = memo(function TokenDistributionChart() {
           </div>
         ))}
       </div>
-      <div className="w-64 h-64 sm:w-72 sm:h-72 md:w-[400px] md:h-[400px]">
+      <div className="h-64 w-full max-w-[320px] sm:h-72 sm:max-w-[360px] md:h-[400px] md:max-w-[400px]">
         <ResponsiveContainer
           width="100%"
           height="100%"
