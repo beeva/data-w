@@ -35,6 +35,7 @@ import {
   Bookmark,
   FileText,
   ArrowLeftRight,
+  Menu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +67,7 @@ export default function CollectorHeader() {
   const pathname = usePathname();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifTab, setNotifTab] = useState<"activity" | "messages">("activity");
   const [mounted, setMounted] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -297,6 +299,7 @@ export default function CollectorHeader() {
 
   const isProjectsActive =
     pathname?.startsWith("/dashboard/projects") ||
+    pathname?.startsWith("/dashboard/proposals") ||
     pathname === "/dashboard/home";
   const isFinancesActive =
     pathname?.startsWith("/dashboard/billing") ||
@@ -309,6 +312,11 @@ export default function CollectorHeader() {
       active
         ? "text-cyan-600 dark:text-cyan-400 bg-white dark:bg-transparent"
         : "text-gray-600 dark:text-gray-300",
+    );
+  const mobileMenuItemClass = (active: boolean) =>
+    cn(
+      "gap-2.5 cursor-pointer",
+      active && "bg-cyan-50 text-cyan-700 dark:bg-cyan-900/20 dark:text-cyan-300",
     );
 
   return (
@@ -323,15 +331,15 @@ export default function CollectorHeader() {
         />
       )}
 
-      <header className="h-16 bg-white dark:bg-gray-800/50 flex items-center justify-between rounded-2xl px-4 sm:px-6 flex-shrink-0 shadow-sm">
+      <header className="bg-white dark:bg-gray-800/50 flex flex-wrap items-center justify-between gap-y-2 rounded-2xl px-3 py-2 sm:px-6 sm:py-3 flex-shrink-0 shadow-sm">
         {/* Left: Logo + Nav */}
-        <div className="flex items-center gap-5 lg:gap-7">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-5 lg:gap-7">
           {/* Logo */}
           <Link
             href="/dashboard/home"
             className="btn-gelatine shrink-0 flex items-center"
           >
-            <div className="relative h-10 w-[120px] dark:hidden">
+            <div className="relative h-9 w-[104px] sm:h-10 sm:w-[120px] dark:hidden">
               <Image
                 src="/logo-dark.png"
                 alt="DataW"
@@ -340,7 +348,7 @@ export default function CollectorHeader() {
                 sizes="120px"
               />
             </div>
-            <div className="relative hidden h-10 w-[120px] dark:block">
+            <div className="relative hidden h-9 w-[104px] sm:h-10 sm:w-[120px] dark:block">
               <Image
                 src="/logo.png"
                 alt="DataW"
@@ -436,6 +444,88 @@ export default function CollectorHeader() {
 
         {/* Right: Search + Controls */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Mobile navigation menu */}
+          <DropdownMenu open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                aria-label="Open navigation menu"
+                className={cn(
+                  "btn-gelatine h-8 w-8 sm:h-9 sm:w-9 p-0 rounded-lg lg:hidden",
+                  mobileMenuOpen
+                    ? "text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-900/20"
+                    : "text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-gray-50 dark:bg-gray-700/50",
+                )}
+              >
+                <Menu className="w-[18px] h-[18px]" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-56 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
+            >
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/projects/find")}
+                className={mobileMenuItemClass(
+                  pathname?.startsWith("/dashboard/projects/find") ?? false,
+                )}
+              >
+                <Briefcase className="w-3.5 h-3.5 text-cyan-500" />
+                Find Work
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/projects/saved")}
+                className={mobileMenuItemClass(
+                  pathname?.startsWith("/dashboard/projects/saved") ?? false,
+                )}
+              >
+                <Bookmark className="w-3.5 h-3.5 text-cyan-500" />
+                Saved Jobs
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/proposals")}
+                className={mobileMenuItemClass(
+                  pathname?.startsWith("/dashboard/proposals") ?? false,
+                )}
+              >
+                <FileText className="w-3.5 h-3.5 text-cyan-500" />
+                Proposals
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/billing")}
+                className={mobileMenuItemClass(
+                  pathname?.startsWith("/dashboard/billing") ?? false,
+                )}
+              >
+                <CreditCard className="w-3.5 h-3.5 text-cyan-500" />
+                Billing &amp; Subscription
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/wallet")}
+                className={mobileMenuItemClass(
+                  pathname?.startsWith("/dashboard/wallet") ?? false,
+                )}
+              >
+                <ArrowLeftRight className="w-3.5 h-3.5 text-cyan-500" />
+                Transactions
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => router.push("/dashboard/messages")}
+                className={mobileMenuItemClass(isMessagesActive)}
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-cyan-500" />
+                Messages
+                {unreadMessagesCount > 0 && (
+                  <span className="ml-auto min-w-[16px] h-[16px] inline-flex items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-none text-white">
+                    {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
+                  </span>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Search */}
           <div
             className="relative hidden md:block flex-1 max-w-[240px] lg:max-w-sm"
@@ -655,7 +745,7 @@ export default function CollectorHeader() {
             variant="ghost"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             aria-label="Toggle theme"
-            className="btn-gelatine h-9 w-9 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+            className="btn-gelatine h-8 w-8 sm:h-9 sm:w-9 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
           >
             {mounted && theme === "dark" ? (
               <Sun className="w-[18px] h-[18px]" />
@@ -670,7 +760,7 @@ export default function CollectorHeader() {
               variant="ghost"
               onClick={toggleNotifications}
               aria-label="Notifications"
-              className="btn-gelatine relative h-9 w-9 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+            className="btn-gelatine relative h-8 w-8 sm:h-9 sm:w-9 p-0 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
             >
               <Bell className="w-[18px] h-[18px]" />
               {unreadCount > 0 && (
@@ -864,10 +954,10 @@ export default function CollectorHeader() {
           <div className="relative" ref={profileMenuRef}>
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="btn-gelatine flex items-center h-9 rounded-lg hover:opacity-90 transition-opacity"
+              className="btn-gelatine flex items-center h-8 sm:h-9 rounded-lg hover:opacity-90 transition-opacity"
             >
               <div className="relative shrink-0">
-                <Avatar className="w-9 h-9">
+                <Avatar className="w-8 h-8 sm:w-9 sm:h-9">
                   <AvatarImage src={profile?.avatar_url || "/default-avatar.svg"} />
                   <AvatarFallback className="p-0 overflow-hidden">
                     <img
@@ -943,6 +1033,68 @@ export default function CollectorHeader() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Mobile search */}
+        <div className="order-3 w-full md:hidden" ref={searchRef}>
+          <div
+            className={cn(
+              "flex items-center h-9 rounded-lg border bg-gray-50 dark:bg-gray-700/50 transition-all duration-200",
+              showSearchResults || searchQuery
+                ? "border-cyan-400 dark:border-cyan-500 ring-2 ring-cyan-500/15 bg-white dark:bg-gray-700"
+                : "border-transparent",
+            )}
+          >
+            <span className="pl-3 flex items-center shrink-0">
+              {searchLoading ? (
+                <Loader2 className="w-4 h-4 text-cyan-500 animate-spin" />
+              ) : (
+                <Search
+                  className={cn(
+                    "w-4 h-4 transition-colors",
+                    searchQuery
+                      ? "text-cyan-500"
+                      : "text-gray-400 dark:text-gray-500",
+                  )}
+                />
+              )}
+            </span>
+            <input
+              type="text"
+              placeholder="Search projects…"
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setShowSearchResults(false);
+                  setSearchQuery("");
+                  setSearchResults([]);
+                  (e.target as HTMLInputElement).blur();
+                } else if (e.key === "Enter" && searchResults.length > 0) {
+                  setShowSearchResults(false);
+                  setSearchQuery("");
+                  setSearchResults([]);
+                  router.push(`/dashboard/projects/find`);
+                }
+              }}
+              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-gray-400 dark:placeholder:text-gray-500 pl-2.5 pr-1 py-0 h-full outline-none min-w-0"
+            />
+            <span className="pr-2 flex items-center gap-1 shrink-0">
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchResults([]);
+                    setShowSearchResults(false);
+                  }}
+                  className="flex items-center justify-center w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                >
+                  <X className="w-2.5 h-2.5 text-gray-500 dark:text-gray-400" />
+                </button>
+              ) : null}
+            </span>
           </div>
         </div>
       </header>

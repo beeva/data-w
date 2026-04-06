@@ -91,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let isMounted = true
     let subscription: { unsubscribe: () => void } | null = null
     let consecutiveRefreshFailures = 0
+    let refreshInFlight = false
 
     const performLocalSignOut = async () => {
       try {
@@ -204,10 +205,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Keep session fresh proactively (some projects use short JWT lifetimes, e.g. ~5 minutes).
     const refreshSessionSafely = async () => {
       if (!isMounted) return
+      if (refreshInFlight) return
       if (!lastUserIdRef.current) {
         consecutiveRefreshFailures = 0
         return
       }
+      refreshInFlight = true
       const refreshWithTimeout = () =>
         Promise.race([
           supabase.auth.refreshSession(),
@@ -215,53 +218,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setTimeout(() => reject(new Error('Auth refresh timeout')), 8000)
           ),
         ])
-
+      const isRefreshTimeoutError = (err: unknown) =>
+        err instanceof Error && err.message === 'Auth refresh timeout'
       try {
-        const { error } = await refreshWithTimeout()
-        if (error) throw error
-        consecutiveRefreshFailures = 0
-        return
-      } catch (error) {
-        if (isAuthSessionMissingError(error)) {
-          // No active session to refresh; this is expected after logout/session expiry.
+        try {
+          const { error } = await refreshWithTimeout()
+          if (error) throw error
           consecutiveRefreshFailures = 0
-          if (isMounted) {
-            setUser(null)
-            setProfile(null)
-            setCachedRole(null)
-            persistRole(null)
-            lastUserIdRef.current = null
-          }
           return
+        } catch (error) {
+          if (isRefreshTimeoutError(error)) {
+            // Treat timeout as transient network latency and keep current session state.
+            // A later refresh attempt can still succeed without forcing sign-out.
+            console.warn('Session refresh timed out; keeping session and retrying later.')
+            return
+          }
+          if (isAuthSessionMissingError(error)) {
+            // No active session to refresh; this is expected after logout/session expiry.
+            consecutiveRefreshFailures = 0
+            if (isMounted) {
+              setUser(null)
+              setProfile(null)
+              setCachedRole(null)
+              persistRole(null)
+              lastUserIdRef.current = null
+            }
+            return
+          }
+          console.warn('Session refresh attempt failed, retrying once...', error)
         }
-        console.warn('Session refresh attempt failed, retrying once...', error)
-      }
 
-      await sleep(1000)
+        await sleep(1000)
 
-      try {
-        const { error } = await refreshWithTimeout()
-        if (error) throw error
-        consecutiveRefreshFailures = 0
-      } catch (error) {
-        if (isAuthSessionMissingError(error)) {
+        try {
+          const { error } = await refreshWithTimeout()
+          if (error) throw error
           consecutiveRefreshFailures = 0
-          if (isMounted) {
-            setUser(null)
-            setProfile(null)
-            setCachedRole(null)
-            persistRole(null)
-            lastUserIdRef.current = null
+        } catch (error) {
+          if (isRefreshTimeoutError(error)) {
+            // Timeout on retry should not count as hard failure.
+            console.warn('Session refresh retry timed out; will try again on next cycle.')
+            return
           }
-          return
-        }
-        consecutiveRefreshFailures += 1
-        console.error('Session refresh failed after retry:', error)
+          if (isAuthSessionMissingError(error)) {
+            consecutiveRefreshFailures = 0
+            if (isMounted) {
+              setUser(null)
+              setProfile(null)
+              setCachedRole(null)
+              persistRole(null)
+              lastUserIdRef.current = null
+            }
+            return
+          }
+          consecutiveRefreshFailures += 1
+          console.error('Session refresh failed after retry:', error)
 
-        if (consecutiveRefreshFailures >= 2) {
-          console.warn('Signing out due to repeated session refresh failures')
-          await performLocalSignOut()
+          if (consecutiveRefreshFailures >= 2) {
+            console.warn('Signing out due to repeated session refresh failures')
+            await performLocalSignOut()
+          }
         }
+      } finally {
+        refreshInFlight = false
       }
     }
 
