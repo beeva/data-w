@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import PageHero from "@/components/PageHero";
@@ -21,7 +22,9 @@ import {
   Camera,
   Check,
   Cpu,
+  Filter,
   FileText,
+  FolderKanban,
   FolderSearch,
   Image,
   LayoutGrid,
@@ -41,6 +44,8 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+
+type PoolTab = "browse" | "purchases" | "mine";
 import {
   getDataPoolItems,
   listMyDataPoolPurchases,
@@ -190,7 +195,7 @@ export default function DataPool() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { profile } = useAuth();
-  const [poolTab, setPoolTabState] = useState<"browse" | "purchases">("browse");
+  const [poolTab, setPoolTabState] = useState<PoolTab>("browse");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedDataTypes, setSelectedDataTypes] = useState<string[]>([]);
   const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
@@ -321,17 +326,21 @@ export default function DataPool() {
   useEffect(() => {
     const t = searchParams.get("tab")?.toLowerCase();
     if (t === "purchases") setPoolTabState("purchases");
+    else if (t === "mine") setPoolTabState("mine");
   }, [searchParams]);
 
   const setPoolTab = useCallback(
     (v: string) => {
-      const next = v === "purchases" ? "purchases" : "browse";
+      let next: PoolTab = "browse";
+      if (v === "purchases") next = "purchases";
+      else if (v === "mine") next = "mine";
       setPoolTabState(next);
-      if (next === "browse") {
+      if (next === "browse" || next === "mine") {
         void fetchDataPoolItems({ silent: true });
       }
       const params = new URLSearchParams(searchParams.toString());
       if (next === "purchases") params.set("tab", "purchases");
+      else if (next === "mine") params.set("tab", "mine");
       else params.delete("tab");
       const qs = params.toString();
       router.replace(qs ? `/datapool?${qs}` : "/datapool", { scroll: false });
@@ -397,11 +406,24 @@ export default function DataPool() {
     selectedFormats,
   ]);
 
+  const filteredMyItems = useMemo(() => {
+    if (!profile?.id) return [];
+    return filteredItems.filter((item) => item.owner_user_id === profile.id);
+  }, [filteredItems, profile?.id]);
+
+  const ownedDatasetCount = useMemo(() => {
+    if (!profile?.id) return 0;
+    return dataItems.filter((item) => item.owner_user_id === profile.id).length;
+  }, [dataItems, profile?.id]);
+
   const visibleItems = filteredItems.slice(0, visibleCount);
   const hasMore = filteredItems.length > visibleCount;
 
   const visiblePurchaseRows = filteredPurchases.slice(0, visibleCount);
   const hasMorePurchases = filteredPurchases.length > visibleCount;
+
+  const visibleMyItems = filteredMyItems.slice(0, visibleCount);
+  const hasMoreMine = filteredMyItems.length > visibleCount;
 
   useEffect(() => {
     setVisibleCount(itemsPerPage);
@@ -654,7 +676,7 @@ export default function DataPool() {
   );
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[#0f1419]">
+    <div className="relative min-h-screen bg-[#0f1419] overflow-x-clip">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-[min(42rem,55vh)] bg-gradient-to-b from-cyan-950/25 via-transparent to-transparent"
         aria-hidden
@@ -673,20 +695,54 @@ export default function DataPool() {
             onValueChange={setPoolTab}
             className="w-full gap-0"
           >
-            <TabsUnderlineList className="mb-6 border-white/10 px-0 gap-6 sm:gap-10">
+            <TabsUnderlineList
+              className={cn(
+                "mb-6 border-white/10 px-0",
+                // Mobile: three equal columns
+                "max-sm:grid max-sm:grid-cols-3 max-sm:gap-0 max-sm:items-stretch",
+                // Desktop: original underline row
+                "sm:flex sm:w-full sm:items-end sm:justify-start sm:gap-10",
+              )}
+            >
               <TabsUnderlineTrigger
                 value="browse"
-                className="gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100 pb-3"
+                className={cn(
+                  "text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100",
+                  "max-sm:inline-flex max-sm:min-h-[52px] max-sm:w-full max-sm:flex-col max-sm:items-center max-sm:justify-center max-sm:gap-1 max-sm:px-1 max-sm:pb-2.5 max-sm:text-[11px] max-sm:leading-tight",
+                  "sm:gap-2 sm:shrink-0 sm:pb-3",
+                )}
               >
-                <LayoutGrid className="h-4 w-4 opacity-80" />
-                Browse
+                <LayoutGrid className="h-4 w-4 opacity-80" aria-hidden />
+                <span className="max-sm:block max-sm:text-center max-sm:max-w-full max-sm:truncate sm:inline">
+                  Browse
+                </span>
+              </TabsUnderlineTrigger>
+              <TabsUnderlineTrigger
+                value="mine"
+                className={cn(
+                  "text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100",
+                  "max-sm:inline-flex max-sm:min-h-[52px] max-sm:w-full max-sm:flex-col max-sm:items-center max-sm:justify-center max-sm:gap-1 max-sm:px-1 max-sm:pb-2.5 max-sm:text-[11px] max-sm:leading-tight",
+                  "sm:gap-2 sm:shrink-0 sm:pb-3",
+                )}
+              >
+                <FolderKanban className="h-4 w-4 opacity-80" aria-hidden />
+                <span className="max-sm:text-center max-sm:max-w-full max-sm:truncate sm:hidden">
+                  Mine
+                </span>
+                <span className="hidden sm:inline">My datasets</span>
               </TabsUnderlineTrigger>
               <TabsUnderlineTrigger
                 value="purchases"
-                className="gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100 pb-3"
+                className={cn(
+                  "text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100",
+                  "max-sm:inline-flex max-sm:min-h-[52px] max-sm:w-full max-sm:flex-col max-sm:items-center max-sm:justify-center max-sm:gap-1 max-sm:px-1 max-sm:pb-2.5 max-sm:text-[11px] max-sm:leading-tight",
+                  "sm:gap-2 sm:shrink-0 sm:pb-3",
+                )}
               >
-                <ShoppingBag className="h-4 w-4 opacity-80" />
-                Purchases
+                <ShoppingBag className="h-4 w-4 opacity-80" aria-hidden />
+                <span className="max-sm:block max-sm:text-center max-sm:max-w-full max-sm:truncate sm:inline">
+                  Purchases
+                </span>
               </TabsUnderlineTrigger>
             </TabsUnderlineList>
 
@@ -746,12 +802,16 @@ export default function DataPool() {
                       placeholder={
                         poolTab === "purchases"
                           ? "Search by title, owner, or type…"
-                          : "Search titles, descriptions, tags…"
+                          : poolTab === "mine"
+                            ? "Search your listings…"
+                            : "Search titles, descriptions, tags…"
                       }
                       aria-label={
                         poolTab === "purchases"
                           ? "Search purchases"
-                          : "Search datasets"
+                          : poolTab === "mine"
+                            ? "Search my datasets"
+                            : "Search datasets"
                       }
                       className="w-full rounded-xl border border-white/10 bg-white/[0.06] py-2.5 pl-10 pr-10 text-sm text-white placeholder:text-white/35 shadow-inner transition-colors focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
                     />
@@ -773,6 +833,16 @@ export default function DataPool() {
                         : `Showing ${visibleItems.length} of ${filteredItems.length} dataset${filteredItems.length === 1 ? "" : "s"}`}
                     </p>
                   )}
+                  {poolTab === "mine" &&
+                    profile?.id &&
+                    !loading &&
+                    !error && (
+                      <p className="text-sm text-white/50 truncate">
+                        {filteredMyItems.length === 0
+                          ? "No matches"
+                          : `Showing ${visibleMyItems.length} of ${filteredMyItems.length} listing${filteredMyItems.length === 1 ? "" : "s"}`}
+                      </p>
+                    )}
                   {poolTab === "purchases" &&
                     profile?.id &&
                     !purchasesLoading &&
@@ -784,7 +854,7 @@ export default function DataPool() {
                       </p>
                     )}
                 </div>
-                {poolTab === "browse" && (
+                {(poolTab === "browse" || poolTab === "mine") && (
                   <div
                     className="inline-flex w-fit rounded-xl border border-white/10 p-1 bg-white/[0.05]"
                     role="group"
@@ -865,9 +935,10 @@ export default function DataPool() {
                 </div>
               </div>
 
-                {(poolTab === "browse" || poolTab === "purchases") &&
+                {(poolTab === "browse" || poolTab === "mine" || poolTab === "purchases") &&
                   activeFilterChips.length > 0 &&
                   !(poolTab === "browse" && loading) &&
+                  !(poolTab === "mine" && loading) &&
                   !(poolTab === "purchases" && purchasesLoading) && (
                     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-white/40">
@@ -985,6 +1056,135 @@ export default function DataPool() {
                       )}
                     </div>
                   )}
+                </>
+              ) : poolTab === "mine" ? (
+                <>
+                  {!profile?.id ? (
+                    <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-white/[0.06] to-white/[0.02] px-6 py-14 text-center shadow-[0_20px_50px_-30px_rgba(0,0,0,0.5)]">
+                      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-cyan-500/20 bg-cyan-500/10">
+                        <FolderKanban className="h-7 w-7 text-cyan-300/80" aria-hidden />
+                      </div>
+                      <p className="mt-5 text-lg font-semibold text-white/95">
+                        Sign in to manage your listings
+                      </p>
+                      <p className="mt-2 max-w-sm mx-auto text-sm text-white/55 leading-relaxed">
+                        Listed datasets appear here so you can open, edit, or track what you sell on the Data Pool.
+                      </p>
+                      <Link
+                        href="/login"
+                        className="mt-7 inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-400/45 bg-gradient-to-r from-cyan-500/20 to-teal-600/15 px-5 py-2.5 text-sm font-semibold text-cyan-100 transition-all hover:border-cyan-300/55 hover:from-cyan-500/30 hover:to-teal-600/25"
+                      >
+                        Sign in
+                      </Link>
+                    </div>
+                  ) : loading ? (
+                    <BrowseResultsSkeleton viewMode={viewMode} />
+                  ) : viewMode === "card" ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                      {visibleMyItems.map((item) => (
+                        <DataItemCard
+                          key={item.id}
+                          item={item}
+                          onRequestAccess={handleOpenDatasetDetail}
+                          currentUserId={profile?.id}
+                          onEditDataset={
+                            canListDatasets ? openEditDatasetDialog : undefined
+                          }
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {visibleMyItems.map((item) => (
+                        <DataItemListItem
+                          key={item.id}
+                          item={item}
+                          onRequestAccess={handleOpenDatasetDetail}
+                          currentUserId={profile?.id}
+                          onEditDataset={
+                            canListDatasets ? openEditDatasetDialog : undefined
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {profile?.id && hasMoreMine && (
+                    <button
+                      type="button"
+                      onClick={handleLoadMore}
+                      className="mt-12 mx-auto flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-8 py-3 text-sm font-semibold text-white transition-all hover:border-cyan-400/45 hover:bg-white/[0.12] hover:shadow-[0_0_24px_-8px_rgba(34,211,238,0.35)]"
+                    >
+                      Load more datasets
+                    </button>
+                  )}
+
+                  {profile?.id && !loading && error && (
+                    <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.08] px-6 py-8 text-center">
+                      <p className="text-red-200/95 text-base font-medium">{error}</p>
+                      <p className="mt-2 text-sm text-white/50">
+                        Check your connection and try again—we will reload your listings.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void fetchDataPoolItems()}
+                        className="mt-5 inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-4 py-2 text-sm font-semibold text-white transition-colors hover:border-cyan-400/40 hover:bg-white/[0.12]"
+                      >
+                        <RefreshCw className="h-4 w-4" aria-hidden />
+                        Try again
+                      </button>
+                    </div>
+                  )}
+                  {profile?.id &&
+                    !loading &&
+                    !error &&
+                    filteredMyItems.length === 0 &&
+                    ownedDatasetCount === 0 && (
+                      <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.03] px-6 sm:px-8 py-12 sm:py-14 text-center">
+                        <FolderKanban
+                          className="mx-auto h-12 w-12 text-cyan-400/50"
+                          strokeWidth={1.25}
+                          aria-hidden
+                        />
+                        <p className="mt-4 text-lg font-semibold text-white/90">
+                          No listings yet
+                        </p>
+                        <p className="mt-2 max-w-md mx-auto text-sm text-white/55 leading-relaxed">
+                          When you list a dataset, it appears here so you can update pricing, files, and details anytime.
+                        </p>
+                        {canListDatasets ? (
+                          <button
+                            type="button"
+                            onClick={openCreateDatasetDialog}
+                            className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-100 transition-colors hover:border-cyan-400/55 hover:bg-cyan-500/15"
+                          >
+                            <Sparkles className="h-4 w-4 shrink-0" aria-hidden />
+                            List a dataset
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setPoolTab("browse")}
+                            className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-500/35 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-100 transition-colors hover:border-cyan-400/55 hover:bg-cyan-500/15"
+                          >
+                            Browse marketplace
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  {profile?.id &&
+                    !loading &&
+                    !error &&
+                    filteredMyItems.length === 0 &&
+                    ownedDatasetCount > 0 && (
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-12 text-center">
+                        <Filter className="mx-auto h-9 w-9 text-white/25" aria-hidden />
+                        <p className="mt-3 text-base font-semibold text-white/85">No listings match</p>
+                        <p className="mt-2 text-sm text-white/50 max-w-md mx-auto leading-relaxed">
+                          Loosen filters or clear the search—your listings are still there.
+                        </p>
+                      </div>
+                    )}
                 </>
               ) : (
                 <DataPoolPurchasesPanel
