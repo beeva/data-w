@@ -584,9 +584,13 @@ export default function CollectorDashboard() {
   );
   const [savedProjectIds, setSavedProjectIds] = useState<string[]>([]);
   const skipSaveWrite = useRef(true);
+  const [guestCoords, setGuestCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
 
-  const collectorLat = profile?.location?.lat;
-  const collectorLng = profile?.location?.lng;
+  const collectorLat = profile?.location?.lat ?? guestCoords?.lat;
+  const collectorLng = profile?.location?.lng ?? guestCoords?.lng;
   const hasLocation =
     typeof collectorLat === "number" && typeof collectorLng === "number";
 
@@ -622,6 +626,43 @@ export default function CollectorDashboard() {
       JSON.stringify(savedProjectIds),
     );
   }, [savedProjectIds, userId]);
+
+  // Approximate location from IP when profile has no coordinates (same as /projects).
+  useEffect(() => {
+    if (
+      typeof profile?.location?.lat === "number" &&
+      typeof profile?.location?.lng === "number"
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const resolveGuestLocation = async () => {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          latitude?: number;
+          longitude?: number;
+        };
+        if (
+          !cancelled &&
+          typeof data.latitude === "number" &&
+          typeof data.longitude === "number"
+        ) {
+          setGuestCoords({ lat: data.latitude, lng: data.longitude });
+        }
+      } catch {
+        // Ignore errors and keep non-location fallback behavior.
+      }
+    };
+
+    resolveGuestLocation();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, profile?.location?.lat, profile?.location?.lng]);
 
   useEffect(() => {
     if (!userId) {
