@@ -54,8 +54,8 @@ export default function JobsTabsBar({
       : "border-transparent text-muted-foreground hover:text-foreground";
 
   return (
-    <div className="flex items-center justify-between gap-6">
-      <div className="flex items-center gap-5 text-sm">
+    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+      <div className="flex items-center gap-4 overflow-x-auto whitespace-nowrap text-xs sm:gap-5 sm:text-sm">
         {showAllTab && (
           <button
             type="button"
@@ -116,7 +116,7 @@ export default function JobsTabsBar({
           <SelectTrigger
             className={cn(
               variant === "projects"
-                ? "h-9 w-[140px] text-sm bg-[#0f172a] border border-white/10 rounded-lg text-white hover:bg-[#0f172a] focus:border-cyan-500 focus:ring-cyan-500/20"
+                ? "h-9 w-full sm:w-[140px] text-sm bg-[#0f172a] border border-white/10 rounded-lg text-white hover:bg-[#0f172a] focus:border-cyan-500 focus:ring-cyan-500/20"
                 : "h-7 w-[130px] text-xs bg-white dark:bg-gray-800 border dark:border-none shadow-none",
             )}
           >
