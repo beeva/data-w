@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import {
   Loader2,
   MessageCircle,
+  ChevronLeft,
   Paperclip,
   Search,
   Send,
@@ -255,6 +256,7 @@ export default function MessagesCenter() {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selectedKey, setSelectedKey] = useState("");
   const [messages, setMessages] = useState<ProjectMessage[]>([]);
+  const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [loadingConversations, setLoadingConversations] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [draft, setDraft] = useState("");
@@ -379,6 +381,12 @@ export default function MessagesCenter() {
     loadConversations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, role, isMessagingRole]);
+
+  useEffect(() => {
+    if (!selectedKey) {
+      setMobileThreadOpen(false);
+    }
+  }, [selectedKey]);
 
   const selectedConversation = useMemo(
     () =>
@@ -1133,9 +1141,14 @@ export default function MessagesCenter() {
         />
       ) : null}
       <div>
-        <div className={cn("flex h-[calc(100dvh-114px)] pt-4")}>
+        <div className={cn("flex h-[calc(100dvh-114px)] flex-col sm:flex-row pt-4")}>
           {/* Desktop: conversations list */}
-          <aside className="hidden w-80 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:flex sm:flex-col mr-6">
+          <aside
+            className={cn(
+              "w-full sm:w-80 rounded-2xl border border-slate-200/70 bg-white p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:flex sm:flex-col sm:mr-6",
+              mobileThreadOpen ? "hidden sm:flex" : "flex flex-col",
+            )}
+          >
             <div className="mb-3 flex items-center justify-between gap-2 px-1">
               <div>
                 <h2 className="text-lg font-semibold leading-tight">
@@ -1194,7 +1207,10 @@ export default function MessagesCenter() {
                     return (
                       <button
                         key={key}
-                        onClick={() => setSelectedKey(key)}
+                        onClick={() => {
+                          setSelectedKey(key);
+                          setMobileThreadOpen(true);
+                        }}
                         className={cn(
                           "group relative flex w-full gap-2 rounded-0.5xl px-2.5 py-2 text-left text-xs transition-all",
                           index > 0
@@ -1289,7 +1305,12 @@ export default function MessagesCenter() {
           </aside>
 
           {/* Desktop: messages center */}
-          <section className="flex flex-1 flex-col rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 overflow-hidden">
+          <section
+            className={cn(
+              "flex flex-1 flex-col rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900 overflow-hidden",
+              mobileThreadOpen ? "flex" : "hidden sm:flex",
+            )}
+          >
             {!selectedConversation ? (
               <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
                 <div className="rounded-full bg-primary/10 p-3 text-primary shadow-sm">
@@ -1317,8 +1338,16 @@ export default function MessagesCenter() {
                 <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
                   <div className="flex min-h-0 flex-1 flex-col">
                     {/* Header */}
-                    <div className="shrink-0 flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+                    <div className="shrink-0 flex items-center justify-between border-b border-slate-200 px-3 sm:px-4 py-3 dark:border-slate-700">
                       <div className="min-w-0 flex-1 pr-3">
+                        <button
+                          type="button"
+                          className="mb-1 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground sm:hidden"
+                          onClick={() => setMobileThreadOpen(false)}
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                          Back
+                        </button>
                         <span className="block truncate text-sm font-semibold">
                           {selectedConversation.counterpartName}
                         </span>
