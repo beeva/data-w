@@ -268,12 +268,12 @@ function ProposalCard({ proposal, onClick }: ProposalCardProps) {
 
   return (
     <div
-      className="group relative flex items-stretch gap-4 rounded-xl border border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all cursor-pointer p-4"
+      className="group relative flex flex-col gap-3 rounded-xl border border-transparent bg-gray-50 p-3.5 transition-all cursor-pointer hover:border-gray-200 hover:bg-white hover:shadow-sm dark:bg-gray-800/50 dark:hover:border-gray-700 dark:hover:bg-gray-800 sm:flex-row sm:items-stretch sm:gap-4 sm:p-4"
       onClick={onClick}
     >
       {/* Category icon */}
       <div
-        className={`shrink-0 w-12 h-12 rounded-xl ${catMeta.bg} flex items-center justify-center mt-0.5`}
+        className={`shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${catMeta.bg} flex items-center justify-center mt-0.5`}
         style={{ color: catMeta.accent }}
       >
         {categoryIcon}
@@ -283,27 +283,27 @@ function ProposalCard({ proposal, onClick }: ProposalCardProps) {
       <div className="flex-1 min-w-0">
         {/* Title row */}
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <h3 className="text-base font-semibold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">
+          <h3 className="text-sm sm:text-base font-semibold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors break-words">
             {project?.title ?? "Unknown Project"}
           </h3>
         </div>
 
         {/* Price & Deadline */}
-        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 mb-1.5 flex-wrap">
           <span className="inline-flex items-center gap-1 text-xs">
             <span className="text-muted-foreground">Price:</span>
             <span className="font-semibold text-muted-foreground">
               ${(project?.budget ?? 0).toFixed(2)}
             </span>
           </span>
-          <span className="text-muted-foreground/30 text-xs">·</span>
+          <span className="hidden sm:inline text-muted-foreground/30 text-xs">·</span>
           <span className="inline-flex items-center gap-1 text-xs">
             <span className="text-muted-foreground">Deadline:</span>
             <span className="font-medium text-muted-foreground">
               {formatDate(project?.deadline ?? null)}
             </span>
           </span>
-          <span className="text-muted-foreground/30 text-xs">·</span>
+          <span className="hidden sm:inline text-muted-foreground/30 text-xs">·</span>
           <span className="inline-flex items-center gap-1 text-xs">
             <span className="text-muted-foreground">Submitted:</span>
             <span className="font-medium text-muted-foreground">
@@ -397,11 +397,11 @@ function ProposalCard({ proposal, onClick }: ProposalCardProps) {
 
       {/* Right: status badge + hover action */}
       <div
-        className="shrink-0 flex flex-col items-end justify-between gap-2 pl-1"
+        className="shrink-0 flex w-full sm:w-auto flex-row sm:flex-col items-center sm:items-end justify-between gap-2 pl-0 sm:pl-1"
         onClick={(e) => e.stopPropagation()}
       >
         {proposalStatusBadge}
-        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-cyan-600 dark:text-cyan-400 opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-200 whitespace-nowrap">
+        <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium text-cyan-600 dark:text-cyan-400 opacity-0 group-hover:opacity-100 translate-x-1 group-hover:translate-x-0 transition-all duration-200 whitespace-nowrap">
           View Proposal
           <ArrowRight className="w-3 h-3" />
         </span>
@@ -428,16 +428,16 @@ function SectionHeader({
     <button
       type="button"
       onClick={onToggle}
-      className="w-full flex items-center gap-3 mb-4 group"
+      className="w-full flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4 group"
     >
       <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
-      <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">
         {title}
       </span>
       <span className="text-xs text-muted-foreground font-medium bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5">
         {count}
       </span>
-      <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
+      <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700 min-w-4" />
       <ChevronDown
         className={`w-4 h-4 text-muted-foreground/50 group-hover:text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "" : "-rotate-90"}`}
       />
@@ -518,11 +518,11 @@ export default function ProposalsPage() {
   };
 
   return (
-    <div className="min-h-screen pt-2">
+    <div className="min-h-screen pt-1 sm:pt-2">
       {/* Page header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">My Proposals</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">My Proposals</h1>
+        <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
           Track the status of your submitted proposals.
         </p>
       </div>
@@ -573,7 +573,7 @@ export default function ProposalsPage() {
           </Button>
         </div>
       ) : (
-        <div className="space-y-10">
+        <div className="space-y-7 sm:space-y-10">
           {/* Active */}
           <section>
             <SectionHeader

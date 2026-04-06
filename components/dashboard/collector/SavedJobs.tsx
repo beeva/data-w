@@ -238,11 +238,11 @@ function ProjectCard({
 
   return (
     <div
-      className="group relative flex items-stretch gap-4 rounded-xl border border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all cursor-pointer p-4"
+      className="group relative flex flex-col gap-3 rounded-xl border border-transparent bg-gray-50 p-3.5 transition-all cursor-pointer hover:border-gray-200 hover:bg-white hover:shadow-sm dark:bg-gray-800/50 dark:hover:border-gray-700 dark:hover:bg-gray-800 sm:flex-row sm:items-stretch sm:gap-4 sm:p-4"
       onClick={() => onSelectProject(project)}
     >
       <div
-        className={`shrink-0 w-12 h-12 rounded-xl ${catMeta.bg} flex items-center justify-center mt-0.5`}
+        className={`shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${catMeta.bg} flex items-center justify-center mt-0.5`}
         style={{ color: catMeta.accent }}
       >
         {categoryIcon}
@@ -250,7 +250,7 @@ function ProjectCard({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <h3 className="text-base font-semibold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">
+          <h3 className="text-sm sm:text-base font-semibold text-foreground group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors break-words">
             {project.title}
           </h3>
           {slotsFilled && !proposal && (
@@ -260,14 +260,14 @@ function ProjectCard({
           )}
         </div>
 
-        <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3 mb-1.5 flex-wrap">
           <span className="inline-flex items-center gap-1 text-xs">
             <span className="text-muted-foreground">Price:</span>
             <span className="font-semibold text-muted-foreground">
               ${project.budget.toFixed(2)}
             </span>
           </span>
-          <span className="text-muted-foreground/30 text-xs">·</span>
+          <span className="hidden sm:inline text-muted-foreground/30 text-xs">·</span>
           <span className="inline-flex items-center gap-1 text-xs">
             <span className="text-muted-foreground">Deadline:</span>
             <span className="font-medium text-muted-foreground">
@@ -355,7 +355,7 @@ function ProjectCard({
       </div>
 
       <div
-        className="shrink-0 flex flex-col items-end justify-between gap-2 pl-1"
+        className="shrink-0 flex w-full sm:w-auto flex-row sm:flex-col items-center sm:items-end justify-between gap-2 pl-0 sm:pl-1"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -364,7 +364,7 @@ function ProjectCard({
           className="btn-gelatine text-cyan-600 dark:text-cyan-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
           title="Remove from saved"
         >
-          <Bookmark className="w-6 h-6" fill="currentColor" />
+          <Bookmark className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" />
         </button>
         {proposal && (
           <Badge
@@ -634,14 +634,14 @@ export default function SavedJobs() {
   }
 
   return (
-    <div className="min-h-screen pt-2">
+    <div className="min-h-screen pt-1 sm:pt-2">
       {/* Page header */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between gap-4">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Saved Jobs</h1>
-              <p className="text-muted-foreground text-sm">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">Saved Jobs</h1>
+              <p className="text-muted-foreground text-xs sm:text-sm">
                 {savedProjectIds.length === 0
                   ? "You haven't saved any jobs yet"
                   : `${savedProjectIds.length} saved job${savedProjectIds.length !== 1 ? "s" : ""}`}
@@ -652,7 +652,7 @@ export default function SavedJobs() {
             variant="ghost"
             size="sm"
             onClick={() => router.push("/dashboard/projects/find")}
-            className="shrink-0 h-9 px-3 text-sm border-none text-muted-foreground hover:text-primary hover:bg-transparent dark:hover:bg-transparent hover:underline bg-transparent hover:underline"
+            className="w-full sm:w-auto justify-center sm:justify-start shrink-0 h-9 px-3 text-sm border-none text-muted-foreground hover:text-primary hover:bg-transparent dark:hover:bg-transparent hover:underline bg-transparent"
           >
             <Search className="w-3.5 h-3.5 mr-1.5" />
             Find More Jobs
@@ -690,9 +690,9 @@ export default function SavedJobs() {
       )}
 
       {savedProjectIds.length > 0 && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4 sm:gap-6">
           {/* Stats row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
             <Card className="bg-white dark:bg-gray-800/50 border-none shadow-md">
               <CardContent className="px-4">
                 <div className="flex items-end justify-between">
@@ -777,14 +777,14 @@ export default function SavedJobs() {
 
           {/* Project list card */}
           <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-            <CardHeader className="px-6">
-              <div className="flex items-center justify-between gap-4 flex-wrap">
-                <span className="text-sm text-muted-foreground shrink-0">
+            <CardHeader className="px-4 sm:px-6">
+              <div className="flex flex-col items-stretch gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <span className="text-xs sm:text-sm text-muted-foreground shrink-0">
                   {searchTerm
                     ? `${filteredProjects.length} result${filteredProjects.length !== 1 ? "s" : ""} found`
                     : `${savedProjects.length} saved job${savedProjects.length !== 1 ? "s" : ""}`}
                 </span>
-                <div className="relative flex-1 min-w-48">
+                <div className="relative w-full lg:flex-1 lg:min-w-48">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
                     placeholder="Search saved jobs..."
@@ -797,7 +797,7 @@ export default function SavedJobs() {
                   value={sortBy}
                   onValueChange={(v) => setSortBy(v as typeof sortBy)}
                 >
-                  <SelectTrigger className="!h-10 w-44 text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground shrink-0">
+                  <SelectTrigger className="!h-10 w-full sm:w-44 text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground shrink-0">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-50 dark:bg-[#111827] text-foreground border-none dark:border-gray-700">
@@ -830,7 +830,7 @@ export default function SavedJobs() {
               </div>
             </CardHeader>
 
-            <CardContent className="px-6 pt-0">
+            <CardContent className="px-4 sm:px-6 pt-0">
               {filteredProjects.length === 0 ? (
                 <div className="text-center py-16">
                   <Search className="w-12 h-12 text-muted-foreground mx-auto mb-3 opacity-40" />
@@ -866,9 +866,9 @@ export default function SavedJobs() {
                     />
                   ))}
 
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-3">
-                      <p className="text-sm text-muted-foreground whitespace-nowrap">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-3">
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                         {filteredProjects.length > itemsPerPage ? (
                           <>
                             {(currentPage - 1) * itemsPerPage + 1}–
@@ -892,7 +892,7 @@ export default function SavedJobs() {
                           setCurrentPage(1);
                         }}
                       >
-                        <SelectTrigger className="h-8 w-[110px] text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground">
+                        <SelectTrigger className="h-8 w-[108px] text-xs sm:text-sm bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800/50 border-none text-foreground">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-50 dark:bg-[#111827] text-foreground border-none dark:border-gray-700">
@@ -910,7 +910,7 @@ export default function SavedJobs() {
                     </div>
 
                     {totalPages > 1 && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2">
                         <Button
                           variant="outline"
                           size="icon"
@@ -922,7 +922,11 @@ export default function SavedJobs() {
                         >
                           <ChevronLeft className="w-4 h-4" />
                         </Button>
-                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        <span className="sm:hidden text-xs text-muted-foreground">
+                          Page {currentPage} / {totalPages}
+                        </span>
+                        <div className="hidden sm:flex items-center gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1)
                           .filter(
                             (page) =>
                               page === 1 ||
@@ -961,6 +965,7 @@ export default function SavedJobs() {
                               </Button>
                             ),
                           )}
+                        </div>
                         <Button
                           variant="outline"
                           size="icon"
