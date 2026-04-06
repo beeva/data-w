@@ -201,6 +201,7 @@ export default function DataPool() {
   const [visibleCount, setVisibleCount] = useState<number>(8);
   const [viewMode, setViewMode] = useState<"card" | "list">("list");
   const [datasetDialogOpen, setDatasetDialogOpen] = useState(false);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [datasetDialogMode, setDatasetDialogMode] = useState<"create" | "edit">(
     "create",
   );
@@ -463,6 +464,195 @@ export default function DataPool() {
     return chips;
   }, [selectedCategories, selectedDataTypes, selectedFormats]);
 
+  useEffect(() => {
+    if (!showMobileFilters) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [showMobileFilters]);
+
+  useEffect(() => {
+    if (!showMobileFilters) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowMobileFilters(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showMobileFilters]);
+
+  const renderFiltersPanel = (isMobile = false) => (
+    <div
+      className={cn(
+        "datapool-filter-scrollbar border border-white/10 bg-white/[0.04] p-4 pr-3 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.5)] backdrop-blur-sm overflow-y-auto overscroll-y-contain",
+        isMobile
+          ? "h-full rounded-none border-l-0 border-y-0"
+          : "rounded-xl sticky top-6 max-h-[calc(100vh-8rem)]",
+      )}
+    >
+      <div className="mb-4 flex items-start justify-between gap-2 rounded-xl border border-cyan-500/15 bg-cyan-500/[0.07] px-3 py-2.5">
+        <div className="flex gap-2 min-w-0">
+          <Sparkles className="h-4 w-4 shrink-0 text-cyan-300/90 mt-0.5" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-white/90">Refine results</p>
+            <p className="text-[11px] leading-snug text-white/50 mt-0.5">
+              Tap to combine filters. Your search applies to titles and descriptions too.
+            </p>
+          </div>
+        </div>
+      </div>
+      {activeFilterCount > 0 && (
+        <button
+          type="button"
+          onClick={clearAllFilters}
+          className="mb-4 w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-semibold text-white/80 transition-colors hover:border-cyan-500/35 hover:bg-white/[0.1] hover:text-white"
+        >
+          Clear all filters ({activeFilterCount})
+        </button>
+      )}
+      <div className="space-y-2 mb-3">
+        <h2 className="text-white font-semibold text-sm tracking-wide">Categories</h2>
+        <p className="text-xs text-white/55 leading-relaxed">
+          What kind of work does this dataset support?
+        </p>
+      </div>
+      {selectedCategories.length > 0 && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[11px] font-medium text-cyan-200/80">
+            {selectedCategories.length} selected
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectedCategories([])}
+            className="text-[11px] font-medium text-white/55 hover:text-white underline underline-offset-2"
+          >
+            Reset section
+          </button>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        {JOB_CATEGORIES.map((category) => {
+          const selected = selectedCategories.includes(category);
+          const { label } = JOB_CATEGORY_DISPLAY[category];
+          const Icon = CATEGORY_ICONS[category] ?? MoreHorizontal;
+          return (
+            <GelFilterChip
+              key={category}
+              selected={selected}
+              onClick={() => toggleCategory(category)}
+              title={label}
+            >
+              <Icon
+                className={cn(
+                  "h-4 w-4 shrink-0",
+                  selected ? "text-cyan-100" : "text-cyan-400/85",
+                )}
+                aria-hidden
+              />
+              <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
+                {label}
+              </span>
+              <TrailingCheckCircle selected={selected} />
+            </GelFilterChip>
+          );
+        })}
+      </div>
+
+      <div className="border-t border-white/10 my-5" />
+
+      <div className="space-y-2 mb-3">
+        <h2 className="text-white font-semibold text-sm tracking-wide">Data types</h2>
+        <p className="text-xs text-white/55 leading-relaxed">
+          Match the kind of media or signals you need in a project.
+        </p>
+      </div>
+      {selectedDataTypes.length > 0 && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[11px] font-medium text-cyan-200/80">
+            {selectedDataTypes.length} selected
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectedDataTypes([])}
+            className="text-[11px] font-medium text-white/55 hover:text-white underline underline-offset-2"
+          >
+            Reset section
+          </button>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        {PROJECT_DATA_TYPES.map((type) => {
+          const selected = selectedDataTypes.includes(type);
+          const Icon = DATA_TYPE_ICONS[type] ?? MoreHorizontal;
+          return (
+            <GelFilterChip
+              key={type}
+              selected={selected}
+              onClick={() => toggleDataType(type)}
+              title={type}
+            >
+              <Icon
+                className={cn(
+                  "h-4 w-4 shrink-0",
+                  selected ? "text-cyan-100" : "text-cyan-400/85",
+                )}
+                aria-hidden
+              />
+              <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
+                {type}
+              </span>
+              <TrailingCheckCircle selected={selected} />
+            </GelFilterChip>
+          );
+        })}
+      </div>
+
+      <div className="border-t border-white/10 my-5" />
+
+      <div className="space-y-2 mb-3">
+        <h2 className="text-white font-semibold text-sm tracking-wide">Formats</h2>
+        <p className="text-xs text-white/55 leading-relaxed">
+          Narrow down by file types such as CSV, JSON, or imagery.
+        </p>
+      </div>
+      {selectedFormats.length > 0 && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[11px] font-medium text-cyan-200/80">
+            {selectedFormats.length} selected
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectedFormats([])}
+            className="text-[11px] font-medium text-white/55 hover:text-white underline underline-offset-2"
+          >
+            Reset section
+          </button>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        {PROJECT_FORMATS.map((format) => {
+          const selected = selectedFormats.includes(format);
+          return (
+            <GelFilterChip
+              key={format}
+              selected={selected}
+              onClick={() => toggleFormat(format)}
+              title={format}
+            >
+              <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
+                {format}
+              </span>
+              <TrailingCheckCircle selected={selected} />
+            </GelFilterChip>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-[#0f1419]">
       <div
@@ -501,172 +691,29 @@ export default function DataPool() {
             </TabsUnderlineList>
 
             <div className="flex flex-col lg:flex-row gap-6">
-            <aside className="w-full lg:w-80 lg:shrink-0">
-              <div className="datapool-filter-scrollbar rounded-xl border border-white/10 bg-white/[0.04] p-4 pr-3 shadow-[0_20px_50px_-24px_rgba(0,0,0,0.5)] backdrop-blur-sm sticky top-6 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-y-contain">
-                <div className="mb-4 flex items-start justify-between gap-2 rounded-xl border border-cyan-500/15 bg-cyan-500/[0.07] px-3 py-2.5">
-                  <div className="flex gap-2 min-w-0">
-                    <Sparkles className="h-4 w-4 shrink-0 text-cyan-300/90 mt-0.5" aria-hidden />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-white/90">Refine results</p>
-                      <p className="text-[11px] leading-snug text-white/50 mt-0.5">
-                        Tap to combine filters. Your search applies to titles and descriptions too.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                {activeFilterCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearAllFilters}
-                    className="mb-4 w-full rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-xs font-semibold text-white/80 transition-colors hover:border-cyan-500/35 hover:bg-white/[0.1] hover:text-white"
-                  >
-                    Clear all filters ({activeFilterCount})
-                  </button>
-                )}
-                <div className="space-y-2 mb-3">
-                  <h2 className="text-white font-semibold text-sm tracking-wide">Categories</h2>
-                  <p className="text-xs text-white/55 leading-relaxed">
-                    What kind of work does this dataset support?
-                  </p>
-                </div>
-                {selectedCategories.length > 0 && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[11px] font-medium text-cyan-200/80">
-                      {selectedCategories.length} selected
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCategories([])}
-                      className="text-[11px] font-medium text-white/55 hover:text-white underline underline-offset-2"
-                    >
-                      Reset section
-                    </button>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  {JOB_CATEGORIES.map((category) => {
-                    const selected = selectedCategories.includes(category);
-                    const { label } = JOB_CATEGORY_DISPLAY[category];
-                    const Icon = CATEGORY_ICONS[category] ?? MoreHorizontal;
-                    return (
-                      <GelFilterChip
-                        key={category}
-                        selected={selected}
-                        onClick={() => toggleCategory(category)}
-                        title={label}
-                      >
-                        <Icon
-                          className={cn(
-                            "h-4 w-4 shrink-0",
-                            selected ? "text-cyan-100" : "text-cyan-400/85",
-                          )}
-                          aria-hidden
-                        />
-                        <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
-                          {label}
-                        </span>
-                        <TrailingCheckCircle selected={selected} />
-                      </GelFilterChip>
-                    );
-                  })}
-                </div>
-
-                <div className="border-t border-white/10 my-5" />
-
-                <div className="space-y-2 mb-3">
-                  <h2 className="text-white font-semibold text-sm tracking-wide">Data types</h2>
-                  <p className="text-xs text-white/55 leading-relaxed">
-                    Match the kind of media or signals you need in a project.
-                  </p>
-                </div>
-                {selectedDataTypes.length > 0 && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[11px] font-medium text-cyan-200/80">
-                      {selectedDataTypes.length} selected
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDataTypes([])}
-                      className="text-[11px] font-medium text-white/55 hover:text-white underline underline-offset-2"
-                    >
-                      Reset section
-                    </button>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  {PROJECT_DATA_TYPES.map((type) => {
-                    const selected = selectedDataTypes.includes(type);
-                    const Icon = DATA_TYPE_ICONS[type] ?? MoreHorizontal;
-                    return (
-                      <GelFilterChip
-                        key={type}
-                        selected={selected}
-                        onClick={() => toggleDataType(type)}
-                        title={type}
-                      >
-                        <Icon
-                          className={cn(
-                            "h-4 w-4 shrink-0",
-                            selected ? "text-cyan-100" : "text-cyan-400/85",
-                          )}
-                          aria-hidden
-                        />
-                        <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
-                          {type}
-                        </span>
-                        <TrailingCheckCircle selected={selected} />
-                      </GelFilterChip>
-                    );
-                  })}
-                </div>
-
-                <div className="border-t border-white/10 my-5" />
-
-                <div className="space-y-2 mb-3">
-                  <h2 className="text-white font-semibold text-sm tracking-wide">Formats</h2>
-                  <p className="text-xs text-white/55 leading-relaxed">
-                    Narrow down by file types such as CSV, JSON, or imagery.
-                  </p>
-                </div>
-                {selectedFormats.length > 0 && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[11px] font-medium text-cyan-200/80">
-                      {selectedFormats.length} selected
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedFormats([])}
-                      className="text-[11px] font-medium text-white/55 hover:text-white underline underline-offset-2"
-                    >
-                      Reset section
-                    </button>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  {PROJECT_FORMATS.map((format) => {
-                    const selected = selectedFormats.includes(format);
-                    return (
-                      <GelFilterChip
-                        key={format}
-                        selected={selected}
-                        onClick={() => toggleFormat(format)}
-                        title={format}
-                      >
-                        <span className="flex-1 min-w-0 text-left break-words line-clamp-2">
-                          {format}
-                        </span>
-                        <TrailingCheckCircle selected={selected} />
-                      </GelFilterChip>
-                    );
-                  })}
-                </div>
-              </div>
+            <aside className="hidden lg:block w-full lg:w-80 lg:shrink-0">
+              {renderFiltersPanel()}
             </aside>
 
             <section className="flex-1 min-w-0">
               <div className="mb-6 flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
+                  <div className="lg:hidden">
+                    <button
+                      type="button"
+                      onClick={() => setShowMobileFilters(true)}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:border-cyan-400/45 hover:bg-white/[0.14] transition-colors"
+                    >
+                      <Sparkles className="h-4 w-4 text-cyan-300" />
+                      Filters
+                      {activeFilterCount > 0 ? (
+                        <span className="rounded-full bg-cyan-500/20 px-1.5 py-0.5 text-[11px] text-cyan-100">
+                          {activeFilterCount}
+                        </span>
+                      ) : null}
+                    </button>
+                  </div>
                   {canListDatasets && (
                     <button
                       type="button"
@@ -765,6 +812,47 @@ export default function DataPool() {
                     </button>
                   </div>
                 )}
+              </div>
+
+              <div
+                className={cn(
+                  "fixed inset-0 z-50 lg:hidden transition-opacity duration-300",
+                  showMobileFilters
+                    ? "opacity-100 pointer-events-auto"
+                    : "opacity-0 pointer-events-none",
+                )}
+                aria-hidden={!showMobileFilters}
+              >
+                <button
+                  type="button"
+                  className={cn(
+                    "absolute inset-0 bg-black/65 transition-opacity duration-300",
+                    showMobileFilters ? "opacity-100" : "opacity-0",
+                  )}
+                  aria-label="Close filters"
+                  onClick={() => setShowMobileFilters(false)}
+                />
+                <div
+                  className={cn(
+                    "absolute left-0 top-0 bottom-0 w-[88%] max-w-sm bg-[#0f1419] border-r border-white/10 shadow-2xl transition-transform duration-300 ease-out flex min-h-0 flex-col",
+                    showMobileFilters ? "translate-x-0" : "-translate-x-full",
+                  )}
+                >
+                  <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 shrink-0">
+                    <h2 className="text-sm font-semibold text-white">Filters</h2>
+                    <button
+                      type="button"
+                      onClick={() => setShowMobileFilters(false)}
+                      className="inline-flex items-center justify-center rounded-lg p-1.5 text-white/70 hover:bg-white/10 hover:text-white"
+                      aria-label="Close filters panel"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="min-h-0 flex-1">
+                    {renderFiltersPanel(true)}
+                  </div>
+                </div>
               </div>
 
                 {(poolTab === "browse" || poolTab === "purchases") &&

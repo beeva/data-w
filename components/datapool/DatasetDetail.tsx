@@ -589,24 +589,24 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                 }}
                 className="w-full"
               >
-                <TabsUnderlineList className="border-white/10 px-4 sm:px-6 gap-4 sm:gap-8">
+                <TabsUnderlineList className="border-white/10 px-4 sm:px-6 gap-3 sm:gap-8 overflow-x-auto whitespace-nowrap scrollbar-hide">
                   <TabsUnderlineTrigger
                     value="card"
-                    className="gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100"
+                    className="shrink-0 gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100"
                   >
                     <FileText className="h-4 w-4 opacity-80" />
                     Overview
                   </TabsUnderlineTrigger>
                   <TabsUnderlineTrigger
                     value="files"
-                    className="gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100"
+                    className="shrink-0 gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100"
                   >
                     <FolderOpen className="h-4 w-4 opacity-80" />
                     Files
                   </TabsUnderlineTrigger>
                   <TabsUnderlineTrigger
                     value="community"
-                    className="gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100"
+                    className="shrink-0 gap-2 text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100"
                   >
                     <MessageSquareText className="h-4 w-4 opacity-80" />
                     Community
