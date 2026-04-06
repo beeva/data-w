@@ -699,7 +699,7 @@ export default function DataPool() {
               <div className="mb-6 flex flex-col gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
-                  <div className="lg:hidden">
+                  <div className="lg:hidden flex items-center justify-between gap-2 w-full">
                     <button
                       type="button"
                       onClick={() => setShowMobileFilters(true)}
@@ -713,12 +713,22 @@ export default function DataPool() {
                         </span>
                       ) : null}
                     </button>
+                    {canListDatasets && (
+                      <button
+                        type="button"
+                        onClick={openCreateDatasetDialog}
+                        className="group inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/20 to-teal-600/15 px-3 py-2 text-sm font-semibold text-cyan-100 shadow-[0_0_24px_-12px_rgba(34,211,238,0.5)] transition-all hover:border-cyan-300/60 hover:from-cyan-500/30 hover:to-teal-600/25"
+                      >
+                        <Sparkles className="h-4 w-4 opacity-80 group-hover:opacity-100" aria-hidden />
+                        List a dataset
+                      </button>
+                    )}
                   </div>
                   {canListDatasets && (
                     <button
                       type="button"
                       onClick={openCreateDatasetDialog}
-                      className="group shrink-0 inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/20 to-teal-600/15 px-4 py-2.5 text-sm font-semibold text-cyan-100 shadow-[0_0_24px_-12px_rgba(34,211,238,0.5)] transition-all hover:border-cyan-300/60 hover:from-cyan-500/30 hover:to-teal-600/25"
+                      className="group hidden lg:inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-cyan-400/40 bg-gradient-to-r from-cyan-500/20 to-teal-600/15 px-4 py-2.5 text-sm font-semibold text-cyan-100 shadow-[0_0_24px_-12px_rgba(34,211,238,0.5)] transition-all hover:border-cyan-300/60 hover:from-cyan-500/30 hover:to-teal-600/25"
                     >
                       <Sparkles className="h-4 w-4 opacity-80 group-hover:opacity-100" aria-hidden />
                       List a dataset
