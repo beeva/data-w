@@ -162,6 +162,7 @@ export default function DashboardSidebar({
                 fill
                 className="object-contain object-left"
                 sizes="100px"
+                loading="eager"
               />
             </div>
             <div className="relative hidden h-[100px] w-[100px] shrink-0 dark:block">

@@ -363,6 +363,7 @@ export default function RequesterHeader() {
                 fill
                 className="object-contain object-left"
                 sizes="120px"
+                loading="eager"
               />
             </div>
             <div className="relative hidden h-9 w-[104px] sm:h-10 sm:w-[120px] dark:block">
