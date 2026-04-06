@@ -54,6 +54,7 @@ import {
 import PageHero from "./PageHero";
 import { JobsListWindow } from "./JobsListWindow";
 import Footer from "./Footer";
+import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import JobsTabsBar from "@/components/shared/JobsTabsBar";
@@ -269,18 +270,18 @@ function ProjectCard({
 
   return (
     <div
-      className="group relative flex items-stretch gap-4 rounded-xl border border-white/10 bg-white/5 dark:bg-gray-800/50 hover:border-cyan-500/50 hover:bg-white/[0.07] dark:hover:border-gray-600 dark:hover:bg-gray-800 transition-all cursor-pointer p-4"
+      className="group relative flex items-stretch gap-3 sm:gap-4 rounded-xl border border-white/10 bg-white/5 dark:bg-gray-800/50 hover:border-cyan-500/50 hover:bg-white/[0.07] dark:hover:border-gray-600 dark:hover:bg-gray-800 transition-all cursor-pointer p-3 sm:p-4 touch-manipulation"
       onClick={() => onApplyClick(project)}
     >
       {onToggleSave && (
-        <div className="absolute top-3 right-3 z-10">
+        <div className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               onToggleSave(project.id);
             }}
-            className="inline-flex items-center justify-center rounded-md p-1.5 text-white/60 hover:text-cyan-300 hover:bg-white/10 transition-colors"
+            className="inline-flex min-h-[40px] min-w-[40px] items-center justify-center rounded-md text-white/60 hover:text-cyan-300 hover:bg-white/10 transition-colors"
             title={isSaved ? "Remove from saved jobs" : "Save this job"}
             aria-label={isSaved ? "Remove from saved jobs" : "Save this job"}
           >
@@ -301,9 +302,14 @@ function ProjectCard({
         {categoryIcon}
       </div>
 
-      <div className="flex-1 min-w-0">
+      <div
+        className={cn(
+          "flex-1 min-w-0",
+          onToggleSave && "pr-11 sm:pr-12",
+        )}
+      >
         <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <h3 className="text-base font-semibold text-white group-hover:text-cyan-400 transition-colors truncate">
+          <h3 className="text-[15px] sm:text-base font-semibold text-white group-hover:text-cyan-400 transition-colors max-sm:break-words sm:truncate">
             {project.title}
           </h3>
           {isUrgent && (
@@ -343,7 +349,7 @@ function ProjectCard({
           {(clamped || expanded) && (
             <button
               type="button"
-              className="text-sm text-cyan-400 underline underline-offset-2 mt-0.5 hover:text-cyan-300 transition-colors"
+              className="inline-flex max-sm:min-h-[44px] sm:min-h-0 items-center text-sm text-cyan-400 underline underline-offset-2 mt-0.5 hover:text-cyan-300 transition-colors -ml-1 px-1 rounded-md"
               onClick={(e) => {
                 e.stopPropagation();
                 setExpanded((v) => !v);
@@ -411,10 +417,17 @@ function ProjectCard({
                 parts.length >= 2 ? parts[parts.length - 1] : null;
               const label = country ? `${city}, ${country}` : city;
               return (
-                <span className="inline-flex items-center gap-1 text-xs text-white/50">
-                  <MapPin className="w-3.5 h-3.5 shrink-0" />
-                  {label}
-                  {distance && <span className="font-medium">({distance})</span>}
+                <span className="inline-flex items-start gap-1 text-xs text-white/50 min-w-0 max-w-full">
+                  <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span className="break-words [overflow-wrap:anywhere]">
+                    {label}
+                    {distance && (
+                      <span className="font-medium whitespace-nowrap">
+                        {" "}
+                        ({distance})
+                      </span>
+                    )}
+                  </span>
                 </span>
               );
             })()
@@ -433,7 +446,7 @@ function ProjectCard({
 function ProjectCardSkeleton() {
   const skeletonClass = "bg-white/10 dark:bg-white/10";
   return (
-    <div className="flex items-stretch gap-4 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 p-4">
+    <div className="flex items-stretch gap-3 sm:gap-4 rounded-xl border border-white/10 bg-white/5 dark:bg-white/5 p-3 sm:p-4">
       <Skeleton
         className={cn("shrink-0 w-12 h-12 rounded-xl", skeletonClass)}
       />
@@ -784,6 +797,15 @@ export default function Projects() {
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
+
+  useEffect(() => {
+    if (!showMobileFilters) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showMobileFilters]);
 
   const tabProjects = useMemo(() => {
     const savedSet = new Set(savedProjectIds);
@@ -1271,39 +1293,48 @@ export default function Projects() {
     </Card>
   );
 
+  const searchAndFiltersToolbar = (
+    <div className="flex flex-col sm:flex-row gap-3 w-full min-w-0">
+      <div className="relative flex-1 min-w-0">
+        <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40 pointer-events-none" />
+        <input
+          type="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search projects…"
+          className="w-full min-h-[44px] px-4 py-3 pl-11 sm:pl-12 text-base bg-white/5 border border-white/10 rounded-xl text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent touch-manipulation"
+        />
+      </div>
+      <Button
+        type="button"
+        className="lg:hidden min-h-[44px] bg-white/10 border border-white/20 text-white shrink-0 touch-manipulation"
+        onClick={() => setShowMobileFilters(true)}
+      >
+        <Filter className="w-4 h-4 mr-2" />
+        Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#0f1419]">
       <Header />
 
+      {/* Hero Section — search/filters in hero only at lg+; below lg they live in main (same as mobile) */}
       <PageHero
         title="Find Projects"
         subtitle="and Start Earning"
         description={`Browse ${projects.length} open data collection projects and contribute quality data`}
         rightContent={<JobsListWindow />}
       >
-        <div className="flex flex-col md:flex-row gap-3 w-full pt-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search for projects by title, description, or keywords..."
-              className="w-full px-4 py-3.5 pl-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-            />
-          </div>
-          <Button
-            className="md:hidden bg-white/10 border border-white/20 text-white"
-            onClick={() => setShowMobileFilters(true)}
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
-          </Button>
-        </div>
+        <div className="hidden lg:block w-full pt-6">{searchAndFiltersToolbar}</div>
       </PageHero>
 
-      <main className="pb-20 pt-8">
-        <div className="container mx-auto px-6">
+      {/* Main Content */}
+      <main className="pb-20 pt-4 sm:pt-8">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="flex gap-6">
             {/* Sidebar Filters - Desktop */}
             <div className="hidden lg:block w-72 flex-shrink-0">
@@ -1312,26 +1343,60 @@ export default function Projects() {
               </div>
             </div>
 
-            {/* Mobile Filters Modal */}
-            {showMobileFilters && (
-              <div className="fixed inset-0 bg-black/80 z-50 lg:hidden">
-                <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-[#0B1020] p-6 overflow-y-auto">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-white">Filters</h2>
-                    <button
-                      onClick={() => setShowMobileFilters(false)}
-                      className="text-white/60 hover:text-white"
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
-                  </div>
-                  <FilterSidebar />
-                </div>
-              </div>
-            )}
+            {/* Mobile / tablet filters drawer (< lg — sidebar hidden) */}
+            <AnimatePresence>
+              {showMobileFilters && (
+                <motion.div
+                  key="projects-filters-overlay"
+                  className="fixed inset-0 z-50 lg:hidden touch-manipulation"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="projects-filters-title"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                >
+                  <div
+                    className="absolute inset-0 bg-black/80"
+                    aria-hidden
+                    onClick={() => setShowMobileFilters(false)}
+                  />
+                  <motion.aside
+                    initial={{ x: "100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "100%" }}
+                    transition={{ type: "spring", damping: 30, stiffness: 320 }}
+                    className="absolute right-0 top-0 z-10 flex h-[100dvh] max-h-[100dvh] w-full max-w-sm min-h-0 flex-col bg-[#0B1020] shadow-2xl shadow-black/40"
+                    style={{
+                      paddingTop: "max(1rem, env(safe-area-inset-top))",
+                      paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+                    }}
+                  >
+                    <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-5 pb-4 sm:px-6">
+                      <h2 id="projects-filters-title" className="text-xl font-bold text-white">
+                        Filters
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => setShowMobileFilters(false)}
+                        className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 -mr-2"
+                        aria-label="Close filters"
+                      >
+                        <X className="w-6 h-6" />
+                      </button>
+                    </div>
+                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 sm:px-6 pb-4">
+                      <FilterSidebar />
+                    </div>
+                  </motion.aside>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Projects List */}
             <div className="flex-1 min-w-0">
+              <div className="lg:hidden mb-4">{searchAndFiltersToolbar}</div>
               <div className="mb-4">
                 <JobsTabsBar
                   activeTab={activeTab}
@@ -1348,8 +1413,8 @@ export default function Projects() {
 
               {/* Sort and Results Count (All Jobs only) */}
               {activeTab === "all" && (
-                <div className="flex items-center justify-between mb-4">
-                  <p className="text-white/60 text-sm">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 min-w-0">
+                  <p className="text-white/60 text-sm shrink-0">
                     {hasActiveFilters
                       ? `${filteredProjects.length} result${filteredProjects.length !== 1 ? "s" : ""} found`
                       : `${filteredProjects.length} project${filteredProjects.length !== 1 ? "s" : ""}`}
@@ -1358,7 +1423,7 @@ export default function Projects() {
                     value={sortBy}
                     onValueChange={(v) => setSortBy(v as typeof sortBy)}
                   >
-                    <SelectTrigger className="!h-10 w-44 text-sm bg-[#0f172a] border border-white/10 rounded-lg text-white hover:bg-[#0f172a] focus:border-cyan-500 focus:ring-cyan-500/20">
+                    <SelectTrigger className="!h-11 w-full sm:!h-10 sm:w-44 text-sm bg-[#0f172a] border border-white/10 rounded-lg text-white hover:bg-[#0f172a] focus:border-cyan-500 focus:ring-cyan-500/20 touch-manipulation">
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#0f172a] text-white border-white/10 dark:border-white/10">
@@ -1516,7 +1581,7 @@ export default function Projects() {
                 <>
                   {showBestMatchesExtras && hasLocation ? (
                     <>
-                      <div className="h-1/2 h-[300px] sticky top-24 z-[11] rounded-xl overflow-hidden border border-white/10">
+                      <div className="relative md:sticky md:top-24 z-[11] h-[min(42vh,300px)] sm:h-[300px] rounded-xl overflow-hidden border border-white/10">
                         <LocationMapPreview
                           lat={collectorLat!}
                           lng={collectorLng!}
@@ -1544,7 +1609,7 @@ export default function Projects() {
                             </p>
                             <Button
                               onClick={clearAllFilters}
-                              className="bg-slate-700 border border-slate-600 text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]"
+                              className="min-h-[44px] bg-slate-700 border border-slate-600 text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] touch-manipulation"
                             >
                               Clear Filters
                             </Button>
@@ -1583,7 +1648,7 @@ export default function Projects() {
                       </p>
                       <Button
                         onClick={clearAllFilters}
-                        className="bg-slate-700 border border-slate-600 text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)]"
+                        className="min-h-[44px] bg-slate-700 border border-slate-600 text-white hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(34,211,238,0.3)] touch-manipulation"
                       >
                         Clear Filters
                       </Button>
@@ -1612,10 +1677,10 @@ export default function Projects() {
                     </>
                   )}
                   {hasMoreJobs && (
-                        <div className="mt-6 flex justify-center">
+                        <div className="mt-6 flex justify-center px-1">
                           <Button
                             variant="outline"
-                            className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400/50"
+                            className="max-w-full min-h-[44px] h-auto whitespace-normal border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400/50 px-4 py-3 text-center touch-manipulation"
                             onClick={() => {
                               if (user) {
                                 setVisibleCount((prev) => prev + 10);
@@ -1668,10 +1733,10 @@ export default function Projects() {
                       </p>
                     </div>
                     <div className="flex flex-col gap-3">
-                      <Link href="/signup?role=requester">
+                      <Link href="/signup?role=requester" className="inline-flex w-full sm:w-auto">
                         <Button
                           size="lg"
-                          className="group bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold border-0 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/30 transition-all duration-200 hover:scale-[1.02]"
+                          className="group w-full min-h-[48px] sm:min-h-10 bg-cyan-500 hover:bg-cyan-400 text-slate-900 font-semibold border-0 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/30 transition-all duration-200 sm:hover:scale-[1.02] touch-manipulation"
                         >
                           Post a Project
                           <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover:translate-x-0.5" />
@@ -1700,7 +1765,7 @@ export default function Projects() {
         <button
           type="button"
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-8 right-8 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-cyan-500/90 text-white shadow-lg transition hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#28303E]"
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] sm:bottom-8 sm:right-8 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-cyan-500/90 text-white shadow-lg transition hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#28303E] touch-manipulation"
           aria-label="Scroll to top"
         >
           <ArrowUpToLine className="h-5 w-5" />
