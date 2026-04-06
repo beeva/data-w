@@ -1242,7 +1242,11 @@ export default function BillingContent() {
                   ) : (
                     <div className="space-y-6">
                       {/* Line chart */}
-                      <ResponsiveContainer width="100%" height={240}>
+                      <ResponsiveContainer
+                        width="100%"
+                        height={240}
+                        initialDimension={{ width: 800, height: 240 }}
+                      >
                         <LineChart
                           data={chartData}
                           margin={{ top: 8, right: 16, left: 0, bottom: 0 }}

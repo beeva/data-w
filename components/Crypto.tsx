@@ -226,7 +226,11 @@ const TokenDistributionChart = memo(function TokenDistributionChart() {
         ))}
       </div>
       <div className="w-64 h-64 sm:w-72 sm:h-72 md:w-[400px] md:h-[400px]">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          initialDimension={{ width: 400, height: 400 }}
+        >
           <PieChart>
             <Pie
               data={TOKEN_DISTRIBUTION_DATA}
@@ -485,13 +489,17 @@ export default function Crypto() {
 
                 {/* Chart */}
                 <motion.div
-                  className="h-64 w-full"
+                  className="h-64 w-full min-h-[256px] min-w-0"
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.2 }}
                 >
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer
+                    width="100%"
+                    height="100%"
+                    initialDimension={{ width: 800, height: 256 }}
+                  >
                     <AreaChart
                       data={priceData}
                       margin={{ top: 4, right: 4, left: 4, bottom: 4 }}

@@ -1621,6 +1621,10 @@ export default function RequesterDashboard() {
                             <ResponsiveContainer
                               width="100%"
                               height={chartHeight}
+                              initialDimension={{
+                                width: 600,
+                                height: Math.max(chartHeight, 1),
+                              }}
                             >
                               <BarChart
                                 data={chartData}
