@@ -100,7 +100,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="pt-20 sm:pt-24 md:pt-32 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 text-white relative overflow-hidden min-h-screen bg-gradient-to-b from-[#0a0f1e] via-[#0f172a] to-[#0f1419]">
+    <section className="pt-[calc(var(--site-header-height)+1rem)] pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 text-white relative overflow-hidden min-h-[calc(100svh-0.5rem)] bg-gradient-to-b from-[#0a0f1e] via-[#0f172a] to-[#0f1419]">
       <div
         className="absolute top-0 bottom-0 overflow-hidden pointer-events-none hidden md:block"
         style={{
@@ -119,7 +119,7 @@ export default function Hero() {
         />
       </div>
       <div className="container mx-auto relative z-10">
-        <div className="min-h-[calc(100vh-10rem)] sm:min-h-[calc(100vh-15rem)] md:min-h-[calc(100vh-20rem)] flex items-center pt-[5%]">
+        <div className="min-h-[calc(100svh-var(--site-header-height)-1.5rem)] flex flex-col justify-center py-8 sm:py-10 md:py-12">
           <div className="max-w-4xl w-full">
             <div className="space-y-8 sm:space-y-10 md:space-y-12">
               {/* Main Headline */}

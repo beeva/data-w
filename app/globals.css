@@ -7,6 +7,8 @@
     @apply bg-white text-light-text antialiased;
   }
   :root {
+    /* Fixed `Header`: logo (aspect 7/5) + py-3 — matches components/Header.tsx */
+    --site-header-height: 5.8125rem; /* 93px */
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -32,6 +34,21 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+  }
+  @media (min-width: 640px) {
+    :root {
+      /* sm: py-5, logo w-32 */
+      --site-header-height: 8.25rem; /* 132px */
+    }
+  }
+  @media (min-width: 768px) {
+    :root {
+      /* md: logo w-36 */
+      --site-header-height: 8.9375rem; /* 143px */
+    }
+  }
+  html {
+    scroll-padding-top: var(--site-header-height);
   }
   .dark {
     --background: 0 0% 3.9%;
