@@ -549,14 +549,14 @@ export default function BillingContent() {
   }
 
   return (
-    <div className={cn("min-h-screen pt-2")}>
+    <div className={cn("min-h-screen pt-1 sm:pt-2")}>
       {/* Page Header */}
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-4 sm:mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
             Billing & Subscription
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
             Manage your plan, track spending and view payment history
           </p>
         </div>
@@ -569,11 +569,11 @@ export default function BillingContent() {
       )}
 
       <Tabs defaultValue="plans" className="w-full">
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
           {/* ── Left Sidebar ── */}
           <aside className="w-full lg:w-64 xl:w-72 shrink-0">
-            <Card className="dark:bg-gray-800/50 border-none shadow-sm pt-6">
-              <CardHeader className="px-6 pb-0">
+            <Card className="dark:bg-gray-800/50 border-none shadow-sm pt-4 sm:pt-6">
+              <CardHeader className="px-4 sm:px-6 pb-0">
                 {/* Current Plan */}
                 <div className={cn("overflow-hidden")}>
                   {/* Tier-tinted background */}
@@ -679,14 +679,14 @@ export default function BillingContent() {
                 </div>
               </CardHeader>
 
-              <CardContent className="px-6 pt-3 pb-3">
+              <CardContent className="px-4 sm:px-6 pt-3 pb-3">
                 {/* Navigation label */}
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                   Navigation
                 </p>
 
                 {/* Tabs nav list */}
-                <TabsList className="flex flex-col h-auto bg-transparent gap-0.5 p-0 w-full">
+                <TabsList className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-1 h-auto bg-transparent gap-1 p-0 w-full">
                   {[
                     {
                       value: "plans",
@@ -718,20 +718,20 @@ export default function BillingContent() {
                       value={value}
                       data-value={value}
                       className={cn(
-                        "group w-full justify-start gap-3 px-3 py-2.5 h-auto rounded-lg text-left border-none",
+                        "group w-full justify-start gap-2 sm:gap-3 px-2.5 sm:px-3 py-2.5 h-auto rounded-lg text-left border-none",
                         "data-[state=active]:bg-cyan-500/10 dark:data-[state=active]:bg-cyan-900/20 data-[state=active]:text-cyan-600 dark:data-[state=active]:text-cyan-400",
                         "data-[state=inactive]:text-muted-foreground data-[state=inactive]:hover:bg-gray-100 dark:data-[state=inactive]:hover:bg-gray-800/50 data-[state=inactive]:hover:text-foreground",
                         "transition-colors",
                       )}
                     >
-                      <div className="w-8 h-8 rounded-md group-data-[state=active]:bg-cyan-500/20 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-md group-data-[state=active]:bg-cyan-500/20 flex items-center justify-center shrink-0">
                         <Icon className="w-4 h-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium leading-none">
+                        <p className="text-xs sm:text-sm font-medium leading-none">
                           {label}
                         </p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                        <p className="hidden sm:block text-[10px] text-muted-foreground mt-0.5">
                           {desc}
                         </p>
                       </div>
@@ -765,9 +765,9 @@ export default function BillingContent() {
           </aside>
 
           {/* ── Right Main Section ── */}
-          <section className="flex-1 min-w-0 flex flex-col gap-6">
+          <section className="flex-1 min-w-0 flex flex-col gap-4 sm:gap-6">
             {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
               <Card className="bg-white dark:bg-gray-800/50 border-none shadow-md">
                 <CardContent className="px-4">
                   <div className="flex items-end justify-between">
@@ -856,19 +856,19 @@ export default function BillingContent() {
             </div>
 
             {/* ── Plans Tab ── */}
-            <TabsContent value="plans" className="mt-0 space-y-8">
+            <TabsContent value="plans" className="mt-0 space-y-6 sm:space-y-8">
               {/* Header + Billing Toggle */}
-              <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <h3 className="text-base font-semibold">Choose Your Plan</h3>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     Save up to 17% with annual billing
                   </p>
                 </div>
-                <div className="flex items-center gap-0.5 p-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                <div className="grid grid-cols-2 sm:flex items-center gap-0.5 p-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg w-full sm:w-auto">
                   <button
                     className={cn(
-                      "btn-gelatine px-4 py-1.5 text-sm rounded-md font-medium transition-all",
+                      "btn-gelatine px-3 sm:px-4 py-1.5 text-sm rounded-md font-medium transition-all w-full",
                       billingCycle === "monthly"
                         ? "bg-black dark:bg-white text-white dark:text-black shadow-sm"
                         : "text-muted-foreground hover:text-foreground",
@@ -879,7 +879,7 @@ export default function BillingContent() {
                   </button>
                   <button
                     className={cn(
-                      "btn-gelatine px-4 py-1.5 text-sm rounded-md font-medium transition-all flex items-center gap-2",
+                      "btn-gelatine px-3 sm:px-4 py-1.5 text-sm rounded-md font-medium transition-all flex items-center justify-center gap-2 w-full",
                       billingCycle === "yearly"
                         ? "bg-black dark:bg-white text-white dark:text-black shadow-sm"
                         : "text-muted-foreground hover:text-foreground",
@@ -902,7 +902,7 @@ export default function BillingContent() {
               </div>
 
               {/* Plan Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
                 {plans.map((plan) => {
                   const isCurrentPlan = plan.tier === currentTier;
                   const tierOrder = [
@@ -1172,8 +1172,8 @@ export default function BillingContent() {
             {/* ── Usage Tab ── */}
             <TabsContent value="usage" className="mt-0">
               <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-                <CardHeader className="px-6">
-                  <div className="flex items-start justify-between flex-wrap gap-3">
+                <CardHeader className="px-4 sm:px-6">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div>
                       <CardTitle className="text-sm flex items-center gap-2">
                         <TrendingUp className="w-4 h-4" />
@@ -1193,7 +1193,7 @@ export default function BillingContent() {
                         )
                       }
                     >
-                      <SelectTrigger className="h-8 w-32 text-xs bg-gray-50 dark:bg-gray-800/50 border-none">
+                      <SelectTrigger className="h-8 w-full sm:w-32 text-xs bg-gray-50 dark:bg-gray-800/50 border-none">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-gray-50 dark:bg-[#111827] border-none">
@@ -1226,7 +1226,7 @@ export default function BillingContent() {
                   </div>
                 </CardHeader>
 
-                <CardContent className="px-6 pt-0">
+                <CardContent className="px-4 sm:px-6 pt-0">
                   {chartData.length === 0 || !hasEarnings ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-3">
                       <div className="w-24 h-24">
@@ -1240,11 +1240,11 @@ export default function BillingContent() {
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-6">
+                    <div className="space-y-4 sm:space-y-6">
                       {/* Line chart */}
                       <ResponsiveContainer
                         width="100%"
-                        height={240}
+                        height={220}
                         initialDimension={{ width: 800, height: 240 }}
                       >
                         <LineChart
@@ -1320,7 +1320,7 @@ export default function BillingContent() {
                       </ResponsiveContainer>
 
                       {/* Summary stats */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
                         {usageData.slice(-2).map((data) => (
                           <div
                             key={data.date}
@@ -1347,7 +1347,7 @@ export default function BillingContent() {
             {/* ── Projects Tab ── */}
             <TabsContent value="projects" className="mt-0">
               <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-                <CardHeader className="px-6">
+                <CardHeader className="px-4 sm:px-6">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Building2 className="w-4 h-4" />
                     Per-Project Billing
@@ -1356,7 +1356,7 @@ export default function BillingContent() {
                     Spending breakdown by project
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="px-6 pt-0">
+                <CardContent className="px-4 sm:px-6 pt-0">
                   {projectBillings.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-3">
                       <div className="w-24 h-24">
@@ -1374,7 +1374,7 @@ export default function BillingContent() {
                       {projectBillings.map((billing) => (
                         <div
                           key={billing.project_id}
-                          className="group flex items-center gap-4 rounded-xl border border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all p-4"
+                          className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-xl border border-transparent bg-gray-50 dark:bg-gray-800/50 hover:border-gray-200 dark:hover:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all p-3.5 sm:p-4"
                         >
                           <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
                             <Building2 className="w-5 h-5 text-blue-500" />
@@ -1389,7 +1389,7 @@ export default function BillingContent() {
                                 ` · Last paid ${formatDate(billing.last_payment_date)}`}
                             </p>
                           </div>
-                          <div className="text-right shrink-0">
+                          <div className="sm:text-right shrink-0 w-full sm:w-auto">
                             <p className="font-bold text-sm">
                               {formatCurrency(billing.total_spent)}
                             </p>
@@ -1400,7 +1400,7 @@ export default function BillingContent() {
                               </p>
                             )}
                           </div>
-                          <ChevronRight className="w-4 h-4 text-muted-foreground ml-1 shrink-0" />
+                          <ChevronRight className="hidden sm:block w-4 h-4 text-muted-foreground ml-1 shrink-0" />
                         </div>
                       ))}
                     </div>
@@ -1412,8 +1412,8 @@ export default function BillingContent() {
             {/* ── Invoices Tab ── */}
             <TabsContent value="invoices" className="mt-0">
               <Card className="dark:bg-gray-800/50 border-none shadow-sm">
-                <CardHeader className="px-6">
-                  <div className="flex items-center justify-between">
+                <CardHeader className="px-4 sm:px-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <CardTitle className="text-sm flex items-center gap-2">
                         <Receipt className="w-4 h-4" />
@@ -1426,14 +1426,14 @@ export default function BillingContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs px-3"
+                      className="h-8 text-xs px-3 w-full sm:w-auto"
                     >
                       <Download className="w-3 h-3 mr-1.5" />
                       Export
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="px-6 pt-0">
+                <CardContent className="px-4 sm:px-6 pt-0">
                   {invoices.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 gap-3">
                       <div className="w-24 h-24">
@@ -1451,7 +1451,7 @@ export default function BillingContent() {
                       {invoices.map((invoice) => (
                         <div
                           key={invoice.id}
-                          className="flex items-center gap-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 transition-colors p-4"
+                          className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 transition-colors p-3.5 sm:p-4"
                         >
                           <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
                             <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -1464,7 +1464,7 @@ export default function BillingContent() {
                               {formatDate(invoice.invoice_date)}
                             </p>
                           </div>
-                          <div className="flex items-center gap-3 shrink-0">
+                          <div className="flex w-full sm:w-auto items-center justify-between sm:justify-start gap-3 shrink-0">
                             <span className="font-semibold text-sm">
                               {formatCurrency(invoice.amount)}
                             </span>
