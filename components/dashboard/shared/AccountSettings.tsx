@@ -442,29 +442,30 @@ export default function AccountSettings() {
         />
       )}
 
-      <div className="p-2 space-y-6">
-        <div className="pt-2 mb-4">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+      <div className="p-1 sm:p-2 space-y-4 sm:space-y-6">
+        <div className="pt-1 sm:pt-2 mb-3 sm:mb-4">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
             Account Settings
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             Manage your profile, security, and contact information
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-stretch">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 lg:gap-8 items-stretch">
           {/* ── Left Sidebar ── */}
           <aside className="w-full lg:w-72 shrink-0 order-1">
             <Card className="overflow-hidden border-none bg-white dark:bg-gray-800/50 shadow-sm h-fit">
-              <CardHeader className="px-5 pt-5 pb-3">
+              <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-3">
                 {/* Avatar + user info */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center items-center gap-2.5 sm:gap-4 text-center sm:text-left">
                   <div className="relative shrink-0">
-                    <Avatar className="w-14 h-14 sm:w-16 sm:h-16">
+                    <Avatar className="w-11 h-11 sm:w-16 sm:h-16 ring-1 ring-border/60">
                       <AvatarImage
                         src={profile?.avatar_url || "/default-avatar.svg"}
+                        className="object-cover"
                       />
-                      <AvatarFallback className="text-base bg-primary/90 text-primary-foreground font-medium">
+                      <AvatarFallback className="text-sm sm:text-base bg-primary/90 text-primary-foreground font-medium">
                         {getInitials(
                           profile?.full_name || null,
                           profile?.email || "",
@@ -495,10 +496,10 @@ export default function AccountSettings() {
                     <p className="text-sm font-semibold text-foreground truncate">
                       {profile?.full_name || "No name set"}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate mt-0.5 w-40">
+                    <p className="text-xs text-muted-foreground truncate mt-0.5 max-w-[14rem] sm:max-w-full sm:w-40 mx-auto sm:mx-0">
                       {profile?.email}
                     </p>
-                    <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start mt-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap justify-center sm:justify-start mt-2">
                       {profile?.role && getRoleBadge(profile.role)}
                       {profile &&
                         getVerificationBadge(profile.verification_tier)}
@@ -507,7 +508,7 @@ export default function AccountSettings() {
                 </div>
               </CardHeader>
 
-              <CardContent className="px-5 pt-0 pb-5">
+              <CardContent className="px-4 sm:px-5 pt-0 pb-4 sm:pb-5">
                 {/* Tab nav - vertical on desktop */}
                 <div className="hidden lg:block">
                   <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
@@ -551,20 +552,26 @@ export default function AccountSettings() {
                 </div>
 
                 {/* Horizontal tabs - mobile */}
-                <div className="lg:hidden flex gap-1 p-1 rounded-lg bg-muted/40 overflow-x-auto">
+                <div className="lg:hidden grid grid-cols-3 gap-1 p-1 rounded-lg bg-muted/40">
                   {TABS.map(({ id, label, icon: Icon }) => (
                     <button
                       key={id}
                       onClick={() => setActiveTab(id)}
                       className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all",
+                        "flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2 rounded-md text-[11px] sm:text-sm font-medium transition-all min-w-0",
                         activeTab === id
                           ? "bg-background text-primary shadow-sm"
                           : "text-muted-foreground hover:text-foreground",
                       )}
                     >
                       <Icon className="w-4 h-4 shrink-0" />
-                      {label}
+                      <span className="truncate max-w-full">
+                        {id === "profile"
+                          ? "Profile"
+                          : id === "security"
+                            ? "Security"
+                            : "Contact"}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -602,7 +609,7 @@ export default function AccountSettings() {
             {/* ── MY PROFILE ── */}
             {activeTab === "profile" && (
               <Card className="border-none bg-white dark:bg-gray-800/50 shadow-sm overflow-hidden">
-                <CardHeader className="py-5 px-6 border-b border-border/50">
+                <CardHeader className="py-4 sm:py-5 px-4 sm:px-6 border-b border-border/50">
                   <CardTitle className="text-base font-semibold">
                     My Profile
                   </CardTitle>
@@ -610,33 +617,34 @@ export default function AccountSettings() {
                     Update your profile photo and bio
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6 py-6 px-6">
+                <CardContent className="space-y-5 sm:space-y-6 py-5 sm:py-6 px-4 sm:px-6">
                   {/* Photo section */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 p-5 rounded-xl bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50">
-                    <Avatar className="w-16 h-16 shrink-0">
+                  <div className="flex flex-col sm:flex-row items-center sm:items-center gap-3 sm:gap-5 p-4 sm:p-5 rounded-xl bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50">
+                    <Avatar className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 ring-1 ring-border/60">
                       <AvatarImage
                         src={profile?.avatar_url || "/default-avatar.svg"}
+                        className="object-cover"
                       />
-                      <AvatarFallback className="text-base bg-cyan-500 text-white">
+                      <AvatarFallback className="text-sm sm:text-base bg-cyan-500 text-white">
                         {getInitials(
                           profile?.full_name || null,
                           profile?.email || "",
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="space-y-2 flex-1 min-w-0">
+                    <div className="space-y-2 flex-1 min-w-0 text-center sm:text-left">
                       <p className="text-sm font-medium">Profile Photo</p>
                       <p className="text-xs text-muted-foreground">
                         JPG, PNG or WebP · Max 5 MB
                       </p>
-                      <div className="flex gap-2">
+                      <div className="flex w-full flex-col sm:flex-row gap-2">
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
                           onClick={handleAvatarClick}
                           disabled={uploadingAvatar}
-                          className="text-xs h-7 px-3 gap-1.5 bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50"
+                          className="text-xs h-8 sm:h-7 px-3 gap-1.5 bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50 w-full sm:w-auto"
                         >
                           {uploadingAvatar ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -654,7 +662,7 @@ export default function AccountSettings() {
                             variant="outline"
                             onClick={handleDeleteAvatar}
                             disabled={uploadingAvatar}
-                            className="text-xs h-7 px-3 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            className="text-xs h-8 sm:h-7 px-3 gap-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 w-full sm:w-auto"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                             Remove
@@ -747,7 +755,7 @@ export default function AccountSettings() {
                         type="submit"
                         disabled={profileLoading}
                         size="sm"
-                        className="h-9 px-4 gap-2"
+                        className="h-9 px-4 gap-2 w-full sm:w-auto"
                       >
                         {profileLoading ? (
                           <>
@@ -770,7 +778,7 @@ export default function AccountSettings() {
             {/* ── PASSWORD & SECURITY ── */}
             {activeTab === "security" && (
               <Card className="border-none bg-white dark:bg-gray-800/50 shadow-sm overflow-hidden">
-                <CardHeader className="py-5 px-6 border-b border-border/50">
+                <CardHeader className="py-4 sm:py-5 px-4 sm:px-6 border-b border-border/50">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Lock className="w-4 h-4" />
                     Password &amp; Security
@@ -779,7 +787,7 @@ export default function AccountSettings() {
                     Update your account password and enable 2FA
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="py-6 px-6">
+                <CardContent className="py-5 sm:py-6 px-4 sm:px-6">
                   <form onSubmit={handlePasswordSubmit} className="space-y-4">
                     {passwordError && (
                       <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
@@ -789,7 +797,7 @@ export default function AccountSettings() {
                     )}
 
                     {/* Account info row */}
-                    <div className="p-4 rounded-xl bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50 flex items-center gap-4">
+                    <div className="p-4 rounded-xl bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
                       <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-800/50 border border-border/50 dark:border-gray-700/50 flex items-center justify-center shrink-0">
                         <Mail className="w-5 h-5 text-muted-foreground" />
                       </div>
@@ -913,7 +921,7 @@ export default function AccountSettings() {
                         type="submit"
                         disabled={passwordLoading}
                         size="sm"
-                        className="h-9 px-4 gap-2"
+                        className="h-9 px-4 gap-2 w-full sm:w-auto"
                       >
                         {passwordLoading ? (
                           <>
@@ -939,7 +947,7 @@ export default function AccountSettings() {
             {/* ── CONTACT INFO ── */}
             {activeTab === "contact" && (
               <Card className="border-none bg-white dark:bg-gray-800/50 shadow-sm overflow-hidden">
-                <CardHeader className="py-5 px-6 border-b border-border/50">
+                <CardHeader className="py-4 sm:py-5 px-4 sm:px-6 border-b border-border/50">
                   <CardTitle className="text-base font-semibold">
                     Contact Info
                   </CardTitle>
@@ -947,7 +955,7 @@ export default function AccountSettings() {
                     Update your name, phone, and address
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="py-6 px-6">
+                <CardContent className="py-5 sm:py-6 px-4 sm:px-6">
                   <form onSubmit={handleContactSubmit} className="space-y-5">
                     {contactError && (
                       <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
@@ -1077,7 +1085,7 @@ export default function AccountSettings() {
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label
                               htmlFor="location_lat"
@@ -1184,7 +1192,7 @@ export default function AccountSettings() {
                         type="submit"
                         disabled={contactLoading}
                         size="sm"
-                        className="h-9 px-4 gap-2"
+                        className="h-9 px-4 gap-2 w-full sm:w-auto"
                       >
                         {contactLoading ? (
                           <>
