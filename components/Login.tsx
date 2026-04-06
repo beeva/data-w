@@ -7,6 +7,7 @@ import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 import { createNotification } from "@/lib/services/notificationService";
 import DataTunnelCanvas from "@/components/DataTunnelCanvas";
+import Header from "@/components/Header";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -84,8 +85,11 @@ export default function Login() {
       <div className="absolute inset-0 w-full h-full bg-[#0a0f1e]">
         <DataTunnelCanvas />
       </div>
+      <div className="lg:hidden">
+        <Header />
+      </div>
       {/* Floating white card: subtle shadow, sharp two-panel split (roadmap reference) */}
-      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-24 relative z-10 flex items-center justify-center">
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-24 pt-28 sm:pt-32 lg:pt-24 relative z-10 flex items-center justify-center">
         <div className="w-full rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.08)] backdrop-blur-lg bg-transparent">
           <div className="flex min-h-[70vh]">
             {/* Left: Branding + data tunnel (dark, animated) — hidden on small screens */}

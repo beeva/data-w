@@ -7,6 +7,7 @@ import Image from "next/image";
 import { supabase } from "@/lib/supabase/client";
 import DataTunnelCanvas from "@/components/DataTunnelCanvas";
 import EmailVerification from "@/components/EmailVerification";
+import Header from "@/components/Header";
 
 const SIGNUP_ROLES = [
   "collector",
@@ -193,8 +194,11 @@ export default function SignUp() {
       <div className="absolute inset-0 w-full h-full bg-[#0a0f1e]">
         <DataTunnelCanvas />
       </div>
+      <div className="lg:hidden">
+        <Header />
+      </div>
       {/* Floating white card: scrollable within viewport */}
-      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-6 flex-1 min-h-0 relative z-10 flex items-center justify-center overflow-y-auto scrollbar-hide">
+      <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-4 pt-24 sm:py-6 sm:pt-28 lg:pt-6 flex-1 min-h-0 relative z-10 flex items-center justify-center overflow-y-auto scrollbar-hide">
         <div className="w-full my-auto rounded-2xl overflow-hidden shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.08)] backdrop-blur-lg bg-transparent max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)]">
           <div className="flex min-h-0 max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)]">
             {/* Left: Branding — hidden on small screens (same structure as login) */}
