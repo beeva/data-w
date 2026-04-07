@@ -10,6 +10,7 @@ import { ThemeProvider } from "next-themes";
 import { StoreProvider } from "@/lib/store/StoreProvider";
 import GlobalCompactFooter from "@/components/GlobalCompactFooter";
 import { DotlottieWasmDeprecationSilencer } from "@/components/DotlottieWasmDeprecationSilencer";
+import ScrollToTop from "@/components/ScrollToTop";
 
 export const metadata: Metadata = {
   title: "DataW - Data Gathering Platform",
@@ -32,6 +33,7 @@ export default function RootLayout({
             <AuthProvider>
               <DotlottieWasmDeprecationSilencer />
               <main className="flex-1">{children}</main>
+              <ScrollToTop />
             </AuthProvider>
           </StoreProvider>
         </ThemeProvider>

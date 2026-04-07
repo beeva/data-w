@@ -48,7 +48,6 @@ import {
   SlidersHorizontal,
   AlertCircle,
   LogIn,
-  ArrowUpToLine,
   Bookmark,
 } from "lucide-react";
 import PageHero from "./PageHero";
@@ -623,7 +622,6 @@ export default function Projects() {
   const [showApplicationSuccessDialog, setShowApplicationSuccessDialog] =
     useState(false);
   const [visibleCount, setVisibleCount] = useState(10);
-  const [showScrollTop, setShowScrollTop] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "best" | "recent" | "saved">(
     "all",
   );
@@ -790,13 +788,6 @@ export default function Projects() {
     activeTab,
     maxDistance,
   ]);
-
-  // Scroll-to-top button visibility
-  useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 400);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     if (!showMobileFilters) return;
@@ -1759,18 +1750,6 @@ export default function Projects() {
       </main>
 
       <Footer />
-
-      {/* Scroll to top */}
-      {showScrollTop && (
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-[max(1rem,env(safe-area-inset-right))] sm:bottom-8 sm:right-8 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-cyan-500/90 text-white shadow-lg transition hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#28303E] touch-manipulation"
-          aria-label="Scroll to top"
-        >
-          <ArrowUpToLine className="h-5 w-5" />
-        </button>
-      )}
 
       {/* Project Detail Sheet */}
       <ProjectDetailsSheet

@@ -631,7 +631,6 @@ export default function FindProjects() {
   const [showSavedOnly, setShowSavedOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [showScrollTop, setShowScrollTop] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const [expandedSections, setExpandedSections] = useState({
@@ -647,12 +646,6 @@ export default function FindProjects() {
     if (!keyword) return;
     setSearchTerm(keyword);
   }, [searchParams]);
-
-  useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 300);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     if (!mobileFiltersOpen) return;
@@ -1866,16 +1859,6 @@ export default function FindProjects() {
         }}
       />
 
-      {/* Scroll to top */}
-      {showScrollTop && itemsPerPage >= 25 && (
-        <button
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-cyan-600 text-white shadow-lg hover:bg-cyan-700 transition-all duration-200 hover:scale-105 active:scale-95"
-          aria-label="Scroll to top"
-        >
-          <ChevronUp className="w-5 h-5" />
-        </button>
-      )}
     </div>
   );
 }

@@ -9,7 +9,6 @@ import CTA from "@/components/CTA";
 import Footer from "@/components/Footer";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { ArrowUpToLine } from "lucide-react";
 import ToastNotification from "@/components/ui/toast-notification";
 import MicrosoftSvg from "@/components/svg/company-logos/MicrosoftSvg";
 import YamahaSvg from "@/components/svg/company-logos/YamahaSvg";
@@ -23,7 +22,6 @@ function HomeContent() {
   const router = useRouter();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     const toast = searchParams.get("toast");
@@ -33,12 +31,6 @@ function HomeContent() {
       router.replace("/");
     }
   }, [searchParams, router]);
-
-  useEffect(() => {
-    const onScroll = () => setShowScrollTop(window.scrollY > 400);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   const handleCloseToast = useCallback(() => setShowToast(false), []);
 
@@ -121,16 +113,6 @@ function HomeContent() {
       <CTA />
       <Footer />
 
-      {showScrollTop && (
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-          className="fixed bottom-8 right-8 z-40 flex h-11 w-11 items-center justify-center rounded-full bg-cyan-500/90 text-white shadow-lg transition hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#28303E]"
-          aria-label="Scroll to top"
-        >
-          <ArrowUpToLine className="h-5 w-5" />
-        </button>
-      )}
     </main>
   );
 }
