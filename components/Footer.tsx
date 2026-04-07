@@ -81,20 +81,6 @@ export default function Footer({ compact = false }: FooterProps) {
               and enables secure crypto payouts for fast, reliable field data
               operations.
             </p>
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:justify-start sm:gap-3">
-              <Link
-                href="/signup?role=requester"
-                className="w-full rounded-md bg-cyan-500 px-4 py-2.5 text-center text-sm font-semibold text-slate-900 transition-colors hover:bg-cyan-400 sm:w-auto"
-              >
-                Post a project
-              </Link>
-              <Link
-                href="/projects"
-                className="w-full rounded-md border border-white/20 px-4 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:border-white/35 hover:bg-white/10 sm:w-auto"
-              >
-                Browse jobs
-              </Link>
-            </div>
           </div>
 
           {/* Platform Links */}
@@ -174,14 +160,9 @@ export default function Footer({ compact = false }: FooterProps) {
                   sizes="(max-width: 640px) 64px, 80px"
                 />
               </div>
-              <div className="text-xs text-white/50 sm:text-sm">
-                © {new Date().getFullYear()} DataW. All rights reserved.
-              </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-xs text-white/50 sm:justify-end sm:text-sm">
-              <span>Secure payouts</span>
-              <span>Verified contributors</span>
-              <span>Global coverage</span>
+              <span>© {new Date().getFullYear()} DataW. All rights reserved.</span>
             </div>
           </div>
         </div>
