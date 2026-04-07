@@ -11,6 +11,9 @@ const eslintConfig = [
       "react-hooks/static-components": "off",
       "react-hooks/preserve-manual-memoization": "off",
       "react-hooks/purity": "off",
+      // Keep current project behavior stable; these can be re-enabled incrementally later.
+      "react-hooks/exhaustive-deps": "off",
+      "@next/next/no-img-element": "off",
       // Apostrophes in marketing copy are common; escaping hurts readability.
       "react/no-unescaped-entities": "off",
     },

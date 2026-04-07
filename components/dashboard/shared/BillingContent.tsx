@@ -201,7 +201,7 @@ export default function BillingContent() {
     } else {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [userId]);
 
   const formatCurrency = (amount: number) =>

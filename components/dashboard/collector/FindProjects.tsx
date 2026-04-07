@@ -702,7 +702,7 @@ export default function FindProjects() {
 
   useEffect(() => {
     fetchProjects(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [userId]);
 
   useEffect(() => {

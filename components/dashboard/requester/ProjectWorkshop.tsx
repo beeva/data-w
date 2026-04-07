@@ -246,7 +246,7 @@ export default function ProjectWorkshop({ projectId }: ProjectWorkshopProps) {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [projectId]);
 
   if (loading) {

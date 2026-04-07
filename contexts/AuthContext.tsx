@@ -304,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       subscription?.unsubscribe()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []) // Empty deps - only run once on mount
 
   const refreshProfile = useCallback(async () => {

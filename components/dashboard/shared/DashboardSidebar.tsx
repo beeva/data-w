@@ -87,7 +87,7 @@ export default function DashboardSidebar({
         .catch((err) => console.error("Error fetching projects:", err))
         .finally(() => setLoadingProjects(false));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [userId, userRole]);
 
   useEffect(() => {
@@ -106,7 +106,7 @@ export default function DashboardSidebar({
         }
       }
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [pathname, profile, authLoading]);
 
   const toggleMenu = (menuName: string) => {

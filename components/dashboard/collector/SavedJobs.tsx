@@ -485,7 +485,7 @@ export default function SavedJobs() {
 
   useEffect(() => {
     fetchProjects(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [userId]);
 
   useEffect(() => {

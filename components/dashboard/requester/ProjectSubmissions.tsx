@@ -244,7 +244,7 @@ function SubmissionRow({
                         key={carouselIndex}
                         className="absolute inset-0 flex items-center justify-center carousel-slide-in"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        { }
                         <img
                           src={
                             imageItems[carouselIndex].thumbnail_url ??
@@ -285,7 +285,7 @@ function SubmissionRow({
                         setLightboxSrc(gridPreviewItem.file_url);
                       }}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      { }
                       <img
                         src={
                           gridPreviewItem.thumbnail_url ??
@@ -568,7 +568,7 @@ function SubmissionRow({
                         className="w-full h-full flex focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 rounded-lg overflow-hidden"
                         onClick={() => setLightboxSrc(first.file_url)}
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        { }
                         <img
                           src={first.thumbnail_url ?? first.file_url}
                           alt={first.file_name}
@@ -692,7 +692,7 @@ function SubmissionRow({
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
           onClick={() => setLightboxSrc(null)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
+          { }
           <img
             src={lightboxSrc}
             alt="Full size preview"
@@ -759,7 +759,7 @@ export default function ProjectSubmissions({
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [projectId]);
 
   const handleValidate = async (submissionId: string) => {

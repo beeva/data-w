@@ -362,7 +362,7 @@ export default function MessagesCenter() {
 
   useEffect(() => {
     loadConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [user?.id, role, isMessagingRole]);
 
   useEffect(() => {
@@ -788,7 +788,7 @@ export default function MessagesCenter() {
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [user?.id, isMessagingRole, messagesSubscriptionAttempt]);
 
   const pinnedKeys = useSelector(
