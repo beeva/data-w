@@ -325,14 +325,14 @@ export default function DataPool() {
 
   useEffect(() => {
     const t = searchParams.get("tab")?.toLowerCase();
-    if (t === "purchases") setPoolTabState("purchases");
+    if (t === "purchases") setPoolTabState(profile?.id ? "purchases" : "browse");
     else if (t === "mine") setPoolTabState(profile?.id ? "mine" : "browse");
   }, [searchParams, profile?.id]);
 
   const setPoolTab = useCallback(
     (v: string) => {
       let next: PoolTab = "browse";
-      if (v === "purchases") next = "purchases";
+      if (v === "purchases") next = profile?.id ? "purchases" : "browse";
       else if (v === "mine") next = profile?.id ? "mine" : "browse";
       setPoolTabState(next);
       if (next === "browse" || next === "mine") {
@@ -349,7 +349,7 @@ export default function DataPool() {
   );
 
   useEffect(() => {
-    if (!profile?.id && poolTab === "mine") {
+    if (!profile?.id && (poolTab === "mine" || poolTab === "purchases")) {
       setPoolTab("browse");
     }
   }, [profile?.id, poolTab, setPoolTab]);
@@ -704,10 +704,8 @@ export default function DataPool() {
             <TabsUnderlineList
               className={cn(
                 "mb-6 border-white/10 px-0",
-                // Mobile: three equal columns
                 "max-sm:grid max-sm:gap-0 max-sm:items-stretch",
-                profile?.id ? "max-sm:grid-cols-3" : "max-sm:grid-cols-2",
-                // Desktop: original underline row
+                profile?.id ? "max-sm:grid-cols-3" : "max-sm:grid-cols-1",
                 "sm:flex sm:w-full sm:items-end sm:justify-start sm:gap-10",
               )}
             >
@@ -740,19 +738,21 @@ export default function DataPool() {
                   <span className="hidden sm:inline">My datasets</span>
                 </TabsUnderlineTrigger>
               ) : null}
-              <TabsUnderlineTrigger
-                value="purchases"
-                className={cn(
-                  "text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100",
-                  "max-sm:inline-flex max-sm:min-h-[52px] max-sm:w-full max-sm:flex-col max-sm:items-center max-sm:justify-center max-sm:gap-1 max-sm:px-1 max-sm:pb-2.5 max-sm:text-[11px] max-sm:leading-tight",
-                  "sm:gap-2 sm:shrink-0 sm:pb-3",
-                )}
-              >
-                <ShoppingBag className="h-4 w-4 opacity-80" aria-hidden />
-                <span className="max-sm:block max-sm:text-center max-sm:max-w-full max-sm:truncate sm:inline">
-                  Purchases
-                </span>
-              </TabsUnderlineTrigger>
+              {profile?.id ? (
+                <TabsUnderlineTrigger
+                  value="purchases"
+                  className={cn(
+                    "text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100",
+                    "max-sm:inline-flex max-sm:min-h-[52px] max-sm:w-full max-sm:flex-col max-sm:items-center max-sm:justify-center max-sm:gap-1 max-sm:px-1 max-sm:pb-2.5 max-sm:text-[11px] max-sm:leading-tight",
+                    "sm:gap-2 sm:shrink-0 sm:pb-3",
+                  )}
+                >
+                  <ShoppingBag className="h-4 w-4 opacity-80" aria-hidden />
+                  <span className="max-sm:block max-sm:text-center max-sm:max-w-full max-sm:truncate sm:inline">
+                    Purchases
+                  </span>
+                </TabsUnderlineTrigger>
+              ) : null}
             </TabsUnderlineList>
 
             <div className="flex flex-col lg:flex-row gap-6">
