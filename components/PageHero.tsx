@@ -20,7 +20,7 @@ export default function PageHero({
   subtitle,
   description,
   children,
-  compact = false,
+  compact = true,
   rightLottie,
   rightContent,
 }: PageHeroProps) {
@@ -56,7 +56,7 @@ export default function PageHero({
     <section
       className={`px-4 sm:px-6 text-white relative overflow-hidden bg-gradient-to-b from-[#0a0f1e] via-[#0f172a] to-[#0f1419] ${
         compact
-          ? "pt-[calc(var(--site-header-height)+0.5rem)] pb-12 sm:pb-14"
+          ? "pt-[calc(var(--site-header-height)+2rem)] pb-12 sm:pb-14"
           : "pt-[calc(var(--site-header-height)+1rem)] pb-16 sm:pb-20"
       }`}
     >
