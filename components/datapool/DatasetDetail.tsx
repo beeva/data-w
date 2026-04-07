@@ -614,74 +614,78 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                 </TabsUnderlineList>
 
                 <TabsContent value="card" className="px-6 py-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <section className="lg:col-span-2 space-y-5">
+                  <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <section className="lg:col-span-3 space-y-5">
                       <div>
-                        <h2 className="text-xl font-bold text-white">{dataset.title}</h2>
-                        <p className="mt-2 text-sm text-white/70 whitespace-pre-wrap leading-relaxed">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <h2 className="text-xl font-bold text-white">{dataset.title}</h2>
+                            <p className="mt-1.5 text-xs text-white/50">
+                              Created {formatDateTime(dataset.created_at)}
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Price</p>
+                            <p className="mt-1 text-sm font-semibold text-emerald-300">
+                              {formatMoney(dataset.price)}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="mt-3 text-sm text-white/70 whitespace-pre-wrap leading-relaxed">
                           {dataset.description?.trim() ? dataset.description : "No description provided."}
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Owner</p>
-                          <p className="mt-1 text-sm font-semibold text-white/85">
-                            {dataset.owner_name || "Unknown user"}
-                          </p>
+                      <div className="space-y-4 pt-1">
+                        <div>
+                          <p className="text-sm font-semibold text-white/85">Category</p>
+                          <p className="mt-1 text-sm text-white/75">{dataset.category || "—"}</p>
                         </div>
-                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Category</p>
-                          <p className="mt-1 text-sm font-semibold text-white/85">{dataset.category}</p>
+                        <div>
+                          <p className="text-sm font-semibold text-white/85">Data types</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {dataset.data_types?.length ? (
+                              dataset.data_types.map((t) => (
+                                <span
+                                  key={t}
+                                  className="rounded-full bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-200"
+                                >
+                                  {t}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-sm text-white/60">—</span>
+                            )}
+                          </div>
                         </div>
-                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Price</p>
-                          <p className="mt-1 text-sm font-semibold text-emerald-300">{formatMoney(dataset.price)}</p>
-                        </div>
-                        <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Updated</p>
-                          <p className="mt-1 text-sm font-semibold text-white/85">{formatDateTime(dataset.updated_at)}</p>
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Data types</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {dataset.data_types?.length ? (
-                            dataset.data_types.map((t) => (
-                              <span
-                                key={t}
-                                className="rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-semibold text-cyan-200"
-                              >
-                                {t}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-sm text-white/60">—</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Formats</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {dataset.formats?.length ? (
-                            dataset.formats.map((f) => (
-                              <span
-                                key={f}
-                                className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-200"
-                              >
-                                {f}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-sm text-white/60">—</span>
-                          )}
+                        <div>
+                          <p className="text-sm font-semibold text-white/85">Formats</p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {dataset.formats?.length ? (
+                              dataset.formats.map((f) => (
+                                <span
+                                  key={f}
+                                  className="rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-semibold text-indigo-200"
+                                >
+                                  {f}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-sm text-white/60">—</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </section>
 
-                    <aside className="space-y-3">
+                    <aside className="space-y-3 lg:max-w-[18rem]">
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Owner</p>
+                        <p className="mt-1 text-sm font-semibold text-white/85">
+                          {dataset.owner_name || "Unknown user"}
+                        </p>
+                      </div>
+
                       <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Dataset files</p>
                         <p className="mt-2 text-sm text-white/70 leading-relaxed">
@@ -809,11 +813,6 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                             </Link>
                           </div>
                         )}
-                      </div>
-
-                      <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Created</p>
-                        <p className="mt-1 text-sm font-semibold text-white/85">{formatDateTime(dataset.created_at)}</p>
                       </div>
                     </aside>
                   </div>
