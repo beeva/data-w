@@ -326,14 +326,14 @@ export default function DataPool() {
   useEffect(() => {
     const t = searchParams.get("tab")?.toLowerCase();
     if (t === "purchases") setPoolTabState("purchases");
-    else if (t === "mine") setPoolTabState("mine");
-  }, [searchParams]);
+    else if (t === "mine") setPoolTabState(profile?.id ? "mine" : "browse");
+  }, [searchParams, profile?.id]);
 
   const setPoolTab = useCallback(
     (v: string) => {
       let next: PoolTab = "browse";
       if (v === "purchases") next = "purchases";
-      else if (v === "mine") next = "mine";
+      else if (v === "mine") next = profile?.id ? "mine" : "browse";
       setPoolTabState(next);
       if (next === "browse" || next === "mine") {
         void fetchDataPoolItems({ silent: true });
@@ -345,8 +345,14 @@ export default function DataPool() {
       const qs = params.toString();
       router.replace(qs ? `/datapool?${qs}` : "/datapool", { scroll: false });
     },
-    [router, searchParams, fetchDataPoolItems],
+    [router, searchParams, fetchDataPoolItems, profile?.id],
   );
+
+  useEffect(() => {
+    if (!profile?.id && poolTab === "mine") {
+      setPoolTab("browse");
+    }
+  }, [profile?.id, poolTab, setPoolTab]);
 
   const filteredItems = dataItems.filter((item) => {
     const q = searchQuery.toLowerCase();
@@ -699,7 +705,8 @@ export default function DataPool() {
               className={cn(
                 "mb-6 border-white/10 px-0",
                 // Mobile: three equal columns
-                "max-sm:grid max-sm:grid-cols-3 max-sm:gap-0 max-sm:items-stretch",
+                "max-sm:grid max-sm:gap-0 max-sm:items-stretch",
+                profile?.id ? "max-sm:grid-cols-3" : "max-sm:grid-cols-2",
                 // Desktop: original underline row
                 "sm:flex sm:w-full sm:items-end sm:justify-start sm:gap-10",
               )}
@@ -717,20 +724,22 @@ export default function DataPool() {
                   Browse
                 </span>
               </TabsUnderlineTrigger>
-              <TabsUnderlineTrigger
-                value="mine"
-                className={cn(
-                  "text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100",
-                  "max-sm:inline-flex max-sm:min-h-[52px] max-sm:w-full max-sm:flex-col max-sm:items-center max-sm:justify-center max-sm:gap-1 max-sm:px-1 max-sm:pb-2.5 max-sm:text-[11px] max-sm:leading-tight",
-                  "sm:gap-2 sm:shrink-0 sm:pb-3",
-                )}
-              >
-                <FolderKanban className="h-4 w-4 opacity-80" aria-hidden />
-                <span className="max-sm:text-center max-sm:max-w-full max-sm:truncate sm:hidden">
-                  Mine
-                </span>
-                <span className="hidden sm:inline">My datasets</span>
-              </TabsUnderlineTrigger>
+              {profile?.id ? (
+                <TabsUnderlineTrigger
+                  value="mine"
+                  className={cn(
+                    "text-white/55 data-[state=active]:border-cyan-400 data-[state=active]:text-cyan-100",
+                    "max-sm:inline-flex max-sm:min-h-[52px] max-sm:w-full max-sm:flex-col max-sm:items-center max-sm:justify-center max-sm:gap-1 max-sm:px-1 max-sm:pb-2.5 max-sm:text-[11px] max-sm:leading-tight",
+                    "sm:gap-2 sm:shrink-0 sm:pb-3",
+                  )}
+                >
+                  <FolderKanban className="h-4 w-4 opacity-80" aria-hidden />
+                  <span className="max-sm:text-center max-sm:max-w-full max-sm:truncate sm:hidden">
+                    Mine
+                  </span>
+                  <span className="hidden sm:inline">My datasets</span>
+                </TabsUnderlineTrigger>
+              ) : null}
               <TabsUnderlineTrigger
                 value="purchases"
                 className={cn(
