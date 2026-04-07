@@ -678,7 +678,7 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                       </div>
                     </section>
 
-                    <aside className="space-y-3 lg:max-w-[18rem]">
+                    <aside className="space-y-3">
                       <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-white/50">Owner</p>
                         <p className="mt-1 text-sm font-semibold text-white/85">
