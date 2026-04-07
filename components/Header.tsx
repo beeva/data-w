@@ -10,6 +10,7 @@ import Image from "next/image";
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileUseCasesOpen, setIsMobileUseCasesOpen] = useState(false);
   const { user, profile, cachedRole, loading, signOut } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -18,6 +19,15 @@ export default function Header() {
     Boolean(user) && isPersonalOrCompanyRole(role ?? undefined);
 
   const isActive = (path: string) => pathname === path;
+  const isUseCasesActive =
+    pathname === "/usecases" || pathname.startsWith("/usecases/");
+  const useCasesLinks = [
+    { href: "/usecases", label: "Use Cases Overview" },
+    { href: "/usecases/what-is-dataw", label: "What is DataW Platform" },
+    { href: "/usecases/when-to-use", label: "When to Use DataW" },
+    { href: "/usecases/how-to-use", label: "How to Use DataW" },
+    { href: "/usecases/why-use-dataw", label: "Why Use DataW Platform" },
+  ];
 
   useEffect(() => {
     const handleScroll = () => {
@@ -95,6 +105,45 @@ export default function Header() {
               >
                 Crypto
               </Link>
+              <div className="relative group">
+                <Link
+                  href="/usecases"
+                  className={`inline-flex items-center gap-2 hover:text-cyan-500 hover:scale-105 transition-all duration-300 font-medium ${
+                    isUseCasesActive ? "text-cyan-400" : "text-white/90"
+                  }`}
+                >
+                  Use Cases
+                  <svg
+                    className="w-4 h-4 transition-transform duration-200 group-hover:rotate-180"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </Link>
+                <div className="pointer-events-none absolute left-0 top-full h-4 w-72" />
+                <div className="invisible absolute right-0 top-[calc(100%+0.8rem)] w-72 rounded-xl border border-white/10 bg-[#101826] p-2 opacity-0 shadow-xl transition-all duration-200 group-hover:visible group-hover:opacity-100 group-hover:pointer-events-auto">
+                  {useCasesLinks.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`block rounded-lg px-3 py-2.5 text-sm transition-colors ${
+                        pathname === item.href
+                          ? "bg-cyan-500/15 text-cyan-400"
+                          : "text-white/80 hover:bg-white/10 hover:text-cyan-400"
+                      }`}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </nav>
           </div>
 
@@ -217,6 +266,50 @@ export default function Header() {
               >
                 Crypto
               </Link>
+              <div className="py-1">
+                <button
+                  onClick={() => setIsMobileUseCasesOpen((prev) => !prev)}
+                  className={`w-full flex items-center justify-between transition-colors font-medium py-2 ${
+                    isUseCasesActive ? "text-cyan-400" : "text-white/90"
+                  }`}
+                >
+                  <span>Use Cases</span>
+                  <svg
+                    className={`w-4 h-4 transition-transform duration-200 ${isMobileUseCasesOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                {isMobileUseCasesOpen && (
+                  <div className="mt-1 ml-3 flex flex-col border-l border-white/10 pl-3">
+                    {useCasesLinks.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => {
+                          setIsMobileMenuOpen(false);
+                          setIsMobileUseCasesOpen(false);
+                        }}
+                        className={`py-2 text-sm transition-colors ${
+                          pathname === item.href
+                            ? "text-cyan-400"
+                            : "text-white/80 hover:text-cyan-400"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
               {user && (
                 <Link
                   href="/dashboard"
