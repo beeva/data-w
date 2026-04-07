@@ -95,11 +95,8 @@ function ConfettiLayer() {
               animationDelay: `${piece.delay}s`,
               animationDuration: `${piece.duration}s`,
               transform: `rotate(${piece.rotation}deg)`,
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore
+              // @ts-expect-error CSS custom properties on inline style
               "--left-start": `${piece.leftStart}%`,
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore
               "--left-end": `${piece.leftEnd}%`,
             }}
           />

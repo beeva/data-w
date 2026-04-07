@@ -24,32 +24,7 @@ import ProjectDetailsSheet from "./dashboard/collector/ProjectDetailsSheet";
 import { useAuth } from "@/contexts/AuthContext";
 import CTASceneCanvas from "./CTASceneCanvas";
 import { JOB_CATEGORIES } from "@/lib/categories";
-import {
-  Users,
-  MapPin,
-  Clock,
-  Search,
-  FolderKanban,
-  ArrowRight,
-  Camera,
-  Video,
-  Mic,
-  FileText,
-  BarChart3,
-  MapPinned,
-  Cpu,
-  MoreHorizontal,
-  Filter,
-  X,
-  ChevronDown,
-  ChevronUp,
-  Globe,
-  Briefcase,
-  SlidersHorizontal,
-  AlertCircle,
-  LogIn,
-  Bookmark,
-} from "lucide-react";
+import { Users, MapPin, Clock, Search, FolderKanban, ArrowRight, Camera, Video, Mic, FileText, BarChart3, MapPinned, Cpu, MoreHorizontal, Filter, X, ChevronDown, ChevronUp, Globe, SlidersHorizontal, AlertCircle, LogIn, Bookmark } from "lucide-react";
 import PageHero from "./PageHero";
 import { JobsListWindow } from "./JobsListWindow";
 import Footer from "./Footer";

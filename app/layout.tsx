@@ -8,7 +8,6 @@ import "@fontsource/poppins/700.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "next-themes";
 import { StoreProvider } from "@/lib/store/StoreProvider";
-import GlobalCompactFooter from "@/components/GlobalCompactFooter";
 import { DotlottieWasmDeprecationSilencer } from "@/components/DotlottieWasmDeprecationSilencer";
 import ScrollToTop from "@/components/ScrollToTop";
 

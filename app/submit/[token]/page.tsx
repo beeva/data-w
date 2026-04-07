@@ -22,52 +22,11 @@ import DashboardLayout from "@/components/dashboard/shared/DashboardLayout";
 import SubmissionDialog from "@/components/dashboard/collector/SubmissionDialog";
 import type { SubmissionToast } from "@/components/dashboard/collector/SubmissionDialog";
 import ToastNotification from "@/components/ui/toast-notification";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AlertCircle,
-  CheckCircle2,
-  FileText,
-  Clock,
-  XCircle,
-  Loader2,
-  ExternalLink,
-  Image as ImageIcon,
-  Film,
-  Music,
-  File,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  Star,
-  Upload,
-  MapPin,
-  Calendar,
-  Users,
-  Ruler,
-  Camera,
-  Video,
-  Mic,
-  ClipboardList,
-  LocateFixed,
-  Activity,
-  Package,
-  DollarSign,
-  ShieldCheck,
-  Inbox,
-  Copy,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, FileText, Clock, XCircle, Loader2, ExternalLink, Image as ImageIcon, Film, Music, File, ChevronDown, ChevronUp, RefreshCw, Star, MapPin, Calendar, Users, Ruler, Camera, Video, Mic, ClipboardList, LocateFixed, Activity, Package, ShieldCheck, Inbox, Copy } from "lucide-react";
 import { Loading } from "@/components/ui/loading";
 import { cn } from "@/lib/utils";
 import { Photography1Svg } from "@/components/svg/photography/photography_1";

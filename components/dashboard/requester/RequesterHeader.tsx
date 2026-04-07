@@ -8,31 +8,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 import { getProjectsByRequester } from "@/lib/services/projectService";
 import type { Project } from "@/types/project";
-import {
-  Sun,
-  Moon,
-  Search,
-  Bell,
-  ChevronDown,
-  User,
-  HelpCircle,
-  LogOut,
-  Loader2,
-  MapPin,
-  DollarSign,
-  FolderKanban,
-  Info,
-  CheckCircle2,
-  XCircle,
-  X,
-  TrendingUp,
-  Key,
-  MessageSquare,
-  CreditCard,
-  PlusCircle,
-  ArrowLeftRight,
-  Menu,
-} from "lucide-react";
+import { Sun, Moon, Search, Bell, ChevronDown, User, HelpCircle, LogOut, Loader2, MapPin, DollarSign, FolderKanban, Info, CheckCircle2, XCircle, X, TrendingUp, Key, MessageSquare, CreditCard, ArrowLeftRight, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

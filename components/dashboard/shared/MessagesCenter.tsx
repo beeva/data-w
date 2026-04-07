@@ -33,24 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import ToastNotification from "@/components/ui/toast-notification";
 import { cn } from "@/lib/utils";
-import {
-  Loader2,
-  MessageCircle,
-  ChevronLeft,
-  Paperclip,
-  Search,
-  Send,
-  Smile,
-  SlidersHorizontal,
-  Eye,
-  MapPin,
-  Phone,
-  Video,
-  MoreVertical,
-  Pin,
-  X,
-  FileText,
-} from "lucide-react";
+import { Loader2, MessageCircle, ChevronLeft, Paperclip, Search, Send, Smile, Eye, MapPin, Phone, Video, MoreVertical, Pin, X, FileText } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState } from "@/lib/store";

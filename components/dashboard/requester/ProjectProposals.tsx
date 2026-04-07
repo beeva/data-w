@@ -30,24 +30,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import {
-  Loader2,
-  DollarSign,
-  CheckCircle2,
-  XCircle,
-  Copy,
-  Users,
-  Check,
-  X,
-  MapPin,
-  MessageSquare,
-  Star,
-  Mail,
-  Phone,
-  Search,
-  LayoutList,
-  LayoutGrid,
-} from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Copy, Users, Check, X, MapPin, MessageSquare, Search, LayoutList, LayoutGrid } from "lucide-react";
 import ToastNotification from "@/components/ui/toast-notification";
 import { LocationMapPreview } from "@/components/ui/location-map-preview";
 import { EmptyDataSvg } from "@/components/svg/EmptyDataSvg";

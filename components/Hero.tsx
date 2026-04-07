@@ -6,8 +6,6 @@ import { useRouter } from "next/navigation";
 import Lottie from "lottie-react";
 import heroAnimation from "@/lib/assets/lottie/hero.json";
 import { supabase } from "@/lib/supabase/client";
-import { GlobeConnectSvg } from "./svg/GlobeConnectSvg";
-import { IncomeSvg } from "./svg/IncomeSvg";
 import { EarthSvg } from "./svg/EarthSvg";
 
 type HeroTab = "requester" | "collector";

@@ -31,29 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  FileText,
-  FileAudio,
-  FileVideo,
-  File,
-  Search,
-  ExternalLink,
-  Download,
-  X,
-  Calendar,
-  Star,
-  FileStack,
-  LayoutList,
-  LayoutGrid,
-  Eye,
-  MoreHorizontal,
-  MoreVertical,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, FileText, FileAudio, FileVideo, File, Search, Download, X, Calendar, FileStack, LayoutList, LayoutGrid, Eye, MoreHorizontal, MoreVertical, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,

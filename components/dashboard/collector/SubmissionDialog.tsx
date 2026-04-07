@@ -13,14 +13,7 @@ import {
 import { createNotification } from "@/lib/services/notificationService";
 import type { Project, CollectorAssignment } from "@/types";
 import type { SubmissionMetadata } from "@/types/submission";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";

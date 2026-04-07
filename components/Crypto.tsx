@@ -7,23 +7,7 @@ import Header from "./Header";
 import PageHero from "./PageHero";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Zap,
-  ArrowRight,
-  Coins,
-  CheckCircle2,
-  ArrowUpRight,
-  ArrowDownRight,
-  Activity,
-  BarChart3,
-  PieChart as PieChartIcon,
-  Banknote,
-  RefreshCw,
-  X,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Coins, ArrowUpRight, ArrowDownRight, Activity, BarChart3, PieChart as PieChartIcon, RefreshCw, X, Check } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -38,7 +22,6 @@ import {
   Sector,
 } from "recharts";
 import { GlobalSvg } from "./svg/GlobalSvg";
-import { CryptoPaySvg } from "./svg/CryptoPaySvg";
 import { TransparencySvg } from "./svg/TransparencySvg";
 import Footer from "./Footer";
 import { InstantSvg } from "./svg/InstantSvg";

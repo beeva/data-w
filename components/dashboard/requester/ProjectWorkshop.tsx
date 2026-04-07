@@ -7,41 +7,16 @@ import { getProjectStats } from "@/lib/services/submissionService";
 import { getProposalsByProject } from "@/lib/services/proposalService";
 import type { Project } from "@/types/project";
 import type { ProjectStats } from "@/types/submission";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import {
   Tabs,
   TabsContent,
   TabsUnderlineList,
   TabsUnderlineTrigger,
 } from "@/components/ui/tabs";
-import {
-  ArrowLeft,
-  FileCheck,
-  FileX,
-  Clock,
-  AlertCircle,
-  Users,
-  BarChart3,
-  Loader2,
-  RefreshCw,
-  TrendingUp,
-  Calendar,
-  DollarSign,
-  Briefcase,
-  MapPin,
-  Ruler,
-  Camera,
-  Video,
-  Mic,
-  FileText,
-  ClipboardList,
-  LocateFixed,
-  Activity,
-  Package,
-} from "lucide-react";
+import { ArrowLeft, AlertCircle, Users, Calendar, Ruler, Camera, Video, Mic, FileText, ClipboardList, LocateFixed, Activity, Package } from "lucide-react";
 import { Photography1Svg } from "@/components/svg/photography/photography_1";
 import { Photography2Svg } from "@/components/svg/photography/photography_2";
 import { Photography3Svg } from "@/components/svg/photography/photography_3";

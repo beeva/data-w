@@ -32,32 +32,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { PieChart, Pie, Cell } from "recharts";
-import {
-  Calendar,
-  DollarSign,
-  Heart,
-  MapPin,
-  Star,
-  Users,
-  Ruler,
-  Tag,
-  ClipboardList,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Camera,
-  Video,
-  Mic,
-  FileText,
-  LocateFixed,
-  Activity,
-  Package,
-  Bookmark,
-  Eye,
-  LogIn,
-  UserPlus,
-  AlertCircle,
-} from "lucide-react";
+import { Calendar, DollarSign, MapPin, Star, Users, Ruler, ClipboardList, Clock, Camera, Video, Mic, FileText, LocateFixed, Activity, Package, Bookmark, Eye, LogIn, UserPlus, AlertCircle } from "lucide-react";
 import { Photography1Svg } from "@/components/svg/photography/photography_1";
 import { Photography2Svg } from "@/components/svg/photography/photography_2";
 import { Photography3Svg } from "@/components/svg/photography/photography_3";

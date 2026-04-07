@@ -34,27 +34,7 @@ import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import ToastNotification from "@/components/ui/toast-notification";
 import PhoneTwoFactorAuth from "@/components/dashboard/shared/PhoneTwoFactorAuth";
 import { cn } from "@/lib/utils";
-import {
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Building2,
-  Globe,
-  Shield,
-  CheckCircle2,
-  Loader2,
-  Save,
-  Camera,
-  Trash2,
-  Upload,
-  Lock,
-  Eye,
-  EyeOff,
-  UserCircle,
-  Contact,
-  CalendarDays,
-} from "lucide-react";
+import { User, Mail, Phone, MapPin, Building2, Globe, Shield, CheckCircle2, Loader2, Save, Trash2, Upload, Lock, Eye, EyeOff, UserCircle, Contact, CalendarDays } from "lucide-react";
 
 type TabId = "profile" | "security" | "contact";
 

@@ -8,17 +8,7 @@ import Header from "./Header";
 import PageHero from "./PageHero";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Users,
-  Globe,
-  Shield,
-  TrendingUp,
-  ArrowRight,
-  Linkedin,
-  Twitter,
-  Mail,
-  Building2,
-} from "lucide-react";
+import { Users, Globe, Shield, TrendingUp, Mail, Building2 } from "lucide-react";
 import { GlobalSvg } from "./svg/GlobalSvg";
 import { DataQualitySvg } from "./svg/DataQualitySvg";
 import { CryptoPaySvg } from "./svg/CryptoPaySvg";

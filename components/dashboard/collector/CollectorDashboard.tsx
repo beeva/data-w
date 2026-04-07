@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getCategoryColor } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { getOpenProjects } from "@/lib/services/projectService";
 import {
@@ -22,31 +21,7 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import JobsTabsBar from "@/components/shared/JobsTabsBar";
-import {
-  Clock,
-  MapPin,
-  Users,
-  Navigation,
-  Briefcase,
-  Bookmark,
-  BookmarkCheck,
-  TrendingUp,
-  CheckCircle2,
-  Camera,
-  Video,
-  Mic,
-  FileText,
-  ClipboardList,
-  LocateFixed,
-  Activity,
-  Package,
-  ChevronRight,
-  XCircle,
-  LifeBuoy,
-  MessageSquare,
-  Settings,
-  BookOpen,
-} from "lucide-react";
+import { Clock, MapPin, Users, Briefcase, Bookmark, TrendingUp, CheckCircle2, Camera, Video, Mic, FileText, ClipboardList, LocateFixed, Activity, Package, ChevronRight, XCircle, LifeBuoy, MessageSquare, Settings, BookOpen } from "lucide-react";
 import ProjectDetailsSheet from "./ProjectDetailsSheet";
 import {
   LocationMapPreview,

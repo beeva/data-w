@@ -19,39 +19,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DollarSign,
-  MapPin,
-  Calendar,
-  Users,
-  Search,
-  FileText,
-  Clock,
-  Briefcase,
-  Camera,
-  Video,
-  Mic,
-  BarChart3,
-  MapPinned,
-  Cpu,
-  MoreHorizontal,
-  ChevronDown,
-  ChevronUp,
-  CheckCircle2,
-  XCircle,
-  X,
-  Bookmark,
-  RefreshCw,
-  SlidersHorizontal,
-  ClipboardList,
-  LocateFixed,
-  Activity,
-  Package,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { DollarSign, MapPin, Users, Search, FileText, Clock, Briefcase, Camera, Video, Mic, BarChart3, MapPinned, Cpu, MoreHorizontal, ChevronDown, ChevronUp, CheckCircle2, XCircle, X, Bookmark, SlidersHorizontal, ClipboardList, LocateFixed, Activity, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import ProjectDetailsSheet from "./ProjectDetailsSheet";
-import { cn, getCategoryColor } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import {
   getProposalsByCollector,
   getAssignmentCountsByProjects,

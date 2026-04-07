@@ -21,7 +21,7 @@ import CompleteProjectDialog, {
   type CollectorFeedbackTarget,
 } from "./CompleteProjectDialog";
 import CreateProjectDialog from "./CreateProjectDialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -89,7 +89,7 @@ import { Sensor5Svg } from "@/components/svg/sensor-data/sensor_5";
 import { Other1Svg } from "@/components/svg/other/other_1";
 import { Other2Svg } from "@/components/svg/other/other_2";
 import { EmptyDataSvg } from "@/components/svg/EmptyDataSvg";
-import { cn, getCategoryColor } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const PHOTOGRAPHY_SVGS = [
   Photography1Svg,

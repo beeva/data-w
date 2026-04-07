@@ -10,13 +10,6 @@ import Footer from "@/components/Footer";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import ToastNotification from "@/components/ui/toast-notification";
-import MicrosoftSvg from "@/components/svg/company-logos/MicrosoftSvg";
-import YamahaSvg from "@/components/svg/company-logos/YamahaSvg";
-import AppleMusicSvg from "@/components/svg/company-logos/AppleMusicSvg";
-import ShopifySvg from "@/components/svg/company-logos/ShopifySvg";
-import YoutubeSvg from "@/components/svg/company-logos/YoutubeSvg";
-import NetflixSvg from "@/components/svg/company-logos/NetflixSvg";
-
 function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();

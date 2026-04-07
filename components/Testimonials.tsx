@@ -2,7 +2,7 @@
 
 import Image, { StaticImageData } from "next/image";
 import Link from "next/link";
-import { Users, ShieldCheck, Wallet, type LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 import PostBrowseSvg from "@/components/svg/PostBrowseSvg";
 import { motion } from "motion/react";
 import man1 from "@/public/avatars/man1.jpg";

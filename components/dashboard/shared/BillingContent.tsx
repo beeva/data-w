@@ -63,29 +63,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  RefreshCw,
-  Download,
-  Receipt,
-  BarChart3,
-  Wallet,
-  Sparkles,
-  Building2,
-  ChevronRight,
-  FileText,
-  Bitcoin,
-  XCircle,
-  Shield,
-  Zap,
-  Crown,
-} from "lucide-react";
+import { TrendingUp, ArrowUpRight, ArrowDownRight, Clock, CheckCircle2, AlertCircle, Loader2, Download, Receipt, BarChart3, Wallet, Sparkles, Building2, ChevronRight, XCircle, Shield, Zap, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FreeSvg } from "@/components/svg/pricing/FreeSvg";
 import { StarterSvg } from "@/components/svg/pricing/StarterSvg";
