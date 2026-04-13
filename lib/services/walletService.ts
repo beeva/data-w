@@ -22,32 +22,6 @@ export interface WalletTransaction {
 }
 
 /**
- * Get wallet balance for a user
- */
-export async function getWalletBalance(
-  userId: string
-): Promise<{ balance: number; error: Error | null }> {
-  try {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("balance")
-      .eq("id", userId)
-      .single();
-
-    if (error) {
-      return { balance: 0, error: new Error(error.message) };
-    }
-
-    return { balance: parseFloat(data.balance) || 0, error: null };
-  } catch (err) {
-    return {
-      balance: 0,
-      error: err instanceof Error ? err : new Error("Failed to fetch balance"),
-    };
-  }
-}
-
-/**
  * Get transaction history for a user (as requester or collector)
  */
 export async function getWalletTransactions(
@@ -101,10 +75,7 @@ export async function transferFunds(
     });
 
     if (error) {
-      const message = error.message.includes("Insufficient balance")
-        ? "Insufficient balance to approve this submission"
-        : error.message;
-      return { transactionId: null, error: new Error(message) };
+      return { transactionId: null, error: new Error(error.message) };
     }
 
     return { transactionId: data as string, error: null };
@@ -118,38 +89,7 @@ export async function transferFunds(
 }
 
 /**
- * Deduct project budget from requester's balance at project creation.
- */
-export async function deductProjectBudget(
-  requesterId: string,
-  amount: number
-): Promise<{ success: boolean; error: Error | null }> {
-  try {
-    const { error } = await supabase.rpc("deduct_project_budget", {
-      p_requester_id: requesterId,
-      p_amount: amount,
-    });
-
-    if (error) {
-      const message = error.message.includes("Insufficient balance")
-        ? "Insufficient balance to create this project"
-        : error.message;
-      return { success: false, error: new Error(message) };
-    }
-
-    return { success: true, error: null };
-  } catch (err) {
-    return {
-      success: false,
-      error:
-        err instanceof Error ? err : new Error("Failed to deduct budget"),
-    };
-  }
-}
-
-/**
- * Credit collector when a submission is approved.
- * The requester's budget was already deducted at project creation.
+ * Credit collector when a submission is approved (records payout + stats; settlement is on-chain DATAW).
  */
 export async function creditCollector(
   requesterId: string,

@@ -25,7 +25,7 @@ import {
   subscribeToPlan,
   cancelSubscription,
 } from "@/lib/services/billingService";
-import { getWalletBalance } from "@/lib/services/walletService";
+import { useDatawBalance } from "@/lib/hooks/useDatawBalance";
 import type {
   BillingStats,
   ProjectBilling,
@@ -70,6 +70,10 @@ import { StarterSvg } from "@/components/svg/pricing/StarterSvg";
 import { ProfessionalSvg } from "@/components/svg/pricing/ProfessionalSvg";
 import { EnterpriseSvg } from "@/components/svg/pricing/EnterpriseSvg";
 import { EmptyDataSvg } from "@/components/svg/EmptyDataSvg";
+import {
+  ensureSepoliaNetwork,
+  isMetaMaskInstalled,
+} from "@/lib/web3/client";
 
 const PLAN_SVG_COLORS: Record<string, string> = {
   free: "#94a3b8",
@@ -116,6 +120,8 @@ const TIER_BORDERS: Record<string, string> = {
 export default function BillingContent() {
   const { user, profile } = useAuth();
   const router = useRouter();
+  const { amount: datawAmount, loading: datawLoading, refresh: refreshDataw } =
+    useDatawBalance();
   const [stats, setStats] = useState<BillingStats | null>(null);
   const [projectBillings, setProjectBillings] = useState<ProjectBilling[]>([]);
   const [usageData, setUsageData] = useState<UsageData[]>([]);
@@ -126,7 +132,6 @@ export default function BillingContent() {
   const [subscription, setSubscription] = useState<UserSubscription | null>(
     null,
   );
-  const [walletBalance, setWalletBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -163,7 +168,6 @@ export default function BillingContent() {
         dailyUsageResult,
         invoicesResult,
         subResult,
-        balanceResult,
       ] = await Promise.all([
         getBillingStats(userId),
         getProjectBillings(userId),
@@ -172,7 +176,6 @@ export default function BillingContent() {
         getDailyUsageData(userId),
         getInvoices(userId),
         getUserSubscription(userId),
-        getWalletBalance(userId),
       ]);
 
       if (statsResult.error) throw statsResult.error;
@@ -187,7 +190,6 @@ export default function BillingContent() {
       setDailyUsageData(dailyUsageResult.data || []);
       setInvoices(invoicesResult.data || []);
       setSubscription(subResult.data);
-      setWalletBalance(balanceResult.balance);
     } catch (err: any) {
       setError(err.message || "Failed to load billing data");
     } finally {
@@ -308,6 +310,13 @@ export default function BillingContent() {
     setSubscribeError("");
 
     try {
+      if (price > 0) {
+        if (!isMetaMaskInstalled()) {
+          throw new Error("Install MetaMask to pay with DATAW.");
+        }
+        await ensureSepoliaNetwork();
+      }
+
       const { error: subError } = await subscribeToPlan(
         userId,
         selectedPlan.id,
@@ -321,6 +330,7 @@ export default function BillingContent() {
       setShowConfirm(false);
       setSelectedPlan(null);
       await fetchBillingData(false);
+      await refreshDataw();
     } catch (err: any) {
       setSubscribeError(err.message || "Failed to subscribe");
     } finally {
@@ -720,10 +730,18 @@ export default function BillingContent() {
                 {/* Wallet info */}
                 <div className="mt-4 pt-4 border-t border-border dark:border-gray-700">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
-                    Available Balance
+                    DATAW Balance
                   </p>
                   <p className="text-2xl font-bold text-foreground leading-none mb-1.5">
-                    {formatCurrency(walletBalance)}
+                    {datawLoading ? (
+                      "…"
+                    ) : datawAmount === null ? (
+                      <span className="text-base font-semibold text-muted-foreground">
+                        Connect wallet
+                      </span>
+                    ) : (
+                      `${datawAmount.toFixed(4)} DATAW`
+                    )}
                   </p>
                   {stats?.total_earned !== undefined && (
                     <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mb-4">
@@ -795,13 +813,19 @@ export default function BillingContent() {
                   <div className="flex items-end justify-between">
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground uppercase tracking-widest">
-                        Balance
+                        DATAW
                       </p>
                       <p className="text-2xl font-bold text-blue-600">
-                        {formatCurrency(walletBalance)}
+                        {datawLoading ? (
+                          "…"
+                        ) : datawAmount === null ? (
+                          "—"
+                        ) : (
+                          `${datawAmount.toFixed(4)}`
+                        )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Available in wallet
+                        On-chain (Sepolia)
                       </p>
                     </div>
                     <div className="w-12 h-12 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
@@ -1510,40 +1534,46 @@ export default function BillingContent() {
                   </span>
                 </div>
                 <div className="border-t border-border pt-1.5 flex justify-between text-xs">
-                  <span className="text-muted-foreground">Wallet Balance</span>
+                  <span className="text-muted-foreground">DATAW balance</span>
                   <span
                     className={cn(
                       "font-semibold",
-                      walletBalance >= getPrice(selectedPlan)
+                      datawAmount !== null &&
+                        datawAmount >= getPrice(selectedPlan)
                         ? "text-green-600"
                         : "text-red-600",
                     )}
                   >
-                    {formatCurrency(walletBalance)}
+                    {datawLoading
+                      ? "…"
+                      : datawAmount === null
+                        ? "—"
+                        : `${datawAmount.toFixed(4)} DATAW`}
                   </span>
                 </div>
               </div>
 
-              {walletBalance < getPrice(selectedPlan) &&
+              {(datawAmount === null ||
+                datawAmount < getPrice(selectedPlan)) &&
                 getPrice(selectedPlan) > 0 && (
                   <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-2.5 flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs text-red-600 dark:text-red-400 font-medium">
-                        Insufficient balance
+                        Not enough DATAW
                       </p>
                       <p className="text-[10px] text-red-500">
-                        You need{" "}
-                        {formatCurrency(getPrice(selectedPlan) - walletBalance)}{" "}
-                        more.{" "}
+                        Connect MetaMask on Sepolia and hold enough DATAW for this
+                        plan (amount matches plan price).{" "}
                         <button
+                          type="button"
                           className="underline font-medium"
                           onClick={() => {
                             setShowConfirm(false);
                             router.push("/dashboard/wallet");
                           }}
                         >
-                          Deposit funds
+                          Open wallet
                         </button>
                       </p>
                     </div>
@@ -1571,7 +1601,9 @@ export default function BillingContent() {
                   onClick={handleSubscribe}
                   disabled={
                     subscribing ||
-                    (walletBalance < getPrice(selectedPlan) &&
+                    datawLoading ||
+                    ((datawAmount === null ||
+                      datawAmount < getPrice(selectedPlan)) &&
                       getPrice(selectedPlan) > 0)
                   }
                 >

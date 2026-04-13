@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDatawBalance } from "@/lib/hooks/useDatawBalance";
 import {
   completeProjectWithCollectorFeedbacks,
   getProjectsByRequester,
@@ -260,6 +261,7 @@ function formatTimeAgo(dateString: string): string {
 export default function RequesterDashboard() {
   const { user, profile } = useAuth();
   const router = useRouter();
+  const { amount: datawAmount, loading: datawLoading } = useDatawBalance();
 
   const displayName =
     profile?.full_name || user?.email?.split("@")[0] || "User";
@@ -302,13 +304,13 @@ export default function RequesterDashboard() {
       target: "sidebar",
       title: "Navigate with Ease",
       content:
-        "This sidebar provides you with instant access to all the essential parts of your dashboard. Think of it as your personal shortcut menu, allowing you to quickly jump between profile, balance, and quick actions.",
+        "This sidebar provides you with instant access to all the essential parts of your dashboard. Think of it as your personal shortcut menu, allowing you to quickly jump between profile, DATAW balance, and quick actions.",
     },
     {
       target: "balance",
       title: "Manage Your Budget",
       content:
-        "Here you can see your available balance and total budget used across projects. Use 'View Transactions' to track all your payments and earnings.",
+        "Here you can see your DATAW balance (on-chain) and total budget used across projects. Use 'View Transactions' to track all your payments and earnings.",
     },
     {
       target: "quick-actions",
@@ -857,11 +859,19 @@ export default function RequesterDashboard() {
             <CardContent className="px-4 sm:px-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Available Balance
+                  DATAW Balance
                 </span>
               </div>
               <p className="text-2xl font-semibold text-foreground mb-0.5">
-                ${(profile?.balance ?? 0).toFixed(2)}
+                {datawLoading ? (
+                  <span className="inline-block h-8 w-28 animate-pulse rounded-md bg-muted" />
+                ) : datawAmount === null ? (
+                  <span className="text-base font-medium text-muted-foreground">
+                    Connect wallet
+                  </span>
+                ) : (
+                  `${datawAmount.toFixed(4)} DATAW`
+                )}
               </p>
               <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 mb-3">
                 <TrendingUp className="w-3 h-3" />

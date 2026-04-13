@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { createProject, updateProject } from "@/lib/services/projectService";
-import { deductProjectBudget } from "@/lib/services/walletService";
 import type { Project, ProjectFormData } from "@/types/project";
 import {
   Dialog,
@@ -558,14 +557,6 @@ export default function CreateProjectDialog({
         });
         if (editError) throw editError;
       } else {
-        const { error: budgetError } = await deductProjectBudget(
-          user.id,
-          budgetAmount,
-        );
-        if (budgetError) {
-          throw budgetError;
-        }
-
         const { error: createError } = await createProject(user.id, {
           title: formData.title,
           description: formData.description,

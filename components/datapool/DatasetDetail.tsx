@@ -30,7 +30,11 @@ import {
   type DataPoolDatasetFileRow,
   type DataPoolDatasetMessageRow,
 } from "@/lib/services/dataPoolService";
-import { getWalletBalance } from "@/lib/services/walletService";
+import {
+  ensureSepoliaNetwork,
+  isMetaMaskInstalled,
+} from "@/lib/web3/client";
+import { useDatawBalance } from "@/lib/hooks/useDatawBalance";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import {
@@ -244,6 +248,8 @@ function FileAccessRow({
 
 export default function DatasetDetail({ datasetId }: { datasetId: string }) {
   const { user, profile, refreshProfile } = useAuth();
+  const { amount: datawAmount, loading: datawLoading, refresh: refreshDataw } =
+    useDatawBalance();
   const router = useRouter();
   const searchParams = useSearchParams();
   const discussionIdFromUrl = searchParams.get("discussion")?.trim() || null;
@@ -268,7 +274,6 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
 
   const [purchased, setPurchased] = useState(false);
   const [purchaseSubmitting, setPurchaseSubmitting] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const setDiscussionInUrl = useCallback(
@@ -452,21 +457,6 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
   const hasFileAccess = isOwner || purchased;
   const isCollector = profile?.role === "collector";
 
-  useEffect(() => {
-    if (!user?.id || !dataset) {
-      setWalletBalance(null);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const { balance } = await getWalletBalance(user.id);
-      if (!cancelled) setWalletBalance(balance);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user?.id, dataset?.id]);
-
   const onDownloadFile = useCallback(async (f: DataPoolDatasetFileRow) => {
     setDownloadingId(f.id);
     setError("");
@@ -494,18 +484,37 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
       return;
     setPurchaseSubmitting(true);
     setError("");
-    const { error: pErr } = await purchaseDataPoolDataset(dataset.id);
-    if (pErr) {
-      setError(pErr.message || "Purchase failed.");
+    try {
+      if (dataset.price > 0) {
+        if (!isMetaMaskInstalled()) {
+          setError("Install MetaMask to pay with DATAW.");
+          setPurchaseSubmitting(false);
+          return;
+        }
+        await ensureSepoliaNetwork();
+        if (datawAmount === null || datawAmount < dataset.price) {
+          setError("Insufficient DATAW balance in your connected wallet.");
+          setPurchaseSubmitting(false);
+          return;
+        }
+      }
+      const { error: pErr } = await purchaseDataPoolDataset(dataset.id);
+      if (pErr) {
+        setError(pErr.message || "Purchase failed.");
+        setPurchaseSubmitting(false);
+        return;
+      }
+      setPurchased(true);
+      await refreshProfile();
+      await refreshDataw();
+      await loadAll("refresh");
+    } catch (e: unknown) {
+      setError(
+        e instanceof Error ? e.message : "Payment or purchase failed.",
+      );
+    } finally {
       setPurchaseSubmitting(false);
-      return;
     }
-    setPurchased(true);
-    await refreshProfile();
-    const { balance } = await getWalletBalance(user.id);
-    setWalletBalance(balance);
-    await loadAll("refresh");
-    setPurchaseSubmitting(false);
   };
 
   const heroDescription = loading
@@ -720,7 +729,7 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                           </p>
                         ) : !user ? (
                           <div className="mt-3 space-y-2">
-                            <p className="text-sm text-white/60">Sign in to purchase with your wallet balance.</p>
+                            <p className="text-sm text-white/60">Sign in to purchase with DATAW (MetaMask on Sepolia).</p>
                             <Button
                               type="button"
                               asChild
@@ -753,23 +762,34 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                             <p className="text-sm text-white/70">
                               Price{" "}
                               <span className="font-semibold text-emerald-300">
-                                {formatMoney(dataset.price)}
+                                {dataset.price > 0
+                                  ? `${dataset.price} DATAW`
+                                  : formatMoney(dataset.price)}
                               </span>
+                              {dataset.price > 0 ? (
+                                <span className="block text-[11px] text-white/45 mt-1">
+                                  Listing price is paid in DATAW from your wallet (same numeric amount).
+                                </span>
+                              ) : null}
                             </p>
                             <div className="flex items-center gap-2 text-sm text-white/60">
                               <Wallet className="h-4 w-4 shrink-0 text-white/45" aria-hidden />
                               <span>
-                                Your balance:{" "}
+                                Your DATAW:{" "}
                                 <span className="font-semibold text-white/85">
-                                  {walletBalance === null ? "—" : formatMoney(walletBalance)}
+                                  {datawLoading
+                                    ? "…"
+                                    : datawAmount === null
+                                      ? "Connect wallet"
+                                      : `${datawAmount.toFixed(4)}`}
                                 </span>
                               </span>
                             </div>
                             {dataset.price > 0 &&
-                            walletBalance !== null &&
-                            walletBalance < dataset.price ? (
+                            datawAmount !== null &&
+                            datawAmount < dataset.price ? (
                               <p className="text-xs text-amber-200/90">
-                                Insufficient balance. Add funds to purchase.
+                                Insufficient DATAW. Acquire tokens or connect the wallet that holds them.
                               </p>
                             ) : null}
                             <div className="flex flex-col gap-2">
@@ -778,9 +798,10 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                                 className="h-9 w-full bg-emerald-600 text-white hover:bg-emerald-700"
                                 disabled={
                                   purchaseSubmitting ||
+                                  datawLoading ||
                                   (dataset.price > 0 &&
-                                    walletBalance !== null &&
-                                    walletBalance < dataset.price)
+                                    (datawAmount === null ||
+                                      datawAmount < dataset.price))
                                 }
                                 onClick={() => void onPurchaseDataset()}
                               >
@@ -792,7 +813,7 @@ export default function DatasetDetail({ datasetId }: { datasetId: string }) {
                                 ) : dataset.price <= 0 ? (
                                   "Add to library"
                                 ) : (
-                                  "Purchase with balance"
+                                  "Pay DATAW & unlock"
                                 )}
                               </Button>
                               <Button

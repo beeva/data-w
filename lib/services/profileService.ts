@@ -5,6 +5,10 @@
 import { supabase } from "@/lib/supabase/client";
 import type { UserProfile } from "@/types/user";
 
+/** Profile columns loaded for the authenticated client. */
+const PROFILE_SELECT =
+  "id, email, full_name, role, verification_tier, avatar_url, bio, location, phone, created_at, updated_at, last_active_at, subscription_tier, company_name, company_website, total_earnings, total_submissions, rating, completed_tasks, validation_score, total_validations";
+
 /**
  * Fetch user profile by ID
  */
@@ -14,7 +18,7 @@ export async function getProfileById(
   try {
     const { data, error } = await supabase
       .from("profiles")
-      .select("*")
+      .select(PROFILE_SELECT)
       .eq("id", userId)
       .single();
 
@@ -43,7 +47,7 @@ export async function updateProfile(
       .from("profiles")
       .update(updates)
       .eq("id", userId)
-      .select()
+      .select(PROFILE_SELECT)
       .single();
 
     if (error) {

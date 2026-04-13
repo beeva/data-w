@@ -662,7 +662,7 @@ export async function getUserSubscription(
 }
 
 /**
- * Subscribe to a plan using wallet balance
+ * Subscribe to a plan (tier stored in Supabase; pay with DATAW in the app UI).
  */
 export async function subscribeToPlan(
   userId: string,
@@ -681,10 +681,7 @@ export async function subscribeToPlan(
     });
 
     if (error) {
-      const message = error.message.includes("Insufficient balance")
-        ? "Insufficient balance. Please deposit funds first."
-        : error.message;
-      return { subscriptionId: null, error: new Error(message) };
+      return { subscriptionId: null, error: new Error(error.message) };
     }
 
     return { subscriptionId: data as string, error: null };

@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDatawBalance } from "@/lib/hooks/useDatawBalance";
 import { getOpenProjects } from "@/lib/services/projectService";
 import {
   getProposalsByCollector,
@@ -542,6 +543,7 @@ function ProjectList({
 export default function CollectorDashboard() {
   const { user, profile } = useAuth();
   const router = useRouter();
+  const { amount: datawAmount, loading: datawLoading } = useDatawBalance();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [proposalStatuses, setProposalStatuses] = useState<
@@ -1080,11 +1082,19 @@ export default function CollectorDashboard() {
           <CardContent className="px-4 sm:px-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Available Balance
+                DATAW Balance
               </span>
             </div>
             <p className="text-2xl font-semibold text-foreground mb-0.5">
-              ${(profile?.balance ?? 0).toFixed(2)}
+              {datawLoading ? (
+                <span className="inline-block h-8 w-28 animate-pulse rounded-md bg-muted" />
+              ) : datawAmount === null ? (
+                <span className="text-base font-medium text-muted-foreground">
+                  Connect wallet
+                </span>
+              ) : (
+                `${datawAmount.toFixed(4)} DATAW`
+              )}
             </p>
             <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 mb-3">
               <TrendingUp className="w-3 h-3" />

@@ -22,9 +22,6 @@ CREATE TABLE profiles (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   last_active_at TIMESTAMPTZ DEFAULT NOW(),
-  
-  -- Wallet balance (all users)
-  balance DECIMAL(10, 2) DEFAULT 0,
 
   -- Subscription tier (synced from user_subscriptions)
   subscription_tier TEXT DEFAULT 'free',
@@ -572,7 +569,7 @@ CREATE POLICY "Authenticated users can insert transactions"
   ON transactions FOR INSERT
   WITH CHECK (requester_id = auth.uid());
 
--- Atomically transfer funds from requester to collector
+-- Record payout in DB; settlement is on-chain (DATAW).
 CREATE OR REPLACE FUNCTION transfer_funds(
   p_requester_id UUID,
   p_collector_id UUID,
@@ -582,31 +579,13 @@ CREATE OR REPLACE FUNCTION transfer_funds(
 )
 RETURNS UUID AS $$
 DECLARE
-  v_requester_balance DECIMAL;
   v_tx_id UUID;
 BEGIN
-  -- Lock the requester row to prevent race conditions
-  SELECT balance INTO v_requester_balance
-  FROM profiles WHERE id = p_requester_id FOR UPDATE;
-
-  IF v_requester_balance < p_amount + p_platform_fee THEN
-    RAISE EXCEPTION 'Insufficient balance';
-  END IF;
-
-  -- Deduct from requester
   UPDATE profiles
-  SET balance = balance - (p_amount + p_platform_fee),
-      updated_at = NOW()
-  WHERE id = p_requester_id;
-
-  -- Credit collector
-  UPDATE profiles
-  SET balance = balance + p_amount,
-      total_earnings = total_earnings + p_amount,
+  SET total_earnings = total_earnings + p_amount,
       updated_at = NOW()
   WHERE id = p_collector_id;
 
-  -- Create transaction record
   INSERT INTO transactions (submission_id, requester_id, collector_id, amount, platform_fee, status, completed_at)
   VALUES (p_submission_id, p_requester_id, p_collector_id, p_amount, p_platform_fee, 'completed', NOW())
   RETURNING id INTO v_tx_id;
@@ -615,36 +594,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Deduct project budget from requester balance at project creation
 CREATE OR REPLACE FUNCTION deduct_project_budget(
   p_requester_id UUID,
   p_amount DECIMAL
 )
 RETURNS BOOLEAN AS $$
-DECLARE
-  v_balance DECIMAL;
 BEGIN
-  SELECT balance INTO v_balance
-  FROM profiles WHERE id = p_requester_id FOR UPDATE;
-
-  IF v_balance IS NULL THEN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = p_requester_id) THEN
     RAISE EXCEPTION 'User not found';
   END IF;
-
-  IF v_balance < p_amount THEN
-    RAISE EXCEPTION 'Insufficient balance';
-  END IF;
-
-  UPDATE profiles
-  SET balance = balance - p_amount,
-      updated_at = NOW()
-  WHERE id = p_requester_id;
-
   RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Credit collector on submission approval (requester already paid at project creation)
 CREATE OR REPLACE FUNCTION credit_collector(
   p_requester_id UUID,
   p_collector_id UUID,
@@ -656,8 +618,7 @@ DECLARE
   v_tx_id UUID;
 BEGIN
   UPDATE profiles
-  SET balance = balance + p_amount,
-      total_earnings = total_earnings + p_amount,
+  SET total_earnings = total_earnings + p_amount,
       updated_at = NOW()
   WHERE id = p_collector_id;
 
@@ -892,7 +853,7 @@ BEGIN
       SELECT COALESCE(json_agg(row_to_json(t)), '[]'::json)
       FROM (
         SELECT p.id, p.email, p.full_name, p.avatar_url, p.role,
-               p.verification_tier, p.created_at, p.updated_at, p.balance,
+               p.verification_tier, p.created_at, p.updated_at,
                p.total_earnings, p.total_submissions, p.rating
         FROM profiles p
         WHERE (search_term = '' OR p.email ILIKE '%' || search_term || '%' OR p.full_name ILIKE '%' || search_term || '%')
@@ -1156,7 +1117,7 @@ CREATE POLICY "Service can insert deposits"
   ON crypto_deposits FOR INSERT
   WITH CHECK (user_id = auth.uid());
 
--- Credit user balance when a crypto deposit is confirmed (called from webhook)
+-- Finalize crypto deposit record (no in-app balance; settlement is on-chain)
 CREATE OR REPLACE FUNCTION credit_user_balance(
   p_user_id UUID,
   p_amount DECIMAL,
@@ -1178,11 +1139,6 @@ BEGIN
   IF v_deposit_status = 'confirmed' THEN
     RETURN TRUE;
   END IF;
-
-  UPDATE profiles
-  SET balance = balance + p_amount,
-      updated_at = NOW()
-  WHERE id = p_user_id;
 
   UPDATE crypto_deposits
   SET status = 'confirmed',
@@ -1222,7 +1178,7 @@ CREATE POLICY "Users can view their own subscriptions"
   ON user_subscriptions FOR SELECT
   USING (user_id = auth.uid());
 
--- Subscribe to a plan (charges wallet balance)
+-- Subscribe to a plan (tier in DB; payment via DATAW in app)
 CREATE OR REPLACE FUNCTION subscribe_to_plan(
   p_user_id UUID,
   p_plan_id TEXT,
@@ -1232,48 +1188,27 @@ CREATE OR REPLACE FUNCTION subscribe_to_plan(
 )
 RETURNS UUID AS $$
 DECLARE
-  v_balance DECIMAL;
   v_sub_id UUID;
   v_period_end TIMESTAMPTZ;
 BEGIN
-  -- Lock user row
-  SELECT balance INTO v_balance
-  FROM profiles WHERE id = p_user_id FOR UPDATE;
-
-  IF v_balance IS NULL THEN
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = p_user_id) THEN
     RAISE EXCEPTION 'User not found';
   END IF;
 
-  -- Free plan doesn't require balance
-  IF p_price > 0 AND v_balance < p_price THEN
-    RAISE EXCEPTION 'Insufficient balance. Please deposit funds first.';
-  END IF;
-
-  -- Calculate period end
   IF p_billing_cycle = 'yearly' THEN
     v_period_end := NOW() + INTERVAL '1 year';
   ELSE
     v_period_end := NOW() + INTERVAL '1 month';
   END IF;
 
-  -- Cancel any existing active subscription
   UPDATE user_subscriptions
   SET status = 'cancelled', updated_at = NOW()
   WHERE user_id = p_user_id AND status = 'active';
 
-  -- Deduct balance if paid plan
-  IF p_price > 0 THEN
-    UPDATE profiles
-    SET balance = balance - p_price, updated_at = NOW()
-    WHERE id = p_user_id;
-  END IF;
-
-  -- Update profile tier
   UPDATE profiles
   SET subscription_tier = p_tier, updated_at = NOW()
   WHERE id = p_user_id;
 
-  -- Create subscription record
   INSERT INTO user_subscriptions (
     user_id, plan_id, tier, billing_cycle, price, status,
     current_period_start, current_period_end

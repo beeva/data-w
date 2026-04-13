@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDatawBalance } from "@/lib/hooks/useDatawBalance";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -29,6 +30,7 @@ function roleLabel(role: UserRole | undefined): string {
 export default function PersonalCompanyDashboard() {
   const { user, profile } = useAuth();
   const router = useRouter();
+  const { amount: datawAmount, loading: datawLoading } = useDatawBalance();
   const role = profile?.role as UserRole | undefined;
 
   const displayName =
@@ -160,11 +162,19 @@ export default function PersonalCompanyDashboard() {
             <CardContent className="px-4 sm:px-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                  Available Balance
+                  DATAW Balance
                 </span>
               </div>
               <p className="text-2xl font-semibold text-foreground mb-0.5">
-                ${(profile?.balance ?? 0).toFixed(2)}
+                {datawLoading ? (
+                  <span className="inline-block h-8 w-28 animate-pulse rounded-md bg-muted" />
+                ) : datawAmount === null ? (
+                  <span className="text-base font-medium text-muted-foreground">
+                    Connect wallet
+                  </span>
+                ) : (
+                  `${datawAmount.toFixed(4)} DATAW`
+                )}
               </p>
               <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 mb-3">
                 <TrendingUp className="w-3 h-3" />
@@ -231,7 +241,7 @@ export default function PersonalCompanyDashboard() {
                 Welcome back!
               </h1>
               <p className="text-xs text-muted-foreground">
-                Explore the Data Pool, manage your balance, and keep your
+                Explore the Data Pool, manage your DATAW in Wallet, and keep your
                 account up to date.
               </p>
             </div>

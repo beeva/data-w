@@ -45,7 +45,6 @@ interface UserRow {
   verification_tier: string | null;
   created_at: string;
   updated_at: string;
-  balance: number;
   total_earnings: number;
   total_submissions: number;
   rating: number;
@@ -281,7 +280,6 @@ export default function UserManagement() {
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">User</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Role</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Tier</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Balance</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Joined</th>
                     </tr>
                   </thead>
@@ -338,9 +336,6 @@ export default function UserManagement() {
                             <Shield className="w-3 h-3 mr-1" />
                             {u.verification_tier || "bronze"}
                           </Badge>
-                        </td>
-                        <td className="py-4 px-4 text-sm">
-                          ${Number(u.balance || 0).toFixed(2)}
                         </td>
                         <td className="py-4 px-4 text-sm text-muted-foreground">
                           {formatDate(u.created_at)}

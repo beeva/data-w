@@ -21,7 +21,7 @@ import {
   getUnreadNotificationCount,
   markAllNotificationsAsRead,
 } from "@/lib/services/notificationService";
-import { getWalletBalance } from "@/lib/services/walletService";
+import { useDatawBalance } from "@/lib/hooks/useDatawBalance";
 
 interface DashboardHeaderProps {
   onSidebarToggle: () => void;
@@ -48,7 +48,7 @@ export default function DashboardHeader({
     message: string;
     type: "success" | "error" | "info";
   } | null>(null);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const { amount: datawAmount, loading: datawLoading } = useDatawBalance();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,11 +106,6 @@ export default function DashboardHeader({
     getUnreadNotificationCount().then(({ count, error }) => {
       if (!error) setUnreadCount(count);
     });
-  }, [userId]);
-
-  useEffect(() => {
-    if (!userId) return;
-    getWalletBalance(userId).then(({ balance }) => setWalletBalance(balance));
   }, [userId]);
 
   useEffect(() => {
@@ -495,11 +490,13 @@ export default function DashboardHeader({
             className="btn-gelatine h-8 gap-1.5 px-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
           >
             <Wallet className="w-4 h-4 shrink-0" />
-            {walletBalance !== null && (
-              <span className="text-sm font-semibold tabular-nums hidden sm:inline">
-                ${walletBalance.toFixed(2)}
-              </span>
-            )}
+            <span className="text-sm font-semibold tabular-nums hidden sm:inline">
+              {datawLoading
+                ? "…"
+                : datawAmount === null
+                  ? "—"
+                  : `${datawAmount.toFixed(2)} DATAW`}
+            </span>
           </Button>
 
           {/* Theme Toggle */}

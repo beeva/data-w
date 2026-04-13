@@ -30,8 +30,6 @@ export interface UserProfile {
   phone: string | null;
   created_at: string;
   updated_at: string;
-  // Wallet
-  balance: number | null;
   // Subscription
   subscription_tier: string | null;
   // Requester specific fields

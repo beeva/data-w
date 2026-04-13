@@ -1,13 +1,24 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  getWalletBalance,
   getWalletTransactions,
   type WalletTransaction,
 } from "@/lib/services/walletService";
-import { supabase } from "@/lib/supabase/client";
+import {
+  connectMetaMask,
+  ensureSepoliaNetwork,
+  getDatawBalance,
+  getErc20Balance,
+  isMetaMaskInstalled,
+  openMetaMaskInstallPage,
+} from "@/lib/web3/client";
+import {
+  STABLE_TOKENS,
+  type SupportedStableSymbol,
+} from "@/lib/web3/contracts";
+import { isAddress } from "ethers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +38,29 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ArrowUpRight, ArrowDownRight, Loader2, DollarSign, Clock, CheckCircle2, AlertCircle, Plus, Copy, Check, Bitcoin, Search, Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, TrendingDown, MoreVertical, Sparkles, ArrowRight, CalendarDays } from "lucide-react";
+import {
+  ArrowUpRight,
+  ArrowDownRight,
+  Loader2,
+  DollarSign,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Plus,
+  Bitcoin,
+  Search,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  TrendingDown,
+  MoreVertical,
+  Sparkles,
+  ArrowRight,
+  CalendarDays,
+  Wallet,
+} from "lucide-react";
 import { EmptyDataSvg } from "@/components/svg/EmptyDataSvg";
 import {
   Table,
@@ -41,31 +74,10 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
-interface DepositPayment {
-  payment_id: string;
-  pay_address: string;
-  pay_amount: number;
-  pay_currency: string;
-  amount_usd: number;
-  status: string;
-  expiration_estimate_date?: string;
-}
-
-const CRYPTO_OPTIONS = [
-  { value: "btc", label: "Bitcoin", symbol: "BTC" },
-  { value: "eth", label: "Ethereum", symbol: "ETH" },
-  { value: "ltc", label: "Litecoin", symbol: "LTC" },
-  { value: "trx", label: "TRON", symbol: "TRX" },
-  { value: "usdttrc20", label: "USDT (TRC-20)", symbol: "USDT" },
-  { value: "usdterc20", label: "USDT (ERC-20)", symbol: "USDT" },
-  { value: "usdtbsc", label: "USDT (BEP-20)", symbol: "USDT" },
-  { value: "bnbbsc", label: "BNB (BSC)", symbol: "BNB" },
-  { value: "matic", label: "Polygon", symbol: "MATIC" },
-  { value: "sol", label: "Solana", symbol: "SOL" },
-  { value: "doge", label: "Dogecoin", symbol: "DOGE" },
-  { value: "xrp", label: "Ripple", symbol: "XRP" },
-  { value: "ada", label: "Cardano", symbol: "ADA" },
-];
+const STABLE_TOKEN_OPTIONS = STABLE_TOKENS.map((token) => ({
+  ...token,
+  isConfigured: Boolean(token.address) && isAddress(token.address),
+}));
 
 const PAGE_SIZE = 10;
 
@@ -160,12 +172,19 @@ function DonutChart({ income, expense }: { income: number; expense: number }) {
 }
 
 export default function WalletContent() {
-  const { user, profile } = useAuth();
-  const role = profile?.role || "";
+  const { user } = useAuth();
   const [balance, setBalance] = useState(0);
+  const [walletAddress, setWalletAddress] = useState("");
+  const [metaMaskAvailable, setMetaMaskAvailable] = useState(false);
+  const [walletConnecting, setWalletConnecting] = useState(false);
+  const [walletBalanceLoading, setWalletBalanceLoading] = useState(false);
+  const [stableTokenBalances, setStableTokenBalances] = useState<
+    Record<string, number>
+  >({});
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [walletError, setWalletError] = useState("");
 
   // Table state
   const [search, setSearch] = useState("");
@@ -175,23 +194,85 @@ export default function WalletContent() {
 
   // Deposit dialog state
   const [depositOpen, setDepositOpen] = useState(false);
-  const [depositStep, setDepositStep] = useState<"form" | "payment" | "done">(
+  const [depositStep, setDepositStep] = useState<"form" | "done">(
     "form",
   );
   const [depositAmount, setDepositAmount] = useState("");
-  const [depositCurrency, setDepositCurrency] = useState("btc");
+  const [depositCurrency, setDepositCurrency] =
+    useState<SupportedStableSymbol>("USDT");
   const [depositLoading, setDepositLoading] = useState(false);
   const [depositError, setDepositError] = useState("");
-  const [depositPayment, setDepositPayment] = useState<DepositPayment | null>(
-    null,
-  );
-  const [copied, setCopied] = useState<"address" | "amount" | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState("");
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const [deposits, setDeposits] = useState<any[]>([]);
-
+  const [depositTxHash, setDepositTxHash] = useState("");
   const userId = user?.id;
+
+  const refreshWalletBalances = useCallback(
+    async (address?: string) => {
+      const targetAddress = address || walletAddress;
+      if (!targetAddress) {
+        setBalance(0);
+        setStableTokenBalances({});
+        return;
+      }
+
+      try {
+        setWalletBalanceLoading(true);
+        setWalletError("");
+        await ensureSepoliaNetwork();
+
+        const [daxwBalance, stableBalances] = await Promise.all([
+          getDatawBalance(targetAddress),
+          Promise.all(
+            STABLE_TOKEN_OPTIONS.filter((token) => token.isConfigured).map(
+              async (token) => {
+              const tokenBalance = await getErc20Balance(
+                token.address,
+                targetAddress,
+                token.decimals,
+              );
+              return [token.symbol, tokenBalance] as const;
+            }),
+          ),
+        ]);
+
+        setBalance(daxwBalance);
+        setStableTokenBalances(Object.fromEntries(stableBalances));
+      } catch (err: any) {
+        setWalletError(err.message || "Failed to load wallet balances");
+      } finally {
+        setWalletBalanceLoading(false);
+      }
+    },
+    [walletAddress],
+  );
+
+  const handleConnectWallet = useCallback(async () => {
+    try {
+      setWalletConnecting(true);
+      setDepositError("");
+      setWalletError("");
+
+      if (!isMetaMaskInstalled()) {
+        setMetaMaskAvailable(false);
+        setWalletError(
+          "MetaMask is not installed. Opening Chrome Web Store installer...",
+        );
+        openMetaMaskInstallPage();
+        return;
+      }
+
+      setMetaMaskAvailable(true);
+      const address = await connectMetaMask();
+      await ensureSepoliaNetwork();
+      setWalletAddress(address);
+      await refreshWalletBalances(address);
+    } catch (err: any) {
+      const message = err.message || "Failed to connect MetaMask";
+      setDepositError(message);
+      setWalletError(message);
+    } finally {
+      setWalletConnecting(false);
+    }
+  }, [refreshWalletBalances]);
 
   const fetchWalletData = useCallback(
     async (showSpinner = true) => {
@@ -202,21 +283,11 @@ export default function WalletContent() {
       try {
         if (showSpinner) setLoading(true);
         setError("");
-        const [balanceResult, txResult, depositResult] = await Promise.all([
-          getWalletBalance(userId),
+        const [txResult] = await Promise.all([
           getWalletTransactions(userId),
-          supabase
-            .from("crypto_deposits")
-            .select("*")
-            .eq("user_id", userId)
-            .order("created_at", { ascending: false })
-            .limit(20),
         ]);
-        if (balanceResult.error) throw balanceResult.error;
         if (txResult.error) throw txResult.error;
-        setBalance(balanceResult.balance);
         setTransactions(txResult.data || []);
-        setDeposits(depositResult.data || []);
       } catch (err: any) {
         setError(err.message || "Failed to load wallet data");
       } finally {
@@ -231,10 +302,52 @@ export default function WalletContent() {
   }, [fetchWalletData]);
 
   useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+    setMetaMaskAvailable(isMetaMaskInstalled());
+
+    const restoreWalletSession = async () => {
+      if (typeof window === "undefined" || !(window as any).ethereum) return;
+      try {
+        const accounts = ((await (window as any).ethereum.request({
+          method: "eth_accounts",
+        })) as string[]) || [];
+        if (accounts[0]) {
+          setWalletAddress(accounts[0]);
+          await refreshWalletBalances(accounts[0]);
+        }
+      } catch {
+        // Ignore wallet auto-restore failure
+      }
     };
-  }, []);
+
+    restoreWalletSession();
+
+    const ethereum = (window as any).ethereum;
+    if (!ethereum?.on) return;
+
+    const onAccountsChanged = (accounts: string[]) => {
+      const nextAddress = accounts?.[0] || "";
+      setWalletAddress(nextAddress);
+      if (nextAddress) {
+        refreshWalletBalances(nextAddress);
+      } else {
+        setBalance(0);
+        setStableTokenBalances({});
+      }
+    };
+
+    const onChainChanged = () => {
+      if (walletAddress) {
+        refreshWalletBalances(walletAddress);
+      }
+    };
+
+    ethereum.on("accountsChanged", onAccountsChanged);
+    ethereum.on("chainChanged", onChainChanged);
+    return () => {
+      ethereum.removeListener?.("accountsChanged", onAccountsChanged);
+      ethereum.removeListener?.("chainChanged", onChainChanged);
+    };
+  }, [refreshWalletBalances, walletAddress]);
 
   const totalIncoming = transactions
     .filter((tx) => tx.collector_id === userId && tx.status === "completed")
@@ -333,50 +446,6 @@ export default function WalletContent() {
     }
   };
 
-  const getDepositStatusBadge = (status: string) => {
-    switch (status) {
-      case "confirmed":
-      case "finished":
-        return (
-          <Badge className="bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30 text-[10px]">
-            Confirmed
-          </Badge>
-        );
-      case "waiting":
-        return (
-          <Badge className="bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30 text-[10px]">
-            Waiting
-          </Badge>
-        );
-      case "confirming":
-      case "sending":
-        return (
-          <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 text-[10px]">
-            Confirming
-          </Badge>
-        );
-      case "expired":
-        return (
-          <Badge className="bg-gray-500/15 text-gray-600 dark:text-gray-400 border-gray-500/30 text-[10px]">
-            Expired
-          </Badge>
-        );
-      case "failed":
-      case "refunded":
-        return (
-          <Badge className="bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30 text-[10px]">
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="secondary" className="text-[10px] capitalize">
-            {status}
-          </Badge>
-        );
-    }
-  };
-
   const handleCreateDeposit = async () => {
     if (!user) return;
     const amount = parseFloat(depositAmount);
@@ -384,91 +453,39 @@ export default function WalletContent() {
       setDepositError("Minimum deposit is $1.00");
       return;
     }
-    setDepositLoading(true);
-    setDepositError("");
-    try {
-      const res = await fetch("/api/crypto/create-payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: depositAmount,
-          currency: depositCurrency,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create payment");
-      setDepositPayment({
-        payment_id: data.payment_id,
-        pay_address: data.pay_address,
-        pay_amount: data.pay_amount,
-        pay_currency: data.pay_currency,
-        amount_usd: data.amount_usd,
-        status: data.status,
-        expiration_estimate_date: data.expiration_estimate_date,
-      });
-      setPaymentStatus(data.status || "waiting");
-      setDepositStep("payment");
-      startPolling(data.payment_id);
-    } catch (err: any) {
-      setDepositError(err.message || "Failed to create deposit");
-    } finally {
-      setDepositLoading(false);
+
+    if (!walletAddress) {
+      setDepositError("Connect MetaMask first");
+      return;
+    }
+
+    if (!metaMaskAvailable) {
+      setDepositError("MetaMask is not installed");
+      openMetaMaskInstallPage();
+      return;
+    }
+
+    const token = STABLE_TOKEN_OPTIONS.find((t) => t.symbol === depositCurrency);
+    if (!token || !token.isConfigured) {
+      setDepositError(
+        `Missing or invalid ${depositCurrency} token address. Set NEXT_PUBLIC_${depositCurrency}_ADDRESS.`,
+      );
+      return;
     }
   };
 
-  const startPolling = (paymentId: string) => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(
-          `/api/crypto/payment-status?payment_id=${paymentId}`,
-        );
-        const data = await res.json();
-        if (res.ok) {
-          setPaymentStatus(data.status);
-          if (data.status === "finished" || data.status === "confirmed") {
-            if (pollRef.current) clearInterval(pollRef.current);
-            setDepositStep("done");
-            fetchWalletData(false);
-          } else if (
-            data.status === "failed" ||
-            data.status === "expired" ||
-            data.status === "refunded"
-          ) {
-            if (pollRef.current) clearInterval(pollRef.current);
-          }
-        }
-      } catch {
-        // Silently retry
-      }
-    }, 15000);
-  };
-
-  const copyToClipboard = async (text: string, type: "address" | "amount") => {
-    await navigator.clipboard.writeText(text);
-    setCopied(type);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
   const resetDeposit = () => {
-    if (pollRef.current) clearInterval(pollRef.current);
     setDepositStep("form");
     setDepositAmount("");
-    setDepositCurrency("btc");
+    setDepositCurrency("USDT");
     setDepositError("");
-    setDepositPayment(null);
-    setPaymentStatus("");
-    setCopied(null);
+    setDepositTxHash("");
   };
 
   const handleDialogClose = (open: boolean) => {
     if (!open) resetDeposit();
     setDepositOpen(open);
   };
-
-  const getCryptoSymbol = (value: string) =>
-    CRYPTO_OPTIONS.find((c) => c.value === value)?.symbol ||
-    value.toUpperCase();
 
   const getPageNumbers = () => {
     const pages: number[] = [];
@@ -636,16 +653,51 @@ export default function WalletContent() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
           <p className="text-muted-foreground mt-1 text-sm">
-            Manage your balance and view transaction history
+            Manage your on-chain DATAW balance and transaction history
           </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            {walletAddress
+              ? `Wallet: ${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)} | DATAW: ${walletBalanceLoading ? "Loading..." : balance.toFixed(4)}`
+              : metaMaskAvailable
+                ? "Connect MetaMask to load DATAW balance on Sepolia"
+                : "MetaMask not detected. Install MetaMask to continue"}
+          </p>
+          {walletError && (
+            <p className="text-xs text-red-500 mt-1">{walletError}</p>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {!metaMaskAvailable ? (
+            <Button
+              variant="outline"
+              onClick={openMetaMaskInstallPage}
+              className="gap-1.5 h-10 rounded-xl"
+            >
+              <Wallet className="w-3.5 h-3.5" />
+              Install MetaMask
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={handleConnectWallet}
+              disabled={walletConnecting}
+              className="gap-1.5 h-10 rounded-xl"
+            >
+              {walletConnecting ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Wallet className="w-3.5 h-3.5" />
+              )}
+              {walletAddress ? "Wallet Connected" : "Connect MetaMask"}
+            </Button>
+          )}
           <Button
             onClick={() => setDepositOpen(true)}
             className="gap-1.5 h-10 rounded-xl btn-gelatine"
+            disabled={!walletAddress || !metaMaskAvailable}
           >
             <Bitcoin className="w-3.5 h-3.5" />
-            Deposit Crypto
+            Deposit USDT/USDC
           </Button>
         </div>
       </div>
@@ -1098,24 +1150,47 @@ export default function WalletContent() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bitcoin className="w-5 h-5 text-orange-500" />
-              {depositStep === "done"
-                ? "Deposit Confirmed"
-                : "Deposit via Crypto"}
+              {depositStep === "done" ? "Deposit Confirmed" : "Deposit via MetaMask"}
             </DialogTitle>
             <DialogDescription>
               {depositStep === "form" &&
-                "Choose a cryptocurrency and enter the amount to deposit."}
-              {depositStep === "payment" &&
-                "Send the exact amount to the address below."}
+                "Choose USDT or USDC and confirm token transfer from your connected wallet."}
               {depositStep === "done" &&
-                "Your deposit has been confirmed and credited to your balance."}
+                "Your on-chain transfer was confirmed and logged."}
             </DialogDescription>
           </DialogHeader>
 
           {depositStep === "form" && (
             <div className="space-y-4 pt-2">
+              <div className="rounded-lg border bg-accent/30 p-3 text-xs">
+                <p className="font-medium">Wallet</p>
+                <p className="text-muted-foreground break-all">
+                  {walletAddress || "Not connected"}
+                </p>
+              </div>
+
+              {walletAddress && (
+                <div className="rounded-lg border bg-muted/40 p-3 text-xs">
+                  <p className="font-medium mb-1">Stablecoin Balances</p>
+                  <div className="space-y-1 text-muted-foreground">
+                    {STABLE_TOKEN_OPTIONS.map((token) => (
+                      <p key={token.symbol}>
+                        {token.symbol}:{" "}
+                        {(stableTokenBalances[token.symbol] || 0).toLocaleString(
+                          "en-US",
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 6,
+                          },
+                        )}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
-                <Label htmlFor="deposit-amount">Amount (USD)</Label>
+                <Label htmlFor="deposit-amount">Amount</Label>
                 <div className="relative">
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                   <Input
@@ -1134,18 +1209,24 @@ export default function WalletContent() {
                 <Label>Pay with</Label>
                 <Select
                   value={depositCurrency}
-                  onValueChange={setDepositCurrency}
+                  onValueChange={(value) =>
+                    setDepositCurrency(value as SupportedStableSymbol)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CRYPTO_OPTIONS.map((crypto) => (
-                      <SelectItem key={crypto.value} value={crypto.value}>
+                    {STABLE_TOKEN_OPTIONS.map((token) => (
+                      <SelectItem
+                        key={token.symbol}
+                        value={token.symbol}
+                        disabled={!token.isConfigured}
+                      >
                         <span className="flex items-center gap-2">
-                          <span className="font-medium">{crypto.symbol}</span>
+                          <span className="font-medium">{token.symbol}</span>
                           <span className="text-muted-foreground">
-                            {crypto.label}
+                            {token.label}
                           </span>
                         </span>
                       </SelectItem>
@@ -1179,147 +1260,47 @@ export default function WalletContent() {
               )}
               <Button
                 onClick={handleCreateDeposit}
-                disabled={depositLoading || !depositAmount}
+                disabled={
+                  depositLoading ||
+                  !depositAmount ||
+                  !walletAddress
+                }
                 className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white"
               >
                 {depositLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating Payment...
+                    Confirming Transfer...
                   </>
                 ) : (
                   <>
                     <Plus className="w-4 h-4 mr-2" />
-                    Generate Payment Address
+                    Deposit with MetaMask
                   </>
                 )}
               </Button>
             </div>
           )}
 
-          {depositStep === "payment" && depositPayment && (
-            <div className="space-y-4 pt-2">
-              <div className="rounded-lg bg-accent/50 p-4 space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Deposit</span>
-                  <span className="font-semibold">
-                    ${depositPayment.amount_usd.toFixed(2)} USD
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Pay</span>
-                  <span className="font-semibold">
-                    {depositPayment.pay_amount}{" "}
-                    {getCryptoSymbol(depositPayment.pay_currency)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm items-center">
-                  <span className="text-muted-foreground">Status</span>
-                  <div className="flex items-center gap-1.5">
-                    {(paymentStatus === "waiting" ||
-                      paymentStatus === "confirming" ||
-                      paymentStatus === "sending") && (
-                      <Loader2 className="w-3 h-3 animate-spin text-yellow-500" />
-                    )}
-                    <span className="capitalize font-medium">
-                      {paymentStatus}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">
-                  Amount to send ({getCryptoSymbol(depositPayment.pay_currency)}
-                  )
-                </Label>
-                <div className="flex gap-2">
-                  <div className="flex-1 rounded-md border bg-muted/50 px-3 py-2 text-sm font-mono select-all">
-                    {depositPayment.pay_amount}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() =>
-                      copyToClipboard(
-                        String(depositPayment.pay_amount),
-                        "amount",
-                      )
-                    }
-                  >
-                    {copied === "amount" ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">
-                  Send to address
-                </Label>
-                <div className="flex gap-2">
-                  <div className="flex-1 rounded-md border bg-muted/50 px-3 py-2 text-xs font-mono break-all select-all">
-                    {depositPayment.pay_address}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0"
-                    onClick={() =>
-                      copyToClipboard(depositPayment.pay_address, "address")
-                    }
-                  >
-                    {copied === "address" ? (
-                      <Check className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <Copy className="w-4 h-4" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3">
-                <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                  Send exactly{" "}
-                  <strong>
-                    {depositPayment.pay_amount}{" "}
-                    {getCryptoSymbol(depositPayment.pay_currency)}
-                  </strong>{" "}
-                  to the address above. Your balance will be credited once the
-                  payment is confirmed.
-                </p>
-              </div>
-              {(paymentStatus === "failed" || paymentStatus === "expired") && (
-                <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3">
-                  <p className="text-xs text-red-600 dark:text-red-400">
-                    Payment {paymentStatus}. Please try creating a new deposit.
-                  </p>
-                </div>
-              )}
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={resetDeposit}
-              >
-                {paymentStatus === "failed" || paymentStatus === "expired"
-                  ? "Create New Deposit"
-                  : "Close"}
-              </Button>
-            </div>
-          )}
-
-          {depositStep === "done" && depositPayment && (
+          {depositStep === "done" && (
             <div className="space-y-4 pt-2 text-center">
               <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-8 h-8 text-green-500" />
               </div>
               <div>
                 <p className="text-lg font-semibold text-foreground">
-                  +${depositPayment.amount_usd.toFixed(2)}
+                  +{depositAmount} {depositCurrency}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  has been added to your balance
+                  tx hash:{" "}
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${depositTxHash}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline"
+                  >
+                    {depositTxHash.slice(0, 10)}...{depositTxHash.slice(-8)}
+                  </a>
                 </p>
               </div>
               <Button

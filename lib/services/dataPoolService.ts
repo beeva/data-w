@@ -592,7 +592,7 @@ export async function purchaseDataPoolDataset(
     if (error) {
       let msg = error.message;
       if (msg.includes("Insufficient balance")) {
-        msg = "Insufficient balance. Add funds in your wallet to complete this purchase.";
+        msg = "Could not complete purchase. Ensure you paid DATAW on-chain first.";
       } else if (msg.includes("Collectors cannot purchase")) {
         msg = "Collector accounts cannot purchase datasets. You can list your own data for sale on the Data Pool.";
       }
